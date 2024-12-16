@@ -27,6 +27,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+anyhow = "1.0.94"
 async-trait = "0.1.83"
 axum = { version = "0.7.9", optional = true }
 base64 = "0.22.1"
