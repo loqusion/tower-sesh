@@ -30,6 +30,7 @@ rust-version.workspace = true
 async-trait = "0.1.83"
 axum = { version = "0.7.9", optional = true }
 base64 = "0.22.1"
+cookie = { version = "0.18.1", features = ["signed", "private"] }
 futures = "0.3.31"
 http = "1.2.0"
 parking_lot = "0.12.3"
