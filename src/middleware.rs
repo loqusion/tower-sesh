@@ -47,6 +47,9 @@ pub trait CookieController: Clone {
 }
 
 impl<Store: SessionStore> SessionManagerLayer<Store> {
+    /// Create a new `SessionManagerLayer`.
+    ///
+    /// Cookies are stored in plaintext by default.
     pub fn new(session_store: Arc<Store>) -> Self {
         Self {
             session_store,
@@ -57,6 +60,7 @@ impl<Store: SessionStore> SessionManagerLayer<Store> {
 }
 
 impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
+    /// Set the name of the cookie used to store a session id.
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         self.cookie_name = name.into();
         self
