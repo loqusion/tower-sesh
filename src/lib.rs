@@ -1,6 +1,8 @@
 #[macro_use]
 mod macros;
 
+mod cookie;
+
 pub mod middleware;
 pub use middleware::SessionManagerLayer;
 pub mod session;
