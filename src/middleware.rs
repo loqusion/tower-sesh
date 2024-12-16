@@ -61,17 +61,6 @@ impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
         self.cookie_name = name.into();
         self
     }
-
-    pub fn cookie_controller<CC: CookieController>(
-        self,
-        cookie_controller: CC,
-    ) -> SessionManagerLayer<Store, CC> {
-        SessionManagerLayer {
-            session_store: self.session_store,
-            cookie_name: self.cookie_name,
-            cookie_controller,
-        }
-    }
 }
 
 impl<Store: SessionStore, C: CookieController> Clone for SessionManagerLayer<Store, C> {
