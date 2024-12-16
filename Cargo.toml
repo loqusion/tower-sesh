@@ -43,5 +43,8 @@ tracing = { version = "0.1.41", optional = true }
 [features]
 default = ["axum", "tracing"]
 
+[dev-dependencies]
+quickcheck = "1.0.3"
+
 [lints]
 workspace = true
