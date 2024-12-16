@@ -1,3 +1,5 @@
+#![allow(unused_macros)]
+
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __log_rejection {
