@@ -2,6 +2,7 @@
 mod macros;
 
 mod cookie;
+mod util;
 
 pub mod middleware;
 pub use middleware::SessionManagerLayer;
