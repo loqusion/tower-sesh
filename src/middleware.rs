@@ -6,12 +6,19 @@ use std::{
     task::{ready, Context, Poll},
 };
 
+use cookie::CookieJar;
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 use tower_cookies::{Cookie, Cookies};
 
-use crate::{session::Session, store::SessionStore};
+use crate::{
+    config::{CookieConfiguration, CookieContentSecurity},
+    cookie::CookieJarExt,
+    session::{Session, SessionKey},
+    store::SessionStore,
+    util::ErrorExt,
+};
 
 /// The default cookie name used by [`SessionManagerLayer`] to store a session
 /// id.
@@ -39,7 +46,7 @@ pub struct SessionManagerLayer<Store: SessionStore, C: CookieController = Plaint
     cookie_controller: C,
 }
 
-/// Controls how cookies are stored and retrieved.
+/// Trait used to control how cookies are stored and retrieved.
 pub trait CookieController: Clone {
     fn get<'c>(&self, cookies: &'c Cookies, name: &str) -> Option<Cookie<'c>>;
     fn add(&self, cookies: &Cookies, cookie: Cookie<'static>);
@@ -155,7 +162,7 @@ where
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         if let Some(cookies) = req.extensions().get::<Cookies>().cloned() {
             let cookie = self.session_cookie(&cookies).map(Cookie::into_owned);
-            let session = Session::from_or_empty(cookie, self.layer.session_store.clone());
+            let session = Session::from_or_empty(cookie);
 
             req.extensions_mut().insert(session.clone());
 
@@ -174,6 +181,33 @@ where
                 state: State::Fallback,
                 future: self.inner.call(req),
             }
+        }
+    }
+}
+
+fn extract_session_key<B>(req: &Request<B>, config: &CookieConfiguration) -> Option<SessionKey> {
+    let jar = CookieJar::from_headers(req.headers());
+
+    let cookie_result = match config.content_security {
+        CookieContentSecurity::Signed => jar.signed(&config.key).get(&config.name),
+        CookieContentSecurity::Private => jar.private(&config.key).get(&config.name),
+    };
+
+    if cookie_result.is_none() && jar.get(&config.name).is_some() {
+        warn!(
+            "session cookie attached to the incoming request failed to pass cryptographic \
+            checks (signature verification/decryption)."
+        );
+    }
+
+    match SessionKey::decode(cookie_result?.value()) {
+        Ok(session_key) => Some(session_key),
+        Err(err) => {
+            warn!(
+                error = %err.display_chain(),
+                "invalid session key; ignoring"
+            );
+            None
         }
     }
 }

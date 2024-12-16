@@ -2,43 +2,41 @@ use std::{any::Any, collections::HashMap, fmt, num::NonZeroU128, sync::Arc};
 
 use async_trait::async_trait;
 use base64::Engine;
+use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
 use tower_cookies::Cookie;
 
-use crate::store::SessionStore;
+pub struct Session(Arc<Mutex<SessionInner>>);
 
-pub struct Session {
-    inner: Arc<SessionInner>,
-    store: Arc<dyn SessionStore>,
+struct SessionInner {
+    session_id: Option<SessionKey>,
 }
 
 impl Session {
     /// Returns a [`Session`] by attempting to parse `cookie` as an [`Id`],
     /// falling back to an empty session if `cookie` is `None` or parsing failed.
     #[must_use]
-    pub(crate) fn from_or_empty(
-        cookie: Option<Cookie<'static>>,
-        store: Arc<dyn SessionStore>,
-    ) -> Self {
-        let session_id = cookie.as_ref().and_then(|c| Id::decode(c.value()).ok());
-        let inner = SessionInner {
-            session_id: Mutex::new(session_id),
-        };
+    pub(crate) fn from_or_empty(cookie: Option<Cookie<'static>>) -> Self {
+        let session_id = cookie
+            .as_ref()
+            .and_then(|c| SessionKey::decode(c.value()).ok());
+        let inner = SessionInner { session_id };
 
-        Session {
-            inner: Arc::new(inner),
-            store,
-        }
+        Session(Arc::new(Mutex::new(inner)))
+    }
+
+    pub(crate) fn extract(extensions: &mut Extensions) -> Option<Self> {
+        extensions
+            .get::<Arc<Mutex<SessionInner>>>()
+            .cloned()
+            .map(Session)
     }
 }
 
 impl Clone for Session {
     fn clone(&self) -> Self {
-        Self {
-            inner: Arc::clone(&self.inner),
-            store: Arc::clone(&self.store),
-        }
+        Self(Arc::clone(&self.0))
     }
 }
 
@@ -51,11 +49,7 @@ impl<S> axum::extract::FromRequestParts<S> for Session {
         parts: &mut http::request::Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        parts
-            .extensions
-            .get::<Session>()
-            .cloned()
-            .ok_or(SessionRejection)
+        Session::extract(&mut parts.extensions).ok_or(SessionRejection)
     }
 }
 
@@ -67,24 +61,19 @@ define_rejection! {
     pub struct SessionRejection;
 }
 
-#[derive(Debug)]
-struct SessionInner {
-    session_id: Mutex<Option<Id>>,
-}
-
 /// A 128-bit session identifier.
 // `NonZeroU128` is used so that `Option<Id>` has the same size as `Id`
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct Id(pub(crate) NonZeroU128);
+pub struct SessionKey(pub(crate) NonZeroU128);
 
-impl Id {
+impl SessionKey {
     const BASE64_ENGINE: base64::engine::general_purpose::GeneralPurpose =
         base64::engine::general_purpose::URL_SAFE_NO_PAD;
     const DECODED_LEN: usize = 16;
 
     #[must_use]
     pub fn generate() -> Self {
-        Id::generate_from_rng(&mut rand::thread_rng())
+        SessionKey::generate_from_rng(&mut rand::thread_rng())
     }
 
     #[must_use]
@@ -94,17 +83,17 @@ impl Id {
 
     #[must_use]
     pub fn encode(&self) -> String {
-        Id::BASE64_ENGINE.encode(self.0.get().to_le_bytes())
+        SessionKey::BASE64_ENGINE.encode(self.0.get().to_le_bytes())
     }
 
-    pub fn decode(s: &str) -> Result<Id, ParseIdError> {
+    pub fn decode(s: &str) -> Result<SessionKey, ParseSessionKeyError> {
         use base64::DecodeError;
 
-        let mut buf = [0; const { Id::DECODED_LEN }];
-        Id::BASE64_ENGINE
+        let mut buf = [0; const { SessionKey::DECODED_LEN }];
+        SessionKey::BASE64_ENGINE
             .decode_slice(s.as_bytes(), &mut buf)
             .and_then(|decoded_len| {
-                if decoded_len == Id::DECODED_LEN {
+                if decoded_len == SessionKey::DECODED_LEN {
                     Ok(())
                 } else {
                     Err(DecodeError::InvalidLength(decoded_len).into())
@@ -112,37 +101,37 @@ impl Id {
             })?;
 
         match u128::from_le_bytes(buf).try_into() {
-            Ok(v) => Ok(Id(v)),
-            Err(_) => Err(ParseIdError::Zero),
+            Ok(v) => Ok(SessionKey(v)),
+            Err(_) => Err(ParseSessionKeyError::Zero),
         }
     }
 }
 
-impl fmt::Display for Id {
+impl fmt::Display for SessionKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.encode())
     }
 }
 
-impl From<NonZeroU128> for Id {
+impl From<NonZeroU128> for SessionKey {
     #[inline]
     fn from(value: NonZeroU128) -> Self {
         Self(value)
     }
 }
 
-impl TryFrom<u128> for Id {
+impl TryFrom<u128> for SessionKey {
     type Error = std::num::TryFromIntError;
 
     #[inline]
     fn try_from(value: u128) -> Result<Self, Self::Error> {
-        value.try_into().map(Id)
+        value.try_into().map(SessionKey)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ParseIdError {
-    #[error("")]
+pub enum ParseSessionKeyError {
+    #[error("failed to parse base64 string")]
     Base64(#[from] base64::DecodeSliceError),
     #[error("session id must be non-zero")]
     Zero,
@@ -152,8 +141,9 @@ type AnyMap = HashMap<String, Box<dyn AnyClone + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct Record {
-    id: Id,
+    id: SessionKey,
     data: AnyMap,
+    ttl: time::Duration,
 }
 
 trait AnyClone: Any {}
@@ -170,25 +160,25 @@ mod test {
     use quickcheck::{quickcheck, Arbitrary};
 
     #[test]
-    fn id_parse_error_zero() {
+    fn session_key_parse_error_zero() {
         const INPUT: &str = "AAAAAAAAAAAAAAAAAAAAAA";
-        let result = Id::decode(INPUT);
+        let result = SessionKey::decode(INPUT);
         assert!(
-            matches!(result, Err(ParseIdError::Zero)),
+            matches!(result, Err(ParseSessionKeyError::Zero)),
             "expected decoding to fail with `ParseIdError::Zero`"
         );
     }
 
-    impl Arbitrary for Id {
+    impl Arbitrary for SessionKey {
         fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-            Id::from(NonZeroU128::arbitrary(g))
+            SessionKey::from(NonZeroU128::arbitrary(g))
         }
     }
 
     quickcheck! {
-        fn id_encode_decode(id: Id) -> bool {
+        fn session_key_encode_decode(id: SessionKey) -> bool {
             let encoded = id.encode();
-            let decoded = Id::decode(&encoded).unwrap();
+            let decoded = SessionKey::decode(&encoded).unwrap();
             id == decoded
         }
     }
