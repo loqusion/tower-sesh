@@ -38,6 +38,7 @@ parking_lot = "0.12.3"
 pin-project-lite = "0.2.15"
 rand = "0.8.5"
 thiserror = "2.0.7"
+time = "0.3.37"
 tower = "0.5.2"
 tower-cookies = "0.10.0"
 tracing = { version = "0.1.41", optional = true }
