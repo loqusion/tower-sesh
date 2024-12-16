@@ -167,4 +167,29 @@ impl Clone for Box<dyn AnyClone + Send + Sync> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quickcheck::{quickcheck, Arbitrary};
+
+    #[test]
+    fn id_parse_error_zero() {
+        const INPUT: &str = "AAAAAAAAAAAAAAAAAAAAAA";
+        let result = Id::decode(INPUT);
+        assert!(
+            matches!(result, Err(ParseIdError::Zero)),
+            "expected decoding to fail with `ParseIdError::Zero`"
+        );
+    }
+
+    impl Arbitrary for Id {
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            Id::from(NonZeroU128::arbitrary(g))
+        }
+    }
+
+    quickcheck! {
+        fn id_encode_decode(id: Id) -> bool {
+            let encoded = id.encode();
+            let decoded = Id::decode(&encoded).unwrap();
+            id == decoded
+        }
+    }
 }
