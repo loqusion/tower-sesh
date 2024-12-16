@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "examples/axum"]
+members = [".", "examples/*"]
 resolver = "2"
 
 [workspace.package]
