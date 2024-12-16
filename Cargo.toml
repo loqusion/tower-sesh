@@ -45,6 +45,7 @@ default = ["axum", "tracing"]
 
 [dev-dependencies]
 quickcheck = "1.0.3"
+tokio = { version = "1.42.0", features = ["full"] }
 
 [lints]
 workspace = true
