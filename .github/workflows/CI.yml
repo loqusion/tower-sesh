@@ -49,19 +49,26 @@ jobs:
   ### test jobs
 
   test:
-    name: "cargo test (${{ matrix.rust }} on ${{ matrix.os }})"
+    name: "cargo test (${{ matrix.rust }})"
     needs: check
     strategy:
       matrix:
-        os: [ubuntu-latest]
         rust: [stable, beta, nightly]
-        include:
-          - rust: stable
-            os: windows-latest
-          - rust: stable
-            os: macos-latest
       fail-fast: true
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    env:
+      REDIS_URL: redis://localhost:6379
+    services:
+      # Required for tower-sesh-store-redis
+      redis:
+        image: redis:7.4.1-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: "install Rust ${{ matrix.rust }}"

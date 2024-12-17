@@ -10,11 +10,22 @@ use redis::{
 /// The default [`ConnectionManager`] behavior is to reconnect if a request
 /// fails due to a dropped connection, however that request's error is
 /// propagated to the caller instead of re-attempting the request.
+#[derive(Clone)]
 pub struct ConnectionManagerWithRetry(ConnectionManager);
 
 impl ConnectionManagerWithRetry {
     pub(crate) async fn new(client: Client) -> RedisResult<Self> {
         ConnectionManager::new(client).await.map(Self::from)
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn new_with_config(
+        client: Client,
+        config: redis::aio::ConnectionManagerConfig,
+    ) -> RedisResult<Self> {
+        ConnectionManager::new_with_config(client, config)
+            .await
+            .map(Self::from)
     }
 }
 

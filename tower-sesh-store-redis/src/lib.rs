@@ -3,9 +3,8 @@ use std::borrow::Cow;
 use async_trait::async_trait;
 use client::ConnectionManagerWithRetry;
 use redis::{
-    aio::{ConnectionLike, ConnectionManager},
-    AsyncCommands, AsyncConnectionConfig, Client, ExistenceCheck, IntoConnectionInfo, RedisResult,
-    SetExpiry, SetOptions, ToRedisArgs,
+    aio::ConnectionLike, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo, RedisResult,
+    SetExpiry, SetOptions,
 };
 use tower_sesh::{
     session::{Record, SessionKey},
@@ -232,4 +231,46 @@ impl RedisRecord {
 
 fn err_max_iterations_reached() -> Error {
     todo!()
+}
+
+#[cfg(test)]
+mod test {
+    use std::{env, time::Duration};
+
+    use redis::aio::ConnectionManagerConfig;
+
+    use super::*;
+
+    async fn store() -> RedisStore<impl ConnectionLike + Clone + Send + Sync + 'static> {
+        let url =
+            env::var("REDIS_URL").expect("REDIS_URL environment variable must be set to run tests");
+
+        let config = ConnectionManagerConfig::new()
+            .set_connection_timeout(Duration::from_secs(5))
+            .set_number_of_retries(1);
+        let client = redis::Client::open(url).expect("failed to connect to redis");
+        let connection = ConnectionManagerWithRetry::new_with_config(client, config)
+            .await
+            .expect("failed to connect to redis");
+        RedisStore {
+            connection,
+            config: Default::default(),
+        }
+    }
+
+    #[tokio::test]
+    async fn smoke() {
+        let _ = store().await;
+    }
+
+    #[tokio::test]
+    async fn loading_a_missing_session_returns_none() -> anyhow::Result<()> {
+        let store = store().await;
+        let session_key = SessionKey::generate();
+        let record = store.load(&session_key).await?;
+
+        assert!(record.is_none(), "expected no record");
+
+        Ok(())
+    }
 }
