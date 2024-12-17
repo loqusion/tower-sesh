@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
 use async_trait::async_trait;
-use client::ConnectionManagerWithRetry;
+use client::{ConnectionManagerWithRetry, GetConnection};
 use redis::{
-    aio::{ConnectionLike, ConnectionManagerConfig},
-    AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo, RedisResult, SetExpiry, SetOptions,
+    aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
+    RedisResult, SetExpiry, SetOptions,
 };
 use tower_sesh::{
     session::{Record, SessionKey},
@@ -22,8 +22,8 @@ const DEFAULT_KEY_PREFIX: &str = "session_";
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub struct RedisStore<C: ConnectionLike> {
-    connection: C,
+pub struct RedisStore<C: GetConnection = ConnectionManagerWithRetry> {
+    client: C,
     config: RedisStoreConfig,
 }
 
@@ -39,7 +39,7 @@ impl Default for RedisStoreConfig {
     }
 }
 
-impl RedisStore<ConnectionManagerWithRetry> {
+impl RedisStore {
     /// Connect to a redis server and return a store.
     ///
     /// When opening a client a URL in the following format should be used:
@@ -77,9 +77,9 @@ impl RedisStore<ConnectionManagerWithRetry> {
     /// # }).unwrap();
     /// ```
     pub async fn with_client(client: Client) -> RedisResult<Self> {
-        let connection = ConnectionManagerWithRetry::new(client).await?;
+        let client = ConnectionManagerWithRetry::new(client).await?;
         Ok(Self {
-            connection,
+            client,
             config: RedisStoreConfig::default(),
         })
     }
@@ -89,15 +89,15 @@ impl RedisStore<ConnectionManagerWithRetry> {
         client: Client,
         config: ConnectionManagerConfig,
     ) -> RedisResult<Self> {
-        let connection = ConnectionManagerWithRetry::new_with_config(client, config).await?;
+        let client = ConnectionManagerWithRetry::new_with_config(client, config).await?;
         Ok(Self {
-            connection,
+            client,
             config: RedisStoreConfig::default(),
         })
     }
 }
 
-impl<C: ConnectionLike> RedisStore<C> {
+impl<C: GetConnection> RedisStore<C> {
     fn redis_key(&self, session_key: &SessionKey) -> String {
         let mut redis_key =
             String::with_capacity(self.config.key_prefix.len() + SessionKey::ENCODED_LEN);
@@ -105,22 +105,14 @@ impl<C: ConnectionLike> RedisStore<C> {
         redis_key.push_str(&session_key.encode());
         redis_key
     }
-}
 
-impl<C: ConnectionLike> RedisStore<C>
-where
-    C: Clone,
-{
-    async fn connection(&self) -> Result<C> {
-        Ok(self.connection.clone())
+    async fn connection(&self) -> Result<<C as GetConnection>::Connection> {
+        self.client.connection().await.map_err(|err| todo!())
     }
 }
 
 #[async_trait]
-impl<C: ConnectionLike> SessionStore for RedisStore<C>
-where
-    C: Clone + Send + Sync + 'static,
-{
+impl<C: GetConnection> SessionStore for RedisStore<C> {
     async fn create(&self, record: Record) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
 

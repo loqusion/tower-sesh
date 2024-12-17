@@ -1,10 +1,10 @@
 use std::{env, time::Duration};
 
-use redis::aio::{ConnectionLike, ConnectionManagerConfig};
+use redis::aio::ConnectionManagerConfig;
 use tower_sesh::{test::test_key, SessionStore};
 use tower_sesh_store_redis::RedisStore;
 
-async fn store() -> RedisStore<impl ConnectionLike + Clone + Send + Sync + 'static> {
+async fn store() -> RedisStore {
     let url =
         env::var("REDIS_URL").expect("REDIS_URL environment variable must be set to run tests");
 

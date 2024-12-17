@@ -1,7 +1,8 @@
+use async_trait::async_trait;
 use futures::FutureExt;
 use redis::{
     aio::{ConnectionLike, ConnectionManager, ConnectionManagerConfig},
-    Client, Cmd, Pipeline, RedisFuture, RedisResult, Value,
+    Client, Cmd, Pipeline, RedisError, RedisFuture, RedisResult, Value,
 };
 
 /// A connection manager that immediately retries a request if it fails due
@@ -72,3 +73,29 @@ impl ConnectionLike for ConnectionManagerWithRetry {
         self.0.get_db()
     }
 }
+
+/// A trait for acquiring a [`ConnectionLike`] object that can be safely sent
+/// between threads.
+///
+/// [`ConnectionLike`]: redis::aio::ConnectionLike
+#[doc(hidden)]
+#[async_trait]
+pub trait GetConnection: Send + Sync + 'static {
+    type Connection: ConnectionLike + Send;
+
+    async fn connection(&self) -> Result<Self::Connection, GetConnectionError>;
+}
+
+#[async_trait]
+impl GetConnection for ConnectionManagerWithRetry {
+    type Connection = ConnectionManagerWithRetry;
+
+    async fn connection(&self) -> Result<Self::Connection, GetConnectionError> {
+        Ok(self.clone())
+    }
+}
+
+#[doc(hidden)]
+#[derive(Debug, thiserror::Error)]
+#[error("failed to acquire redis connection")]
+pub struct GetConnectionError(#[from] RedisError);
