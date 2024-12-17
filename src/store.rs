@@ -25,7 +25,7 @@ pub trait SessionStore: 'static + Send + Sync {
     /// provided `record`.
     ///
     /// If such a session does not exist, it will be created.
-    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<SessionKey>;
+    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<()>;
 
     /// Delete the session associated with `session_key`.
     ///
@@ -53,7 +53,7 @@ impl SessionStore for MemoryStore {
         todo!()
     }
 
-    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<SessionKey> {
+    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<()> {
         todo!()
     }
 
@@ -102,7 +102,7 @@ impl<Cache: SessionStore, Store: SessionStore> SessionStore for CachingStore<Cac
         }
     }
 
-    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<SessionKey> {
+    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<()> {
         #![allow(clippy::clone_on_copy)]
 
         let store_fut = self.store.update(session_key, record.clone());
@@ -110,7 +110,7 @@ impl<Cache: SessionStore, Store: SessionStore> SessionStore for CachingStore<Cac
 
         futures::try_join!(store_fut, cache_fut)?;
 
-        Ok(session_key.clone())
+        Ok(())
     }
 
     async fn delete(&self, session_key: &SessionKey) -> Result<()> {
