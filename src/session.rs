@@ -5,6 +5,7 @@ use base64::Engine;
 use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
+use time::OffsetDateTime;
 use tower_cookies::Cookie;
 
 pub struct Session(Arc<Mutex<SessionInner>>);
@@ -141,9 +142,8 @@ type AnyMap = HashMap<String, Box<dyn AnyClone + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct Record {
-    id: SessionKey,
     data: AnyMap,
-    ttl: time::Duration,
+    expiry: OffsetDateTime,
 }
 
 trait AnyClone: Any {}
