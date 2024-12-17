@@ -146,6 +146,12 @@ pub struct Record {
     expiry: OffsetDateTime,
 }
 
+impl Record {
+    pub fn unix_timestamp(&self) -> i64 {
+        self.expiry.unix_timestamp()
+    }
+}
+
 trait AnyClone: Any {}
 
 impl Clone for Box<dyn AnyClone + Send + Sync> {
