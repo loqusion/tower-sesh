@@ -1,0 +1,34 @@
+[package]
+name = "tower-sesh-store-redis"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["tokio-comp"]
+
+async-std-comp = ["redis/async-std-comp"]
+tokio-comp = ["redis/tokio-comp"]
+
+[dependencies]
+async-trait = "0.1.83"
+futures = "0.3.31"
+redis = { version = "0.27.6", features = ["aio", "connection-manager"] }
+rmp-serde = "1.3.0"
+tower-sesh = { version = "0.1.0", path = ".." }
+
+[dev-dependencies]
+anyhow = "1.0.94"
+tokio = "1.42.0"
+tokio-test = "0.4.4"
+
+[lints]
+workspace = true
+
+[package.metadata.cargo-udeps.ignore]
+development = ["tokio-test"]
