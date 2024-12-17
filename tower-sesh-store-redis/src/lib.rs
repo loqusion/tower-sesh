@@ -27,12 +27,6 @@ pub struct RedisStore<C: ConnectionLike> {
     config: RedisStoreConfig,
 }
 
-impl<C: ConnectionLike> std::fmt::Debug for RedisStore<C> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("hi")
-    }
-}
-
 struct RedisStoreConfig {
     key_prefix: Cow<'static, str>,
 }
@@ -238,6 +232,7 @@ mod test {
     use std::{env, time::Duration};
 
     use redis::aio::ConnectionManagerConfig;
+    use tower_sesh::test::test_key;
 
     use super::*;
 
@@ -266,7 +261,7 @@ mod test {
     #[tokio::test]
     async fn loading_a_missing_session_returns_none() -> anyhow::Result<()> {
         let store = store().await;
-        let session_key = SessionKey::generate();
+        let session_key = test_key();
         let record = store.load(&session_key).await?;
 
         assert!(record.is_none(), "expected no record");

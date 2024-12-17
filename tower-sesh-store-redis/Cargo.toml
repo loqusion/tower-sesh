@@ -26,6 +26,7 @@ tower-sesh = { version = "0.1.0", path = ".." }
 anyhow = "1.0.94"
 tokio = "1.42.0"
 tokio-test = "0.4.4"
+tower-sesh = { version = "0.1.0", path = "..", features = ["_test"] }
 
 [lints]
 workspace = true

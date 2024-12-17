@@ -50,5 +50,7 @@ tokio = { version = "1.42.0", features = ["full"] }
 [features]
 default = ["axum", "tracing"]
 
+_test = []
+
 [lints]
 workspace = true

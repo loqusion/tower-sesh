@@ -5,6 +5,10 @@ mod config;
 mod cookie;
 mod util;
 
+#[cfg(feature = "_test")]
+#[doc(hidden)]
+pub mod test;
+
 pub mod middleware;
 pub use middleware::SessionManagerLayer;
 pub mod session;
