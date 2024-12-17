@@ -1,6 +1,6 @@
 use futures::FutureExt;
 use redis::{
-    aio::{ConnectionLike, ConnectionManager},
+    aio::{ConnectionLike, ConnectionManager, ConnectionManagerConfig},
     Client, Cmd, Pipeline, RedisFuture, RedisResult, Value,
 };
 
@@ -18,10 +18,9 @@ impl ConnectionManagerWithRetry {
         ConnectionManager::new(client).await.map(Self::from)
     }
 
-    #[cfg(test)]
     pub(crate) async fn new_with_config(
         client: Client,
-        config: redis::aio::ConnectionManagerConfig,
+        config: ConnectionManagerConfig,
     ) -> RedisResult<Self> {
         ConnectionManager::new_with_config(client, config)
             .await
