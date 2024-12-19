@@ -15,8 +15,8 @@ pub mod suite;
 /// values in the range 1..2^128 are _exceedingly_ rare. Still, the
 /// probability of collision is non-zero.
 pub fn test_key() -> SessionKey {
-    static mut KEY_STATE: AtomicU64 = AtomicU64::new(1);
-    let v = unsafe { KEY_STATE.fetch_add(1, atomic::Ordering::SeqCst) as u128 };
+    static KEY_STATE: AtomicU64 = AtomicU64::new(1);
+    let v = KEY_STATE.fetch_add(1, atomic::Ordering::SeqCst) as u128;
     SessionKey::try_from(v).unwrap()
 }
 
