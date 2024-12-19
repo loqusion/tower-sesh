@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use cookie::{Key, SameSite};
 
-pub(crate) enum CookieContentSecurity {
+pub enum CookieContentSecurity {
     Signed,
     Private,
 }

@@ -1,7 +1,8 @@
 #[macro_use]
 mod macros;
 
-mod config;
+#[doc(hidden)]
+pub mod config;
 mod cookie;
 mod util;
 
