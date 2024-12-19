@@ -30,6 +30,7 @@ rust-version.workspace = true
 anyhow = "1.0.94"
 async-trait = "0.1.83"
 axum = { version = "0.7.9", optional = true }
+axum-test = { version = "16.4.1", optional = true }
 base64 = "0.22.1"
 cookie = { version = "0.18.1", features = ["signed", "private"] }
 futures = "0.3.31"
@@ -50,7 +51,7 @@ tokio = { version = "1.42.0", features = ["full"] }
 [features]
 default = ["axum", "tracing"]
 
-_test = []
+_test = ["axum", "axum-test", "tracing"]
 
 [lints]
 workspace = true
