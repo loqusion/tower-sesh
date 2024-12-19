@@ -1,7 +1,10 @@
 use std::{env, time::Duration};
 
 use redis::aio::ConnectionManagerConfig;
-use tower_sesh::{test::test_key, SessionStore};
+use tower_sesh::{
+    test::{test_key, test_suite},
+    SessionStore,
+};
 use tower_sesh_store_redis::RedisStore;
 
 async fn store() -> RedisStore {
@@ -33,3 +36,5 @@ async fn loading_a_missing_session_returns_none() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+test_suite!(store().await);
