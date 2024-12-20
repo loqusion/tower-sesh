@@ -63,7 +63,8 @@ define_rejection! {
 }
 
 /// A 128-bit session identifier.
-// `NonZeroU128` is used so that `Option<Id>` has the same size as `Id`
+// `NonZeroU128` is used so that `Option<SessionKey>` has the same size as
+// `SessionKey`
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub struct SessionKey(pub(crate) NonZeroU128);
 
