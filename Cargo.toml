@@ -29,8 +29,6 @@ rust-version.workspace = true
 [dependencies]
 anyhow = "1.0.94"
 async-trait = "0.1.83"
-axum = { version = "0.7.9", optional = true }
-axum-test = { version = "16.4.1", optional = true }
 base64 = "0.22.1"
 cookie = { version = "0.18.1", features = ["signed", "private"] }
 futures = "0.3.31"
@@ -42,6 +40,10 @@ thiserror = "2.0.7"
 time = "0.3.37"
 tower = "0.5.2"
 tower-cookies = "0.10.0"
+
+# optional dependencies
+axum = { version = "0.7.9", optional = true }
+axum-test = { version = "16.4.1", optional = true }
 tracing = { version = "0.1.41", optional = true }
 
 [dev-dependencies]
