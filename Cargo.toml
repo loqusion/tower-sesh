@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "examples/*", "tower-sesh-*"]
+members = [".", "tower-sesh-*"]
 resolver = "2"
 
 [workspace.package]
