@@ -3,7 +3,6 @@ mod macros;
 
 #[doc(hidden)]
 pub mod config;
-mod cookie;
 mod util;
 
 #[cfg(feature = "_test")]

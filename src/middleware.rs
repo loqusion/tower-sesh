@@ -13,62 +13,67 @@ use tower::{Layer, Service};
 use tower_cookies::Cookies;
 
 use crate::{
-    config::{CookieConfiguration, CookieContentSecurity},
-    cookie::CookieJarExt,
-    session::{Session, SessionKey},
+    config::{CookieController, PrivateCookieController, SignedCookieController},
+    session::Session,
     store::SessionStore,
-    util::ErrorExt,
+    util::CookieJarExt,
 };
 
 /// The default cookie name used by [`SessionManagerLayer`] to store a session
-/// id.
-pub const DEFAULT_COOKIE_NAME: &str = "session_key";
+/// key.
+const DEFAULT_COOKIE_NAME: &str = "session_key";
 
 /// A layer that provides [`Session`] as a request extension.
 ///
 /// # Example
 ///
-/// ```rust
-/// use std::sync::Arc;
-/// use tower::ServiceBuilder;
-/// use tower_cookies::CookieManagerLayer;
-/// use tower_sesh::{store::MemoryStore, SessionManagerLayer};
-///
-/// let session_store = MemoryStore::new();
-/// let middleware = ServiceBuilder::new()
-///     .layer(CookieManagerLayer::new())
-///     .layer(SessionManagerLayer::new(Arc::new(session_store)));
-/// ```
+/// TODO: Provide an example
 #[derive(Debug)]
-pub struct SessionManagerLayer<Store: SessionStore, C: CookieController = PlaintextCookie> {
+pub struct SessionManagerLayer<Store: SessionStore, C: CookieController = PrivateCookieController> {
     session_store: Arc<Store>,
     cookie_name: Cow<'static, str>,
     cookie_controller: C,
 }
 
-/// Trait used to control how cookies are stored and retrieved.
-pub trait CookieController: Clone {
-    fn get<'c>(&self, cookies: &'c Cookies, name: &str) -> Option<Cookie<'c>>;
-    fn add(&self, cookies: &Cookies, cookie: Cookie<'static>);
-    fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>);
-}
-
 impl<Store: SessionStore> SessionManagerLayer<Store> {
     /// Create a new `SessionManagerLayer`.
     ///
-    /// Cookies are stored in plaintext by default.
-    pub fn new(session_store: Arc<Store>) -> Self {
+    /// TODO: More documentation
+    pub fn new(session_store: Arc<Store>, key: cookie::Key) -> Self {
         Self {
             session_store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
-            cookie_controller: PlaintextCookie,
+            cookie_controller: PrivateCookieController::new(key),
         }
     }
 }
 
 // TODO: Add customization for session expiry
-// TODO: Add customization for private/signed
 impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
+    /// Authenticate cookies.
+    ///
+    /// TODO: More documentation
+    pub fn signed(self) -> SessionManagerLayer<Store, SignedCookieController> {
+        let key = self.cookie_controller.into_key();
+        SessionManagerLayer {
+            session_store: self.session_store,
+            cookie_name: self.cookie_name,
+            cookie_controller: SignedCookieController::new(key),
+        }
+    }
+
+    /// Encrypt cookies.
+    ///
+    /// TODO: More documentation
+    pub fn private(self) -> SessionManagerLayer<Store, PrivateCookieController> {
+        let key = self.cookie_controller.into_key();
+        SessionManagerLayer {
+            session_store: self.session_store,
+            cookie_name: self.cookie_name,
+            cookie_controller: PrivateCookieController::new(key),
+        }
+    }
+
     /// Set the [name][mdn] of the cookie used to store a session id.
     ///
     /// Default: `session_key`
@@ -138,50 +143,20 @@ impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionManagerLay
     }
 }
 
-/// Store cookies in plaintext (unauthenticated, unencrypted).
-#[derive(Clone, Debug)]
-pub struct PlaintextCookie;
-
-impl CookieController for PlaintextCookie {
-    fn get<'c>(&self, cookies: &'c Cookies, name: &str) -> Option<Cookie<'c>> {
-        cookies.get(name)
-    }
-
-    fn add(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.add(cookie)
-    }
-
-    fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>) {
-        cookies.remove(cookie)
-    }
-}
-
 /// A middleware that provides [`Session`] as a request extension.
 ///
 /// [`Session`]: crate::session::Session
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct SessionManager<S, Store: SessionStore, C: CookieController> {
     inner: S,
     layer: SessionManagerLayer<Store, C>,
 }
 
 impl<S, Store: SessionStore, C: CookieController> SessionManager<S, Store, C> {
-    fn session_cookie<'c>(&self, cookies: &'c Cookies) -> Option<Cookie<'c>> {
+    fn session_cookie<'c>(&self, jar: &'c CookieJar) -> Option<Cookie<'c>> {
         self.layer
             .cookie_controller
-            .get(cookies, &self.layer.cookie_name)
-    }
-}
-
-impl<S, Store: SessionStore, C: CookieController> Clone for SessionManager<S, Store, C>
-where
-    S: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            layer: self.layer.clone(),
-        }
+            .get(jar, &self.layer.cookie_name)
     }
 }
 
@@ -198,62 +173,62 @@ where
         self.inner.poll_ready(cx)
     }
 
-    #[cfg_attr(
-        feature = "tracing",
-        tracing::instrument(name = "SessionManager", skip(self, req))
-    )]
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
-        if let Some(cookies) = req.extensions().get::<Cookies>().cloned() {
-            let cookie = self.session_cookie(&cookies).map(Cookie::into_owned);
-            let session = Session::from_or_empty(cookie);
+        let jar = CookieJar::from_headers(req.headers());
+        let cookie = self.session_cookie(&jar);
 
-            req.extensions_mut().insert(session.clone());
-
-            ResponseFuture {
-                state: State::Session {
-                    session,
-                    cookies,
-                    cookie_controller: self.layer.cookie_controller.clone(),
-                },
-                future: self.inner.call(req),
-            }
-        } else {
-            error!("tower_cookies::CookieManagerLayer must be added before SessionManagerLayer");
-
-            ResponseFuture {
-                state: State::Fallback,
-                future: self.inner.call(req),
-            }
-        }
+        todo!()
+        // if let Some(cookies) = req.extensions().get::<Cookies>().cloned() {
+        //     let cookie = self.session_cookie(&cookies).map(Cookie::into_owned);
+        //     let session = Session::from_or_empty(cookie);
+        //
+        //     req.extensions_mut().insert(session.clone());
+        //
+        //     ResponseFuture {
+        //         state: State::Session {
+        //             session,
+        //             cookies,
+        //             cookie_controller: self.layer.cookie_controller.clone(),
+        //         },
+        //         future: self.inner.call(req),
+        //     }
+        // } else {
+        //     error!("tower_cookies::CookieManagerLayer must be added before SessionManagerLayer");
+        //
+        //     ResponseFuture {
+        //         state: State::Fallback,
+        //         future: self.inner.call(req),
+        //     }
+        // }
     }
 }
 
-fn extract_session_key<B>(req: &Request<B>, config: &CookieConfiguration) -> Option<SessionKey> {
-    let jar = CookieJar::from_headers(req.headers());
-
-    let cookie_result = match config.content_security {
-        CookieContentSecurity::Signed => jar.signed(&config.key).get(&config.name),
-        CookieContentSecurity::Private => jar.private(&config.key).get(&config.name),
-    };
-
-    if cookie_result.is_none() && jar.get(&config.name).is_some() {
-        warn!(
-            "session cookie attached to the incoming request failed to pass cryptographic \
-            checks (signature verification/decryption)."
-        );
-    }
-
-    match SessionKey::decode(cookie_result?.value()) {
-        Ok(session_key) => Some(session_key),
-        Err(err) => {
-            warn!(
-                error = %err.display_chain(),
-                "invalid session key; ignoring"
-            );
-            None
-        }
-    }
-}
+// fn extract_session_key<B>(req: &Request<B>, config: &CookieConfiguration) -> Option<SessionKey> {
+//     let jar = CookieJar::from_headers(req.headers());
+//
+//     let cookie_result = match config.content_security {
+//         CookieContentSecurity::Signed => jar.signed(&config.key).get(&config.name),
+//         CookieContentSecurity::Private => jar.private(&config.key).get(&config.name),
+//     };
+//
+//     if cookie_result.is_none() && jar.get(&config.name).is_some() {
+//         warn!(
+//             "session cookie attached to the incoming request failed to pass cryptographic \
+//             checks (signature verification/decryption)."
+//         );
+//     }
+//
+//     match SessionKey::decode(cookie_result?.value()) {
+//         Ok(session_key) => Some(session_key),
+//         Err(err) => {
+//             warn!(
+//                 error = %err.display_chain(),
+//                 "invalid session key; ignoring"
+//             );
+//             None
+//         }
+//     }
+// }
 
 pin_project! {
     /// Response future for [`SessionManager`].
@@ -289,7 +264,7 @@ where
             cookie_controller,
         } = this.state
         {
-            todo!("sync changes in session with cookie jar, which will in turn cause the  `CookieManager` future to set the `Set-Cookie` header");
+            todo!("sync changes in session state to store and set the `Set-Cookie` header");
         }
 
         Poll::Ready(Ok(res))
