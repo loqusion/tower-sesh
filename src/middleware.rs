@@ -6,7 +6,7 @@ use std::{
     task::{ready, Context, Poll},
 };
 
-use cookie::{Cookie, CookieJar};
+use cookie::{Cookie, CookieJar, SameSite};
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
@@ -66,11 +66,54 @@ impl<Store: SessionStore> SessionManagerLayer<Store> {
     }
 }
 
+// TODO: Add customization for session expiry
+// TODO: Add customization for private/signed
 impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
-    /// Set the name of the cookie used to store a session id.
+    /// Set the [name][mdn] of the cookie used to store a session id.
+    ///
+    /// Default: `session_key`
+    ///
+    /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         self.cookie_name = name.into();
         self
+    }
+
+    /// Set the [`Domain`][mdn] attribute in the `Set-Cookie` response header.
+    ///
+    /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value
+    pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
+        todo!()
+    }
+
+    /// Set whether to add the [`HttpOnly`][mdn] attribute in the `Set-Cookie`
+    /// response header.
+    ///
+    /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly
+    pub fn http_only(mut self, enable: bool) -> Self {
+        todo!()
+    }
+
+    /// Set the [`Path`][mdn] attribute in the `Set-Cookie` response header.
+    ///
+    /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
+    pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
+        todo!()
+    }
+
+    /// Set the [`SameSite`][mdn] attribute in the `Set-Cookie` response header.
+    ///
+    /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+    pub fn same_site(mut self, same_site: SameSite) -> Self {
+        todo!()
+    }
+
+    /// Set whether to add the [`Secure`][mdn] attribute in the `Set-Cookie`
+    /// response header.
+    ///
+    /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure
+    pub fn secure(mut self, enable: bool) -> Self {
+        todo!()
     }
 }
 
