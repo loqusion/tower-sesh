@@ -14,7 +14,7 @@ use tower_sesh::{
 
 // Required to use the redis asynchronous interface
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
-compile_error!("to use tower-sesh-store-redis, either the `tokio-comp` or `async-std-comp` feature must be enabled");
+compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
 
 pub mod client;
 
