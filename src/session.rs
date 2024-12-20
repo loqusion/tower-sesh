@@ -2,11 +2,11 @@ use std::{any::Any, collections::HashMap, fmt, num::NonZeroU128, sync::Arc};
 
 use async_trait::async_trait;
 use base64::Engine;
+use cookie::Cookie;
 use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
 use time::OffsetDateTime;
-use tower_cookies::Cookie;
 
 pub struct Session(Arc<Mutex<SessionInner>>);
 

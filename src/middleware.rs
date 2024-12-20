@@ -6,11 +6,11 @@ use std::{
     task::{ready, Context, Poll},
 };
 
-use cookie::CookieJar;
+use cookie::{Cookie, CookieJar};
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
-use tower_cookies::{Cookie, Cookies};
+use tower_cookies::Cookies;
 
 use crate::{
     config::{CookieConfiguration, CookieContentSecurity},
