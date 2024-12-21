@@ -66,7 +66,7 @@ define_rejection! {
 // `NonZeroU128` is used so that `Option<SessionKey>` has the same size as
 // `SessionKey`
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
-pub struct SessionKey(pub(crate) NonZeroU128);
+pub struct SessionKey(NonZeroU128);
 
 impl SessionKey {
     const BASE64_ENGINE: base64::engine::general_purpose::GeneralPurpose =
