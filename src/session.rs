@@ -172,6 +172,12 @@ mod test {
     use quickcheck::{quickcheck, Arbitrary};
 
     #[test]
+    fn traits() {
+        fn assert_send<T: Send>() {}
+        assert_send::<Session>();
+    }
+
+    #[test]
     fn session_key_parse_error_zero() {
         const INPUT: &str = "AAAAAAAAAAAAAAAAAAAAAA";
         let result = SessionKey::decode(INPUT);
