@@ -10,7 +10,6 @@ use cookie::{Cookie, CookieJar, SameSite};
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
-use tower_cookies::Cookies;
 
 use crate::{
     config::{CookieController, PrivateCookieController, SignedCookieController},
@@ -241,7 +240,6 @@ pin_project! {
 enum State<C> {
     Session {
         session: Session,
-        cookies: Cookies,
         cookie_controller: C,
     },
     Fallback,
@@ -259,7 +257,6 @@ where
 
         if let State::Session {
             session,
-            cookies,
             cookie_controller,
         } = this.state
         {
