@@ -10,7 +10,7 @@ mod util;
 pub mod test;
 
 pub mod middleware;
-pub use middleware::SessionManagerLayer;
+pub use middleware::SessionLayer;
 pub mod session;
 pub use session::Session;
 pub mod store;

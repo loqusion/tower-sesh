@@ -19,8 +19,7 @@ use crate::{
     util::CookieJarExt,
 };
 
-/// The default cookie name used by [`SessionManagerLayer`] to store a session
-/// key.
+/// The default cookie name used by [`SessionLayer`] to store a session key.
 const DEFAULT_COOKIE_NAME: &str = "session_key";
 
 /// A layer that provides [`Session`] as a request extension.
@@ -29,14 +28,14 @@ const DEFAULT_COOKIE_NAME: &str = "session_key";
 ///
 /// TODO: Provide an example
 #[derive(Debug)]
-pub struct SessionManagerLayer<Store: SessionStore, C: CookieController = PrivateCookieController> {
+pub struct SessionLayer<Store: SessionStore, C: CookieController = PrivateCookieController> {
     session_store: Arc<Store>,
     cookie_name: Cow<'static, str>,
     cookie_controller: C,
 }
 
-impl<Store: SessionStore> SessionManagerLayer<Store> {
-    /// Create a new `SessionManagerLayer`.
+impl<Store: SessionStore> SessionLayer<Store> {
+    /// Create a new `SessionLayer`.
     ///
     /// TODO: More documentation
     pub fn new(session_store: Arc<Store>, key: cookie::Key) -> Self {
@@ -49,13 +48,13 @@ impl<Store: SessionStore> SessionManagerLayer<Store> {
 }
 
 // TODO: Add customization for session expiry
-impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
+impl<Store: SessionStore, C: CookieController> SessionLayer<Store, C> {
     /// Authenticate cookies.
     ///
     /// TODO: More documentation
-    pub fn signed(self) -> SessionManagerLayer<Store, SignedCookieController> {
+    pub fn signed(self) -> SessionLayer<Store, SignedCookieController> {
         let key = self.cookie_controller.into_key();
-        SessionManagerLayer {
+        SessionLayer {
             session_store: self.session_store,
             cookie_name: self.cookie_name,
             cookie_controller: SignedCookieController::new(key),
@@ -65,9 +64,9 @@ impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
     /// Encrypt cookies.
     ///
     /// TODO: More documentation
-    pub fn private(self) -> SessionManagerLayer<Store, PrivateCookieController> {
+    pub fn private(self) -> SessionLayer<Store, PrivateCookieController> {
         let key = self.cookie_controller.into_key();
-        SessionManagerLayer {
+        SessionLayer {
             session_store: self.session_store,
             cookie_name: self.cookie_name,
             cookie_controller: PrivateCookieController::new(key),
@@ -122,7 +121,7 @@ impl<Store: SessionStore, C: CookieController> SessionManagerLayer<Store, C> {
     }
 }
 
-impl<Store: SessionStore, C: CookieController> Clone for SessionManagerLayer<Store, C> {
+impl<Store: SessionStore, C: CookieController> Clone for SessionLayer<Store, C> {
     fn clone(&self) -> Self {
         Self {
             session_store: Arc::clone(&self.session_store),
@@ -132,7 +131,7 @@ impl<Store: SessionStore, C: CookieController> Clone for SessionManagerLayer<Sto
     }
 }
 
-impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionManagerLayer<Store, C> {
+impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionLayer<Store, C> {
     type Service = SessionManager<S, Store, C>;
 
     fn layer(&self, inner: S) -> Self::Service {
@@ -149,7 +148,7 @@ impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionManagerLay
 #[derive(Clone, Debug)]
 pub struct SessionManager<S, Store: SessionStore, C: CookieController> {
     inner: S,
-    layer: SessionManagerLayer<Store, C>,
+    layer: SessionLayer<Store, C>,
 }
 
 impl<S, Store: SessionStore, C: CookieController> SessionManager<S, Store, C> {
@@ -193,7 +192,7 @@ where
         //         future: self.inner.call(req),
         //     }
         // } else {
-        //     error!("tower_cookies::CookieManagerLayer must be added before SessionManagerLayer");
+        //     error!("tower_cookies::CookieManagerLayer must be added before SessionLayer");
         //
         //     ResponseFuture {
         //         state: State::Fallback,
