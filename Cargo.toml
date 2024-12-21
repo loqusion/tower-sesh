@@ -30,7 +30,7 @@ rust-version.workspace = true
 anyhow = "1.0.94"
 async-trait = "0.1.83"
 base64 = "0.22.1"
-cookie = { version = "0.18.1", features = ["signed", "private"] }
+cookie = { version = "0.18.1", features = ["signed", "private", "percent-encode"] }
 futures = "0.3.31"
 http = "1.2.0"
 parking_lot = "0.12.3"
@@ -39,7 +39,6 @@ rand = "0.8.5"
 thiserror = "2.0.7"
 time = "0.3.37"
 tower = "0.5.2"
-tower-cookies = "0.10.0"
 
 # optional dependencies
 axum = { version = "0.7.9", optional = true }
