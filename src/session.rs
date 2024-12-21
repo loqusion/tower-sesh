@@ -134,6 +134,8 @@ impl TryFrom<u128> for SessionKey {
     }
 }
 
+/// An error which can be returned when decoding a [`SessionKey`] from a
+/// base64 string.
 #[derive(Debug, thiserror::Error)]
 pub enum ParseSessionKeyError {
     #[error("failed to parse base64 string")]
