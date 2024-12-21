@@ -15,7 +15,7 @@ struct SessionInner {
 }
 
 impl Session {
-    /// Returns a [`Session`] by attempting to parse `cookie` as an [`Id`],
+    /// Returns a [`Session`] by attempting to parse `cookie` as a [`SessionKey`],
     /// falling back to an empty session if `cookie` is `None` or parsing failed.
     #[must_use]
     pub(crate) fn from_or_empty(cookie: Option<Cookie<'static>>) -> Self {
