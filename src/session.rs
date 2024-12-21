@@ -65,7 +65,7 @@ define_rejection! {
 /// A 128-bit session identifier.
 // `NonZeroU128` is used so that `Option<SessionKey>` has the same size as
 // `SessionKey`
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq)]
 pub struct SessionKey(NonZeroU128);
 
 impl SessionKey {
@@ -110,9 +110,11 @@ impl SessionKey {
     }
 }
 
-impl fmt::Display for SessionKey {
+impl fmt::Debug for SessionKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.encode())
+        f.debug_tuple(stringify!(SessionKey))
+            .field(&format_args!("[REDACTED]"))
+            .finish()
     }
 }
 
@@ -189,5 +191,14 @@ mod test {
             let decoded = SessionKey::decode(&encoded).unwrap();
             id == decoded
         }
+    }
+
+    #[test]
+    fn session_key_debug_redacts_contents() {
+        let s = SessionKey::generate();
+        assert_eq!(
+            format!("{:?}", s),
+            concat!(stringify!(SessionKey), "([REDACTED])")
+        );
     }
 }
