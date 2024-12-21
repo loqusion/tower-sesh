@@ -15,13 +15,13 @@ pub trait CookieController: Clone {
 }
 
 #[doc(hidden)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SignedCookieController {
     key: Key,
 }
 
 #[doc(hidden)]
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PrivateCookieController {
     key: Key,
 }
