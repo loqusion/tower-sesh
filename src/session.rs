@@ -69,7 +69,7 @@ define_rejection! {
 pub struct SessionKey(NonZeroU128);
 
 impl SessionKey {
-    const BASE64_ENGINE: base64::engine::general_purpose::GeneralPurpose =
+    const BASE64_ENGINE: base64::engine::GeneralPurpose =
         base64::engine::general_purpose::URL_SAFE_NO_PAD;
     pub const ENCODED_LEN: usize = 22;
     const DECODED_LEN: usize = 16;
