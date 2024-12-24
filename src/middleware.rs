@@ -12,7 +12,7 @@ use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 
 use crate::{
-    config::{CookieController, PrivateCookieController, SignedCookieController},
+    config::{CookieSecurity, PrivateCookie, SignedCookie},
     session::Session,
     store::SessionStore,
     util::CookieJarExt,
@@ -27,7 +27,7 @@ const DEFAULT_COOKIE_NAME: &str = "session_key";
 ///
 /// TODO: Provide an example
 #[derive(Debug)]
-pub struct SessionLayer<Store: SessionStore, C: CookieController = PrivateCookieController> {
+pub struct SessionLayer<Store: SessionStore, C: CookieSecurity = PrivateCookie> {
     session_store: Arc<Store>,
     cookie_name: Cow<'static, str>,
     cookie_controller: C,
@@ -41,34 +41,34 @@ impl<Store: SessionStore> SessionLayer<Store> {
         Self {
             session_store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
-            cookie_controller: PrivateCookieController::new(key),
+            cookie_controller: PrivateCookie::new(key),
         }
     }
 }
 
 // TODO: Add customization for session expiry
-impl<Store: SessionStore, C: CookieController> SessionLayer<Store, C> {
+impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     /// Authenticate cookies.
     ///
     /// TODO: More documentation
-    pub fn signed(self) -> SessionLayer<Store, SignedCookieController> {
+    pub fn signed(self) -> SessionLayer<Store, SignedCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
             session_store: self.session_store,
             cookie_name: self.cookie_name,
-            cookie_controller: SignedCookieController::new(key),
+            cookie_controller: SignedCookie::new(key),
         }
     }
 
     /// Encrypt cookies.
     ///
     /// TODO: More documentation
-    pub fn private(self) -> SessionLayer<Store, PrivateCookieController> {
+    pub fn private(self) -> SessionLayer<Store, PrivateCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
             session_store: self.session_store,
             cookie_name: self.cookie_name,
-            cookie_controller: PrivateCookieController::new(key),
+            cookie_controller: PrivateCookie::new(key),
         }
     }
 
@@ -120,7 +120,7 @@ impl<Store: SessionStore, C: CookieController> SessionLayer<Store, C> {
     }
 }
 
-impl<Store: SessionStore, C: CookieController> Clone for SessionLayer<Store, C> {
+impl<Store: SessionStore, C: CookieSecurity> Clone for SessionLayer<Store, C> {
     fn clone(&self) -> Self {
         Self {
             session_store: Arc::clone(&self.session_store),
@@ -130,7 +130,7 @@ impl<Store: SessionStore, C: CookieController> Clone for SessionLayer<Store, C> 
     }
 }
 
-impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionLayer<Store, C> {
+impl<S, Store: SessionStore, C: CookieSecurity> Layer<S> for SessionLayer<Store, C> {
     type Service = SessionManager<S, Store, C>;
 
     fn layer(&self, inner: S) -> Self::Service {
@@ -145,12 +145,12 @@ impl<S, Store: SessionStore, C: CookieController> Layer<S> for SessionLayer<Stor
 ///
 /// [`Session`]: crate::session::Session
 #[derive(Clone, Debug)]
-pub struct SessionManager<S, Store: SessionStore, C: CookieController> {
+pub struct SessionManager<S, Store: SessionStore, C: CookieSecurity> {
     inner: S,
     layer: SessionLayer<Store, C>,
 }
 
-impl<S, Store: SessionStore, C: CookieController> SessionManager<S, Store, C> {
+impl<S, Store: SessionStore, C: CookieSecurity> SessionManager<S, Store, C> {
     fn session_cookie<'c>(&self, jar: &'c CookieJar) -> Option<Cookie<'c>> {
         self.layer
             .cookie_controller
@@ -158,7 +158,7 @@ impl<S, Store: SessionStore, C: CookieController> SessionManager<S, Store, C> {
     }
 }
 
-impl<ReqBody, ResBody, S, Store: SessionStore, C: CookieController> Service<Request<ReqBody>>
+impl<ReqBody, ResBody, S, Store: SessionStore, C: CookieSecurity> Service<Request<ReqBody>>
     for SessionManager<S, Store, C>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
@@ -230,7 +230,7 @@ where
 
 pin_project! {
     /// Response future for [`SessionManager`].
-    pub struct ResponseFuture<F, C: CookieController> {
+    pub struct ResponseFuture<F, C: CookieSecurity> {
         state: State<C>,
         #[pin]
         future: F,
@@ -245,7 +245,7 @@ enum State<C> {
     Fallback,
 }
 
-impl<F, B, E, C: CookieController> Future for ResponseFuture<F, C>
+impl<F, B, E, C: CookieSecurity> Future for ResponseFuture<F, C>
 where
     F: Future<Output = Result<Response<B>, E>>,
 {

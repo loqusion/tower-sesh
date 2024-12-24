@@ -7,7 +7,7 @@ pub enum CookieContentSecurity {
 
 /// Trait used to control how cookies are stored and retrieved.
 #[doc(hidden)]
-pub trait CookieController: Clone {
+pub trait CookieSecurity: Clone {
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>>;
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>);
     fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>);
@@ -16,29 +16,29 @@ pub trait CookieController: Clone {
 
 #[doc(hidden)]
 #[derive(Clone, Debug)]
-pub struct SignedCookieController {
+pub struct SignedCookie {
     key: Key,
 }
 
 #[doc(hidden)]
 #[derive(Clone, Debug)]
-pub struct PrivateCookieController {
+pub struct PrivateCookie {
     key: Key,
 }
 
-impl SignedCookieController {
+impl SignedCookie {
     pub(crate) fn new(key: Key) -> Self {
         Self { key }
     }
 }
 
-impl PrivateCookieController {
+impl PrivateCookie {
     pub(crate) fn new(key: Key) -> Self {
         Self { key }
     }
 }
 
-impl CookieController for SignedCookieController {
+impl CookieSecurity for SignedCookie {
     #[inline]
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>> {
         jar.signed(&self.key).get(name)
@@ -60,7 +60,7 @@ impl CookieController for SignedCookieController {
     }
 }
 
-impl CookieController for PrivateCookieController {
+impl CookieSecurity for PrivateCookie {
     #[inline]
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>> {
         jar.private(&self.key).get(name)
