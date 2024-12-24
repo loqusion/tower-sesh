@@ -28,7 +28,7 @@ const DEFAULT_COOKIE_NAME: &str = "session_key";
 /// TODO: Provide an example
 #[derive(Debug)]
 pub struct SessionLayer<Store: SessionStore, C: CookieSecurity = PrivateCookie> {
-    session_store: Arc<Store>,
+    store: Arc<Store>,
     cookie_name: Cow<'static, str>,
     cookie_controller: C,
 }
@@ -37,9 +37,9 @@ impl<Store: SessionStore> SessionLayer<Store> {
     /// Create a new `SessionLayer`.
     ///
     /// TODO: More documentation
-    pub fn new(session_store: Arc<Store>, key: cookie::Key) -> Self {
+    pub fn new(store: Arc<Store>, key: cookie::Key) -> Self {
         Self {
-            session_store,
+            store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
             cookie_controller: PrivateCookie::new(key),
         }
@@ -55,7 +55,7 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     pub fn signed(self) -> SessionLayer<Store, SignedCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
-            session_store: self.session_store,
+            store: self.store,
             cookie_name: self.cookie_name,
             cookie_controller: SignedCookie::new(key),
         }
@@ -68,7 +68,7 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     pub fn private(self) -> SessionLayer<Store, PrivateCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
-            session_store: self.session_store,
+            store: self.store,
             cookie_name: self.cookie_name,
             cookie_controller: PrivateCookie::new(key),
         }
@@ -124,9 +124,9 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
 
 impl<Store: SessionStore> SessionLayer<Store, PlainCookie> {
     /// Create a new `SessionLayer` that doesn't sign or encrypt cookies.
-    pub fn plain(session_store: Arc<Store>) -> SessionLayer<Store, PlainCookie> {
+    pub fn plain(store: Arc<Store>) -> SessionLayer<Store, PlainCookie> {
         SessionLayer {
-            session_store,
+            store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
             cookie_controller: PlainCookie,
         }
@@ -136,7 +136,7 @@ impl<Store: SessionStore> SessionLayer<Store, PlainCookie> {
 impl<Store: SessionStore, C: CookieSecurity> Clone for SessionLayer<Store, C> {
     fn clone(&self) -> Self {
         Self {
-            session_store: Arc::clone(&self.session_store),
+            store: Arc::clone(&self.store),
             cookie_name: self.cookie_name.clone(),
             cookie_controller: self.cookie_controller.clone(),
         }
