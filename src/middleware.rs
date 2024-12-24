@@ -12,7 +12,7 @@ use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 
 use crate::{
-    config::{CookieSecurity, PrivateCookie, SignedCookie},
+    config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
     session::Session,
     store::SessionStore,
     util::CookieJarExt,
@@ -51,6 +51,7 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     /// Authenticate cookies.
     ///
     /// TODO: More documentation
+    #[track_caller]
     pub fn signed(self) -> SessionLayer<Store, SignedCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
@@ -63,6 +64,7 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     /// Encrypt cookies.
     ///
     /// TODO: More documentation
+    #[track_caller]
     pub fn private(self) -> SessionLayer<Store, PrivateCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
@@ -117,6 +119,17 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure
     pub fn secure(mut self, enable: bool) -> Self {
         todo!()
+    }
+}
+
+impl<Store: SessionStore> SessionLayer<Store, PlainCookie> {
+    /// Create a new `SessionLayer` that doesn't sign or encrypt cookies.
+    pub fn plain(session_store: Arc<Store>) -> SessionLayer<Store, PlainCookie> {
+        SessionLayer {
+            session_store,
+            cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
+            cookie_controller: PlainCookie,
+        }
     }
 }
 

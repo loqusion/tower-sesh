@@ -26,6 +26,11 @@ pub struct PrivateCookie {
     key: Key,
 }
 
+#[doc(hidden)]
+#[non_exhaustive]
+#[derive(Clone, Debug)]
+pub struct PlainCookie;
+
 impl SignedCookie {
     pub(crate) fn new(key: Key) -> Self {
         Self { key }
@@ -79,5 +84,28 @@ impl CookieSecurity for PrivateCookie {
     #[inline]
     fn into_key(self) -> Key {
         self.key
+    }
+}
+
+impl CookieSecurity for PlainCookie {
+    #[inline]
+    fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>> {
+        jar.get(name).cloned()
+    }
+
+    #[inline]
+    fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
+        jar.add(cookie)
+    }
+
+    #[inline]
+    fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
+        jar.remove(cookie)
+    }
+
+    #[inline]
+    #[track_caller]
+    fn into_key(self) -> Key {
+        unimplemented!("use `SessionLayer::new()` to sign or encrypt cookies")
     }
 }
