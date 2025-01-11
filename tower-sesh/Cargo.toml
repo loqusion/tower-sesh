@@ -1,0 +1,46 @@
+[package]
+name = "tower-sesh"
+description = "Tower middleware for session authentication via cookies"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow = "1.0.94"
+async-trait = "0.1.83"
+base64 = "0.22.1"
+cookie = { version = "0.18.1", features = [
+    "signed",
+    "private",
+    "percent-encode",
+] }
+futures = "0.3.31"
+http = "1.2.0"
+parking_lot = "0.12.3"
+pin-project-lite = "0.2.15"
+rand = "0.8.5"
+thiserror = "2.0.7"
+time = "0.3.37"
+tower = "0.5.2"
+
+# optional dependencies
+axum = { version = "0.7.9", optional = true }
+axum-test = { version = "16.4.1", optional = true }
+tracing = { version = "0.1.41", optional = true }
+
+[dev-dependencies]
+quickcheck = "1.0.3"
+tokio = { version = "1.42.0", features = ["full"] }
+
+[features]
+default = ["axum", "tracing"]
+
+_test = ["axum", "axum-test", "tracing"]
+
+[lints]
+workspace = true
