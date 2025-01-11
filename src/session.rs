@@ -2,37 +2,62 @@ use std::{fmt, num::NonZeroU128, sync::Arc};
 
 use async_trait::async_trait;
 use base64::Engine;
-use cookie::Cookie;
 use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
+
+use crate::record::Record;
 
 pub struct Session(Arc<Mutex<SessionInner>>);
 
 struct SessionInner {
     session_id: Option<SessionKey>,
+    record: Option<Record>,
+    status: SessionStatus,
+}
+
+enum SessionStatus {
+    Unchanged,
+    Renewed,
+    Changed,
+    Purged,
 }
 
 impl Session {
-    /// Returns a [`Session`] by attempting to parse `cookie` as a [`SessionKey`],
-    /// falling back to an empty session if `cookie` is `None` or parsing failed.
-    #[must_use]
-    pub(crate) fn from_or_empty(cookie: Option<Cookie<'static>>) -> Self {
-        let session_id = cookie
-            .as_ref()
-            .and_then(|c| SessionKey::decode(c.value()).ok());
-        let inner = SessionInner { session_id };
-
-        Session(Arc::new(Mutex::new(inner)))
-    }
-
     pub(crate) fn extract(extensions: &mut Extensions) -> Option<Self> {
         extensions
             .get::<Arc<Mutex<SessionInner>>>()
             .cloned()
             .map(Session)
     }
+
+    pub fn get<V>(&self, key: &str) -> Result<Option<&V>, GetError> {
+        let mut data = self.0.lock();
+        todo!()
+    }
+
+    pub fn insert<V>(&self, key: &str, value: V) -> Result<Option<V>, InsertError> {
+        let mut data = self.0.lock();
+        todo!()
+    }
+
+    pub fn remove<V>(&self, key: &str) -> Result<Option<V>, RemoveError> {
+        let mut data = self.0.lock();
+        todo!()
+    }
+
+    pub fn clear(&self) {
+        let mut data = self.0.lock();
+        todo!()
+    }
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum GetError {}
+#[derive(Debug, thiserror::Error)]
+pub enum InsertError {}
+#[derive(Debug, thiserror::Error)]
+pub enum RemoveError {}
 
 impl Clone for Session {
     fn clone(&self) -> Self {
