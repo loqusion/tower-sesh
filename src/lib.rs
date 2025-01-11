@@ -11,6 +11,7 @@ pub mod test;
 
 pub mod middleware;
 pub use middleware::SessionLayer;
+pub mod record;
 pub mod session;
 pub use session::Session;
 pub mod store;

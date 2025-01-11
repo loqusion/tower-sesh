@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap, fmt, num::NonZeroU128, sync::Arc};
+use std::{fmt, num::NonZeroU128, sync::Arc};
 
 use async_trait::async_trait;
 use base64::Engine;
@@ -6,7 +6,6 @@ use cookie::Cookie;
 use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
-use time::OffsetDateTime;
 
 pub struct Session(Arc<Mutex<SessionInner>>);
 
@@ -142,28 +141,6 @@ pub enum ParseSessionKeyError {
     Base64(#[from] base64::DecodeSliceError),
     #[error("session id must be non-zero")]
     Zero,
-}
-
-type AnyMap = HashMap<String, Box<dyn AnyClone + Send + Sync>>;
-
-#[derive(Clone)]
-pub struct Record {
-    data: AnyMap,
-    expiry: OffsetDateTime,
-}
-
-impl Record {
-    pub fn unix_timestamp(&self) -> i64 {
-        self.expiry.unix_timestamp()
-    }
-}
-
-trait AnyClone: Any {}
-
-impl Clone for Box<dyn AnyClone + Send + Sync> {
-    fn clone(&self) -> Self {
-        todo!()
-    }
 }
 
 #[cfg(test)]

@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 
-use crate::session::{Record, SessionKey};
+use crate::{record::Record, session::SessionKey};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {}
