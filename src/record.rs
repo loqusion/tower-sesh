@@ -16,10 +16,36 @@ impl Record {
     }
 }
 
-trait AnyClone: Any {}
+trait AnyClone: Any {
+    fn clone_box(&self) -> Box<dyn AnyClone + Send + Sync>;
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn into_any(self: Box<Self>) -> Box<dyn Any>;
+}
+
+impl<T> AnyClone for T
+where
+    T: Any + Clone + Send + Sync,
+{
+    fn clone_box(&self) -> Box<dyn AnyClone + Send + Sync> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
 
 impl Clone for Box<dyn AnyClone + Send + Sync> {
     fn clone(&self) -> Self {
-        todo!()
+        (**self).clone_box()
     }
 }
