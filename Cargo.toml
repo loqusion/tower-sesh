@@ -1,11 +1,5 @@
 [workspace]
-members = [
-    "tower-sesh",
-    "tower-sesh-*",
-
-    # Internal
-    "benches",
-]
+members = ["tower-sesh", "tower-sesh-*"]
 resolver = "2"
 
 [workspace.package]

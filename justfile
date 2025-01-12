@@ -9,7 +9,3 @@ test:
     trap finish EXIT
 
     REDIS_URL="redis://localhost:6379" cargo test --workspace
-
-bench:
-    cd benches
-    cargo bench
