@@ -9,6 +9,10 @@ pub enum Error {}
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
+// TODO: MUST mention that the data format used by a session store must be
+// self-describing, i.e. it implements `Deserializer::deserialize_any`. (This
+// is because `Value`'s `Deserialize::deserialize` delegates to
+// `Deserializer::deserialize_any`.)
 #[async_trait]
 pub trait SessionStore: 'static + Send + Sync {
     /// Create a new session with the provided `session_state`.
