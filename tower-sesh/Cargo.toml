@@ -33,6 +33,8 @@ tower = "0.5.2"
 axum = { version = "0.7.9", optional = true }
 axum-test = { version = "16.4.1", optional = true }
 tracing = { version = "0.1.41", optional = true }
+ryu = "1.0.18"
+itoa = "1.0.14"
 
 [dev-dependencies]
 quickcheck = "1.0.3"
