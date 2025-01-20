@@ -375,6 +375,18 @@ macro_rules! itoa_serializer {
     };
 }
 
+macro_rules! ryu_serializer {
+    ($item:ty => $method:ident) => {
+        fn $method(self, v: $item) -> Result<Self::Ok, Self::Error> {
+            if v.is_finite() {
+                Ok(ryu::Buffer::new().format_finite(v).to_owned())
+            } else {
+                Err(Error::from(ErrorImpl::FloatKeyMustBeFinite))
+            }
+        }
+    };
+}
+
 struct MapKeySerializer;
 
 impl serde::Serializer for MapKeySerializer {
@@ -425,22 +437,8 @@ impl serde::Serializer for MapKeySerializer {
     itoa_serializer!(u32 => serialize_u32);
     itoa_serializer!(u64 => serialize_u64);
     itoa_serializer!(u128 => serialize_u128);
-
-    fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
-        if v.is_finite() {
-            Ok(v.to_string())
-        } else {
-            Err(Error::from(ErrorImpl::FloatKeyMustBeFinite))
-        }
-    }
-
-    fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
-        if v.is_finite() {
-            Ok(v.to_string())
-        } else {
-            Err(Error::from(ErrorImpl::FloatKeyMustBeFinite))
-        }
-    }
+    ryu_serializer!(f32 => serialize_f32);
+    ryu_serializer!(f64 => serialize_f64);
 
     #[inline]
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
