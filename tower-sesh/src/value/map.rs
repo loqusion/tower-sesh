@@ -23,7 +23,18 @@ pub struct Map<K, V> {
 type MapImpl<K, V> = BTreeMap<K, V>;
 
 impl Map<String, Value> {
-    /// Makes a new empty `Map`.
+    /// Makes a new, empty `Map`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    ///
+    /// // entries can now be inserted into the empty map
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// ```
     #[inline]
     #[must_use]
     pub fn new() -> Self {
@@ -32,7 +43,18 @@ impl Map<String, Value> {
         }
     }
 
-    /// Clear the map, removing all values.
+    /// Clears the map, removing all elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// a.insert("sesh".to_owned(), "a".into());
+    /// a.clear();
+    /// assert!(a.is_empty());
+    /// ```
     #[inline]
     pub fn clear(&mut self) {
         self.map.clear()
@@ -42,6 +64,17 @@ impl Map<String, Value> {
     ///
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// assert_eq!(map.get("sesh").and_then(|v| v.as_str()), Some("a"));
+    /// assert_eq!(map.get("notexist"), None);
+    /// ```
     #[inline]
     pub fn get<Q>(&self, key: &Q) -> Option<&Value>
     where
@@ -55,6 +88,30 @@ impl Map<String, Value> {
     ///
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    /// # use std::collections::BTreeMap;
+    ///
+    /// # fn test() {
+    /// let mut map = Map::new();
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// # assert_eq!(
+    /// #     map.get_key_value("sesh")
+    /// #         .and_then(|(k, v)| Some(k.as_str()).zip(v.as_str())),
+    /// #     Some(("sesh", "a"))
+    /// # );
+    /// # assert_eq!(map.get_key_value("notexist"), None);
+    /// # }
+    /// # test();
+    /// #
+    /// # let mut map = BTreeMap::new();
+    /// # map.insert("sesh", "a");
+    /// assert_eq!(map.get_key_value("sesh"), Some((&"sesh", &"a")));
+    /// assert_eq!(map.get_key_value("notexist"), None);
+    /// ```
     #[inline]
     pub fn get_key_value<Q>(&self, key: &Q) -> Option<(&String, &Value)>
     where
@@ -68,6 +125,17 @@ impl Map<String, Value> {
     ///
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// assert_eq!(map.contains_key("sesh"), true);
+    /// assert_eq!(map.contains_key("notexist"), false);
+    /// ```
     #[inline]
     pub fn contains_key<Q>(&self, key: &Q) -> bool
     where
@@ -81,6 +149,19 @@ impl Map<String, Value> {
     ///
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// if let Some(x) = map.get_mut("sesh") {
+    ///     *x = "b".into();
+    /// }
+    /// assert_eq!(map["sesh"], "b");
+    /// ```
     #[inline]
     pub fn get_mut<Q>(&mut self, key: &Q) -> Option<&mut Value>
     where
@@ -96,6 +177,21 @@ impl Map<String, Value> {
     ///
     /// If the map did have this key present, the value is updated, and the old
     /// value is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    /// assert_eq!(map.insert("sesh".to_owned(), "a".into()), None);
+    /// assert_eq!(map.is_empty(), false);
+    ///
+    /// map.insert("sesh".to_owned(), "b".into());
+    /// let prev = map.insert("sesh".to_owned(), "c".into());
+    /// assert_eq!(prev.as_ref().and_then(|v| v.as_str()), Some("b"));
+    /// assert_eq!(map["sesh"], "c");
+    /// ```
     #[inline]
     pub fn insert(&mut self, key: String, value: Value) -> Option<Value> {
         self.map.insert(key, value)
@@ -106,6 +202,17 @@ impl Map<String, Value> {
     ///
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// assert_eq!(map.remove("sesh").as_ref().and_then(|v| v.as_str()), Some("a"));
+    /// assert_eq!(map.remove("sesh"), None);
+    /// ```
     #[inline]
     pub fn remove<Q>(&mut self, key: &Q) -> Option<Value>
     where
@@ -120,6 +227,31 @@ impl Map<String, Value> {
     ///
     /// The key may be any borrowed form of the map's key type, but the ordering
     /// on the borrowed form *must* match the ordering on the key type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    /// # use std::collections::BTreeMap;
+    ///
+    /// # fn test() {
+    /// let mut map = Map::new();
+    /// map.insert("sesh".to_owned(), "a".into());
+    /// # assert_eq!(
+    /// #     map
+    /// #         .remove_entry("sesh")
+    /// #         .as_ref()
+    /// #         .and_then(|(k, v)| Some(k.as_str()).zip(v.as_str())),
+    /// #     Some(("sesh", "a"))
+    /// # );
+    /// # assert_eq!(map.remove_entry("sesh"), None);
+    /// # }
+    /// # test();
+    /// # let mut map = BTreeMap::new();
+    /// # map.insert("sesh", "a");
+    /// assert_eq!(map.remove_entry("sesh"), Some(("sesh", "a")));
+    /// assert_eq!(map.remove_entry("sesh"), None);
+    /// ```
     #[inline]
     pub fn remove_entry<Q>(&mut self, key: &Q) -> Option<(String, Value)>
     where
@@ -133,6 +265,25 @@ impl Map<String, Value> {
     ///
     /// In other words, remove all pairs `(k, v)` for which `f(&k, &mut v)`
     /// returns `false`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::{value::Map, Value};
+    ///
+    /// let mut map = Map::from_iter([
+    ///     ("rust".into(), "a".into()),
+    ///     ("sesh".into(), "b".into()),
+    ///     ("tower".into(), "c".into()),
+    /// ]);
+    /// // Keep only the elements with keys of length 4.
+    /// map.retain(|k, _| k.len() == 4);
+    /// let elements = map.into_iter().collect::<Vec<(String, Value)>>();
+    /// assert_eq!(
+    ///     elements,
+    ///     vec![("rust".into(), "a".into()), ("sesh".into(), "b".into())]
+    /// );
+    /// ```
     #[inline]
     pub fn retain<F>(&mut self, f: F)
     where
@@ -142,6 +293,37 @@ impl Map<String, Value> {
     }
 
     /// Moves all elements from other into self, leaving other empty.
+    ///
+    /// If a key from `other` is already present in `self`, the respective
+    /// value from `self` will be overwritten with the respective value from
+    /// `other`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// a.insert("one".to_owned(), "a".into());
+    /// a.insert("two".to_owned(), "b".into());
+    /// a.insert("three".to_owned(), "c".into()); // Note: Key ("three") also present in b.
+    ///
+    /// let mut b = Map::new();
+    /// b.insert("three".to_owned(), "d".into()); // Note: Key ("three") also present in a.
+    /// b.insert("four".to_owned(), "e".into());
+    /// b.insert("five".to_owned(), "f".into());
+    ///
+    /// a.append(&mut b);
+    ///
+    /// assert_eq!(a.len(), 5);
+    /// assert_eq!(b.len(), 0);
+    ///
+    /// assert_eq!(a["one"], "a");
+    /// assert_eq!(a["two"], "b");
+    /// assert_eq!(a["three"], "d"); // Note: "c" has been overwritten.
+    /// assert_eq!(a["four"], "e");
+    /// assert_eq!(a["five"], "f");
+    /// ```
     #[inline]
     pub fn append(&mut self, other: &mut Self) {
         self.map.append(&mut other.map)
@@ -149,6 +331,25 @@ impl Map<String, Value> {
 
     /// Gets the given key's corresponding entry in the map for in-place
     /// manipulation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut count = Map::new();
+    ///
+    /// // count the number of occurrences of letters in the vec
+    /// for x in ["a", "b", "a", "c", "a", "b"] {
+    ///     count.entry(x)
+    ///         .and_modify(|curr| *curr = (curr.as_u64().unwrap_or(0) + 1).into())
+    ///         .or_insert_with(|| 1.into());
+    /// }
+    ///
+    /// assert_eq!(count["a"], 3);
+    /// assert_eq!(count["b"], 2);
+    /// assert_eq!(count["c"], 1);
+    /// ```
     pub fn entry<S>(&mut self, key: S) -> Entry
     where
         S: Into<String>,
@@ -162,6 +363,17 @@ impl Map<String, Value> {
     }
 
     /// Returns the number of elements in the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// assert_eq!(a.len(), 0);
+    /// a.insert("sesh".to_owned(), "a".into());
+    /// assert_eq!(a.len(), 1);
+    /// ```
     #[inline]
     #[must_use]
     pub fn len(&self) -> usize {
@@ -169,6 +381,17 @@ impl Map<String, Value> {
     }
 
     /// Returns `true` if the map contains no elements.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// assert!(a.is_empty());
+    /// a.insert("sesh".to_owned(), "a".into());
+    /// assert!(!a.is_empty());
+    /// ```
     #[inline]
     #[must_use]
     pub fn is_empty(&self) -> bool {
@@ -176,6 +399,24 @@ impl Map<String, Value> {
     }
 
     /// Gets an iterator over the entries of the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::new();
+    /// map.insert("1".to_owned(), "a".into());
+    /// map.insert("2".to_owned(), "b".into());
+    /// map.insert("3".to_owned(), "c".into());
+    ///
+    /// for (key, value) in map.iter() {
+    ///     println!("{key}: {value:?}");
+    /// }
+    ///
+    /// let (first_key, first_value) = map.iter().next().unwrap();
+    /// assert_eq!((first_key.as_str(), first_value.as_str().unwrap()), ("1", "a"));
+    /// ```
     #[inline]
     pub fn iter(&self) -> Iter<'_> {
         Iter {
@@ -184,6 +425,29 @@ impl Map<String, Value> {
     }
 
     /// Gets a mutable iterator over the entries of the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut map = Map::from_iter([
+    ///     ("a".to_owned(), 1.into()),
+    ///     ("b".to_owned(), 2.into()),
+    ///     ("c".to_owned(), 3.into()),
+    /// ]);
+    ///
+    /// // add 10 to the value if the key isn't "a"
+    /// for (key, value) in map.iter_mut() {
+    ///     if key != "a" {
+    ///         *value = (value.as_u64().unwrap_or(0) + 10).into();
+    ///     }
+    /// }
+    ///
+    /// assert_eq!(map["a"], 1);
+    /// assert_eq!(map["b"], 12);
+    /// assert_eq!(map["c"], 13);
+    /// ```
     #[inline]
     pub fn iter_mut(&mut self) -> IterMut<'_> {
         IterMut {
@@ -192,6 +456,19 @@ impl Map<String, Value> {
     }
 
     /// Gets an iterator over the keys of the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// a.insert("rust".to_owned(), "a".into());
+    /// a.insert("sesh".to_owned(), "b".into());
+    ///
+    /// let keys: Vec<_> = a.keys().cloned().collect();
+    /// assert_eq!(keys, ["rust", "sesh"]);
+    /// ```
     #[inline]
     pub fn keys(&self) -> Keys<'_> {
         Keys {
@@ -200,6 +477,19 @@ impl Map<String, Value> {
     }
 
     /// Gets an iterator over the values of the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// a.insert("rust".to_owned(), "hello".into());
+    /// a.insert("sesh".to_owned(), "goodbye".into());
+    ///
+    /// let values: Vec<_> = a.values().cloned().collect();
+    /// assert_eq!(values, ["hello", "goodbye"]);
+    /// ```
     #[inline]
     pub fn values(&self) -> Values<'_> {
         Values {
@@ -208,6 +498,26 @@ impl Map<String, Value> {
     }
 
     /// Gets a mutable iterator over the values of the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::{value::Map, Value};
+    ///
+    /// let mut a = Map::new();
+    /// a.insert("rust".to_owned(), "hello".into());
+    /// a.insert("sesh".to_owned(), "goodbye".into());
+    ///
+    /// for value in a.values_mut() {
+    ///     match value {
+    ///         Value::String(s) => s.push_str("!"),
+    ///         _ => unimplemented!(),
+    ///     }
+    /// }
+    ///
+    /// let values: Vec<_> = a.values().cloned().collect();
+    /// assert_eq!(values, ["hello!", "goodbye!"]);
+    /// ```
     #[inline]
     pub fn values_mut(&mut self) -> ValuesMut<'_> {
         ValuesMut {
@@ -217,6 +527,19 @@ impl Map<String, Value> {
 
     /// Creates a consuming iterator visiting all the values of the map.
     /// The map cannot be used after calling this.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::value::Map;
+    ///
+    /// let mut a = Map::new();
+    /// a.insert("rust".to_owned(), "hello".into());
+    /// a.insert("sesh".to_owned(), "goodbye".into());
+    ///
+    /// let values: Vec<_> = a.into_values().collect();
+    /// assert_eq!(values, ["hello", "goodbye"]);
+    /// ```
     #[inline]
     pub fn into_values(self) -> IntoValues {
         IntoValues {
@@ -226,6 +549,7 @@ impl Map<String, Value> {
 }
 
 impl Default for Map<String, Value> {
+    /// Creates an empty `Map`.
     #[inline]
     fn default() -> Self {
         Map::new()
@@ -397,12 +721,14 @@ pub enum Entry<'a> {
     Occupied(OccupiedEntry<'a>),
 }
 
-/// A view into a vacant entry in a `Map`. It is part of the [`Entry`] enum.
+/// A view into a vacant entry in a `Map`.
+/// It is part of the [`Entry`] enum.
 pub struct VacantEntry<'a> {
     vacant: VacantEntryImpl<'a>,
 }
 
-/// A view into an occupied entry in a `Map`. It is part of the [`Entry`] enum.
+/// A view into an occupied entry in a `Map`.
+/// It is part of the [`Entry`] enum.
 pub struct OccupiedEntry<'a> {
     occupied: OccupiedEntryImpl<'a>,
 }
@@ -741,6 +1067,11 @@ impl<'a> IntoIterator for &'a Map<String, Value> {
 }
 
 /// An iterator over the entries of a `Map`.
+///
+/// This `struct` is created by the [`iter`] method on [`Map`]. See its
+/// documentation for more.
+///
+/// [`iter`]: Map::iter
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a> {
     iter: IterImpl<'a>,
@@ -751,6 +1082,11 @@ type IterImpl<'a> = btree_map::Iter<'a, String, Value>;
 delegate_iterator!((Iter<'a>) => (&'a String, &'a Value));
 
 /// A mutable iterator over the entries of a `Map`.
+///
+/// This `struct` is created by the [`iter_mut`] method on [`Map`]. See its
+/// documentation for more.
+///
+/// [`iter_mut`]: Map::iter_mut
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct IterMut<'a> {
     iter: IterMutImpl<'a>,
@@ -774,6 +1110,11 @@ impl IntoIterator for Map<String, Value> {
 }
 
 /// An owning iterator over the entries of a `Map`.
+///
+/// This `struct` is created by the [`into_iter`] method on [`Map`]
+/// (provided by the [`IntoIterator`] trait). See its documentation for more.
+///
+/// [`into_iter`]: IntoIterator::into_iter
 pub struct IntoIter {
     iter: IntoIterImpl,
 }
@@ -785,6 +1126,11 @@ delegate_iterator!((IntoIter) => (String, Value));
 ////////////////////////////////////////////////////////////////////////////////
 
 /// An iterator over the keys of a `Map`.
+///
+/// This `struct` is created by the [`keys`] method on [`Map`]. See its
+/// documentation for more.
+///
+/// [`keys`]: Map::keys
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Keys<'a> {
     iter: KeysImpl<'a>,
@@ -797,6 +1143,11 @@ delegate_iterator!((Keys<'a>) => &'a String);
 ////////////////////////////////////////////////////////////////////////////////
 
 /// An iterator over the values of a `Map`.
+///
+/// This `struct` is created by the [`values`] method on [`Map`]. See its
+/// documentation for more.
+///
+/// [`values`]: Map::values
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Values<'a> {
     iter: ValuesImpl<'a>,
@@ -809,6 +1160,11 @@ delegate_iterator!((Values<'a>) => &'a Value);
 //////////////////////////////////////////////////////////////////////////////
 
 /// A mutable iterator over the values of a `Map`.
+///
+/// This `struct` is created by the [`values_mut`] method on [`Map`]. See its
+/// documentation for more.
+///
+/// [`values_mut`]: Map::values_mut
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct ValuesMut<'a> {
     iter: ValuesMutImpl<'a>,
@@ -821,6 +1177,11 @@ delegate_iterator!((ValuesMut<'a>) => &'a mut Value);
 ////////////////////////////////////////////////////////////////////////////////
 
 /// An owning iterator over the values of a `Map`.
+///
+/// This `struct` is created by the [`into_values`] method on [`Map`]. See its
+/// documentation for more.
+///
+/// [`into_values`]: Map::into_values
 #[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct IntoValues {
     iter: IntoValuesImpl,
