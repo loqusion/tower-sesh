@@ -25,6 +25,7 @@ type MapImpl<K, V> = BTreeMap<K, V>;
 impl Map<String, Value> {
     /// Makes a new empty `Map`.
     #[inline]
+    #[must_use]
     pub fn new() -> Self {
         Map {
             map: MapImpl::new(),
@@ -162,12 +163,14 @@ impl Map<String, Value> {
 
     /// Returns the number of elements in the map.
     #[inline]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.map.len()
     }
 
     /// Returns `true` if the map contains no elements.
     #[inline]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
     }
@@ -214,6 +217,7 @@ impl Map<String, Value> {
 
     /// Creates a consuming iterator visiting all the values of the map.
     /// The map cannot be used after calling this.
+    #[inline]
     pub fn into_values(self) -> IntoValues {
         IntoValues {
             iter: self.map.into_values(),
@@ -737,6 +741,7 @@ impl<'a> IntoIterator for &'a Map<String, Value> {
 }
 
 /// An iterator over the entries of a `Map`.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Iter<'a> {
     iter: IterImpl<'a>,
 }
@@ -746,6 +751,7 @@ type IterImpl<'a> = btree_map::Iter<'a, String, Value>;
 delegate_iterator!((Iter<'a>) => (&'a String, &'a Value));
 
 /// A mutable iterator over the entries of a `Map`.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct IterMut<'a> {
     iter: IterMutImpl<'a>,
 }
@@ -779,6 +785,7 @@ delegate_iterator!((IntoIter) => (String, Value));
 ////////////////////////////////////////////////////////////////////////////////
 
 /// An iterator over the keys of a `Map`.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Keys<'a> {
     iter: KeysImpl<'a>,
 }
@@ -790,6 +797,7 @@ delegate_iterator!((Keys<'a>) => &'a String);
 ////////////////////////////////////////////////////////////////////////////////
 
 /// An iterator over the values of a `Map`.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct Values<'a> {
     iter: ValuesImpl<'a>,
 }
@@ -801,6 +809,7 @@ delegate_iterator!((Values<'a>) => &'a Value);
 //////////////////////////////////////////////////////////////////////////////
 
 /// A mutable iterator over the values of a `Map`.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct ValuesMut<'a> {
     iter: ValuesMutImpl<'a>,
 }
@@ -812,6 +821,7 @@ delegate_iterator!((ValuesMut<'a>) => &'a mut Value);
 ////////////////////////////////////////////////////////////////////////////////
 
 /// An owning iterator over the values of a `Map`.
+#[must_use = "iterators are lazy and do nothing unless consumed"]
 pub struct IntoValues {
     iter: IntoValuesImpl,
 }
