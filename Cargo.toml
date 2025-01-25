@@ -12,4 +12,12 @@ keywords = []
 edition = "2021"
 rust-version = "1.82.0"
 
+[workspace.dependencies]
+serde = { version = "1.0.217", default-features = false, features = ["std"] }
+
 [workspace.lints]
+
+
+[profile.dev.package]
+insta.opt-level = 3
+similar.opt-level = 3
