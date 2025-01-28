@@ -1066,6 +1066,18 @@ impl<'a> IntoIterator for &'a Map<String, Value> {
     }
 }
 
+impl<'a> IntoIterator for &'a mut Map<String, Value> {
+    type Item = <Self::IntoIter as Iterator>::Item;
+    type IntoIter = IterMut<'a>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        IterMut {
+            iter: self.map.iter_mut(),
+        }
+    }
+}
+
 /// An iterator over the entries of a `Map`.
 ///
 /// This `struct` is created by the [`iter`] method on [`Map`]. See its
