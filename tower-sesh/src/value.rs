@@ -664,10 +664,8 @@ impl Value {
     /// If the `Value` is a `Null`, returns `()`. Returns `None` otherwise.
     ///
     /// ```
-    /// # use serde_json::json;
     /// # use tower_sesh::Value;
     /// #
-    /// let v = json!({ "a": null, "b": false });
     /// let v = Value::from_iter([
     ///     ("a", Value::Null),
     ///     ("b", Value::from(false)),
@@ -691,8 +689,8 @@ impl Value {
     /// # use tower_sesh::Value;
     /// #
     /// let mut v = Value::from_iter([("x", "y")]);
-    /// assert_eq!(v["x"].take(), Value::from("y"));
-    /// assert_eq!(v, Value::from_iter([("x", Value::Null)]));
+    /// assert_eq!(v["x"].take(), "y");
+    /// assert_eq!(v.get("x"), Some(&Value::Null));
     /// ```
     pub fn take(&mut self) -> Value {
         Some(3).take();
