@@ -710,7 +710,7 @@ impl Value {
     /// let v = Value::from_bytes([82, 117, 115, 116]);
     /// let v = Value::from_bytes(vec![115, 101, 115, 104]);
     /// ```
-    pub fn from_bytes<B>(bytes: B) -> Self
+    pub fn from_bytes<B>(bytes: B) -> Value
     where
         B: Into<Vec<u8>>,
     {
