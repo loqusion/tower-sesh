@@ -721,16 +721,40 @@ pub enum Entry<'a> {
     Occupied(OccupiedEntry<'a>),
 }
 
+impl fmt::Debug for Entry<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Entry::Vacant(v) => f.debug_tuple("Entry").field(v).finish(),
+            Entry::Occupied(o) => f.debug_tuple("Entry").field(o).finish(),
+        }
+    }
+}
+
 /// A view into a vacant entry in a `Map`.
 /// It is part of the [`Entry`] enum.
 pub struct VacantEntry<'a> {
     vacant: VacantEntryImpl<'a>,
 }
 
+impl fmt::Debug for VacantEntry<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("VacantEntry").field(self.key()).finish()
+    }
+}
+
 /// A view into an occupied entry in a `Map`.
 /// It is part of the [`Entry`] enum.
 pub struct OccupiedEntry<'a> {
     occupied: OccupiedEntryImpl<'a>,
+}
+
+impl fmt::Debug for OccupiedEntry<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OccupiedEntry")
+            .field("key", self.key())
+            .field("value", self.get())
+            .finish()
+    }
 }
 
 type VacantEntryImpl<'a> = btree_map::VacantEntry<'a, String, Value>;
@@ -1052,6 +1076,16 @@ macro_rules! delegate_iterator {
     };
 }
 
+macro_rules! delegate_debug {
+    ($name:ident $($generics:tt)*) => {
+        impl $($generics)* std::fmt::Debug for $name $($generics)* {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                std::fmt::Debug::fmt(&self.iter, f)
+            }
+        }
+    };
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 impl<'a> IntoIterator for &'a Map<String, Value> {
@@ -1085,6 +1119,7 @@ impl<'a> IntoIterator for &'a mut Map<String, Value> {
 ///
 /// [`iter`]: Map::iter
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Clone, Default)]
 pub struct Iter<'a> {
     iter: IterImpl<'a>,
 }
@@ -1092,6 +1127,7 @@ pub struct Iter<'a> {
 type IterImpl<'a> = btree_map::Iter<'a, String, Value>;
 
 delegate_iterator!((Iter<'a>) => (&'a String, &'a Value));
+delegate_debug!(Iter<'a>);
 
 /// A mutable iterator over the entries of a `Map`.
 ///
@@ -1100,6 +1136,7 @@ delegate_iterator!((Iter<'a>) => (&'a String, &'a Value));
 ///
 /// [`iter_mut`]: Map::iter_mut
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Default)]
 pub struct IterMut<'a> {
     iter: IterMutImpl<'a>,
 }
@@ -1107,6 +1144,7 @@ pub struct IterMut<'a> {
 type IterMutImpl<'a> = btree_map::IterMut<'a, String, Value>;
 
 delegate_iterator!((IterMut<'a>) => (&'a String, &'a mut Value));
+delegate_debug!(IterMut<'a>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1127,6 +1165,7 @@ impl IntoIterator for Map<String, Value> {
 /// (provided by the [`IntoIterator`] trait). See its documentation for more.
 ///
 /// [`into_iter`]: IntoIterator::into_iter
+#[derive(Default)]
 pub struct IntoIter {
     iter: IntoIterImpl,
 }
@@ -1134,6 +1173,7 @@ pub struct IntoIter {
 type IntoIterImpl = btree_map::IntoIter<String, Value>;
 
 delegate_iterator!((IntoIter) => (String, Value));
+delegate_debug!(IntoIter);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1144,6 +1184,7 @@ delegate_iterator!((IntoIter) => (String, Value));
 ///
 /// [`keys`]: Map::keys
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Clone, Default)]
 pub struct Keys<'a> {
     iter: KeysImpl<'a>,
 }
@@ -1151,6 +1192,7 @@ pub struct Keys<'a> {
 type KeysImpl<'a> = btree_map::Keys<'a, String, Value>;
 
 delegate_iterator!((Keys<'a>) => &'a String);
+delegate_debug!(Keys<'a>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1161,6 +1203,7 @@ delegate_iterator!((Keys<'a>) => &'a String);
 ///
 /// [`values`]: Map::values
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Clone, Default)]
 pub struct Values<'a> {
     iter: ValuesImpl<'a>,
 }
@@ -1168,6 +1211,7 @@ pub struct Values<'a> {
 type ValuesImpl<'a> = btree_map::Values<'a, String, Value>;
 
 delegate_iterator!((Values<'a>) => &'a Value);
+delegate_debug!(Values<'a>);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1178,6 +1222,7 @@ delegate_iterator!((Values<'a>) => &'a Value);
 ///
 /// [`values_mut`]: Map::values_mut
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Default)]
 pub struct ValuesMut<'a> {
     iter: ValuesMutImpl<'a>,
 }
@@ -1185,6 +1230,7 @@ pub struct ValuesMut<'a> {
 type ValuesMutImpl<'a> = btree_map::ValuesMut<'a, String, Value>;
 
 delegate_iterator!((ValuesMut<'a>) => &'a mut Value);
+delegate_debug!(ValuesMut<'a>);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -1195,6 +1241,7 @@ delegate_iterator!((ValuesMut<'a>) => &'a mut Value);
 ///
 /// [`into_values`]: Map::into_values
 #[must_use = "iterators are lazy and do nothing unless consumed"]
+#[derive(Default)]
 pub struct IntoValues {
     iter: IntoValuesImpl,
 }
@@ -1202,3 +1249,50 @@ pub struct IntoValues {
 type IntoValuesImpl = btree_map::IntoValues<String, Value>;
 
 delegate_iterator!((IntoValues) => Value);
+delegate_debug!(IntoValues);
+
+#[cfg(test)]
+#[test]
+fn test_debug() {
+    let mut map = Map::from_iter([
+        ("rust".to_owned(), "now".into()),
+        ("sesh".to_owned(), "wow".into()),
+    ]);
+    assert_eq!(
+        format!("{:?}", map),
+        r#"{"rust": String("now"), "sesh": String("wow")}"#
+    );
+    assert_eq!(
+        format!("{:?}", map.entry("notexist")),
+        r#"Entry(VacantEntry("notexist"))"#
+    );
+    assert_eq!(
+        format!("{:?}", map.entry("rust")),
+        r#"Entry(OccupiedEntry { key: "rust", value: String("now") })"#
+    );
+    assert_eq!(
+        format!("{:?}", map.iter()),
+        r#"[("rust", String("now")), ("sesh", String("wow"))]"#
+    );
+    assert_eq!(
+        format!("{:?}", map.iter_mut()),
+        r#"[("rust", String("now")), ("sesh", String("wow"))]"#
+    );
+    assert_eq!(
+        format!("{:?}", map.clone().into_iter()),
+        r#"[("rust", String("now")), ("sesh", String("wow"))]"#
+    );
+    assert_eq!(format!("{:?}", map.keys()), r#"["rust", "sesh"]"#);
+    assert_eq!(
+        format!("{:?}", map.values()),
+        r#"[String("now"), String("wow")]"#
+    );
+    assert_eq!(
+        format!("{:?}", map.values_mut()),
+        r#"[String("now"), String("wow")]"#
+    );
+    assert_eq!(
+        format!("{:?}", map.clone().into_values()),
+        r#"[String("now"), String("wow")]"#
+    );
+}
