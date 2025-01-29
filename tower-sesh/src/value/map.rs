@@ -37,7 +37,7 @@ impl Map<String, Value> {
     /// ```
     #[inline]
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new() -> Map<String, Value> {
         Map {
             map: MapImpl::new(),
         }
@@ -325,7 +325,7 @@ impl Map<String, Value> {
     /// assert_eq!(a["five"], "f");
     /// ```
     #[inline]
-    pub fn append(&mut self, other: &mut Self) {
+    pub fn append(&mut self, other: &mut Map<String, Value>) {
         self.map.append(&mut other.map)
     }
 
@@ -842,7 +842,7 @@ impl<'a> Entry<'a> {
     ///
     /// assert_eq!(map["sesh"], "rust");
     /// ```
-    pub fn and_modify<F>(self, f: F) -> Self
+    pub fn and_modify<F>(self, f: F) -> Entry<'a>
     where
         F: FnOnce(&mut Value),
     {
