@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, marker::PhantomData};
 
 use async_trait::async_trait;
 use client::{ConnectionManagerWithRetry, GetConnection};
@@ -22,9 +22,10 @@ const DEFAULT_KEY_PREFIX: &str = "session_";
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub struct RedisStore<C: GetConnection = ConnectionManagerWithRetry> {
+pub struct RedisStore<Data, C: GetConnection = ConnectionManagerWithRetry> {
     client: C,
     config: RedisStoreConfig,
+    _marker: PhantomData<fn() -> Data>,
 }
 
 struct RedisStoreConfig {
@@ -39,7 +40,7 @@ impl Default for RedisStoreConfig {
     }
 }
 
-impl RedisStore {
+impl<Data> RedisStore<Data> {
     /// Connect to a redis server and return a store.
     ///
     /// When opening a client a URL in the following format should be used:
@@ -54,11 +55,12 @@ impl RedisStore {
     /// use tower_sesh_store_redis::RedisStore;
     ///
     /// # tokio_test::block_on(async {
-    /// let store = RedisStore::open("redis://127.0.0.1/").await?;
+    /// # type SessionData = ();
+    /// let store = RedisStore::<SessionData>::open("redis://127.0.0.1/").await?;
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
     /// ```
-    pub async fn open<T: IntoConnectionInfo>(params: T) -> RedisResult<Self> {
+    pub async fn open<T: IntoConnectionInfo>(params: T) -> RedisResult<RedisStore<Data>> {
         let client = Client::open(params)?;
         Self::with_client(client).await
     }
@@ -72,15 +74,17 @@ impl RedisStore {
     ///
     /// # tokio_test::block_on(async {
     /// let client = redis::Client::open("redis://127.0.0.1/")?;
-    /// let store = RedisStore::with_client(client).await?;
+    /// # type SessionData = ();
+    /// let store = RedisStore::<SessionData>::with_client(client).await?;
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
     /// ```
-    pub async fn with_client(client: Client) -> RedisResult<Self> {
+    pub async fn with_client(client: Client) -> RedisResult<RedisStore<Data>> {
         let client = ConnectionManagerWithRetry::new(client).await?;
         Ok(Self {
             client,
             config: RedisStoreConfig::default(),
+            _marker: PhantomData,
         })
     }
 
@@ -88,16 +92,17 @@ impl RedisStore {
     pub async fn with_connection_manager_config(
         client: Client,
         config: ConnectionManagerConfig,
-    ) -> RedisResult<Self> {
+    ) -> RedisResult<RedisStore<Data>> {
         let client = ConnectionManagerWithRetry::new_with_config(client, config).await?;
         Ok(Self {
             client,
             config: RedisStoreConfig::default(),
+            _marker: PhantomData,
         })
     }
 }
 
-impl<C: GetConnection> RedisStore<C> {
+impl<Data, C: GetConnection> RedisStore<Data, C> {
     fn redis_key(&self, session_key: &SessionKey) -> String {
         let mut redis_key =
             String::with_capacity(self.config.key_prefix.len() + SessionKey::ENCODED_LEN);
@@ -112,12 +117,15 @@ impl<C: GetConnection> RedisStore<C> {
 }
 
 #[async_trait]
-impl<C: GetConnection> SessionStore for RedisStore<C> {
-    async fn create(&self, record: Record) -> Result<SessionKey> {
+impl<Data, C: GetConnection> SessionStore<Data> for RedisStore<Data, C>
+where
+    Data: 'static + Send + Sync,
+{
+    async fn create(&self, record: &Record<Data>) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
 
         let expiry = record.set_expiry();
-        let serialized = serialize(&record);
+        let serialized = serialize(record);
 
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
@@ -146,7 +154,7 @@ impl<C: GetConnection> SessionStore for RedisStore<C> {
         Err(err_max_iterations_reached())
     }
 
-    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record>> {
+    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<Data>>> {
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
@@ -170,12 +178,12 @@ impl<C: GetConnection> SessionStore for RedisStore<C> {
         }
     }
 
-    async fn update(&self, session_key: &SessionKey, record: Record) -> Result<()> {
+    async fn update(&self, session_key: &SessionKey, record: &Record<Data>) -> Result<()> {
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
         let expiry = record.set_expiry();
-        let serialized = serialize(&record);
+        let serialized = serialize(record);
 
         let _: () = conn
             .set_options(
@@ -203,26 +211,26 @@ trait RecordExt {
     fn set_expiry(&self) -> SetExpiry;
 }
 
-impl RecordExt for Record {
+impl<Data> RecordExt for Record<Data> {
     fn set_expiry(&self) -> SetExpiry {
         SetExpiry::EXAT(todo!())
     }
 }
 
-fn serialize(record: &Record) -> Vec<u8> {
+fn serialize<Data>(record: &Record<Data>) -> Vec<u8> {
     todo!()
 }
 
-fn deserialize(s: &str, ttl: i64) -> Result<Record> {
+fn deserialize<Data>(s: &str, ttl: i64) -> Result<Record<Data>> {
     debug_assert!(ttl >= 0, "ttl is negative. This is a bug.");
     todo!()
 }
 
-struct RedisRecord {
-    data: (),
+struct RedisRecord<Data> {
+    data: Data,
 }
-impl RedisRecord {
-    fn into_record(self, ttl: i64) -> Record {
+impl<Data> RedisRecord<Data> {
+    fn into_record(self, ttl: i64) -> Record<Data> {
         todo!()
     }
 }

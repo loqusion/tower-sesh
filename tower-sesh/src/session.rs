@@ -6,10 +6,11 @@ use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
 
-pub struct Session(Arc<Mutex<SessionInner>>);
+pub struct Session<Data>(Arc<Mutex<SessionInner<Data>>>);
 
-struct SessionInner {
+struct SessionInner<Data> {
     session_id: Option<SessionKey>,
+    data: Option<Data>,
     status: SessionStatus,
 }
 
@@ -20,10 +21,13 @@ enum SessionStatus {
     Purged,
 }
 
-impl Session {
+impl<Data> Session<Data>
+where
+    Data: 'static + Send + Sync,
+{
     pub(crate) fn extract(extensions: &mut Extensions) -> Option<Self> {
         extensions
-            .get::<Arc<Mutex<SessionInner>>>()
+            .get::<Arc<Mutex<SessionInner<Data>>>>()
             .cloned()
             .map(Session)
     }
@@ -56,7 +60,7 @@ pub enum InsertError {}
 #[derive(Debug, thiserror::Error)]
 pub enum RemoveError {}
 
-impl Clone for Session {
+impl<Data> Clone for Session<Data> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
     }
@@ -64,7 +68,10 @@ impl Clone for Session {
 
 #[cfg(feature = "axum")]
 #[async_trait]
-impl<S> axum::extract::FromRequestParts<S> for Session {
+impl<S, Data> axum::extract::FromRequestParts<S> for Session<Data>
+where
+    Data: 'static + Send + Sync,
+{
     type Rejection = SessionRejection;
 
     async fn from_request_parts(
@@ -173,7 +180,7 @@ mod test {
     #[test]
     fn traits() {
         fn assert_send<T: Send>() {}
-        assert_send::<Session>();
+        assert_send::<Session<()>>();
     }
 
     #[test]

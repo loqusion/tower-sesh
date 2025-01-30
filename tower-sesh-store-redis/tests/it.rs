@@ -7,7 +7,7 @@ use tower_sesh::{
 };
 use tower_sesh_store_redis::RedisStore;
 
-async fn store() -> RedisStore {
+async fn store<Data>() -> RedisStore<Data> {
     let url =
         env::var("REDIS_URL").expect("REDIS_URL environment variable must be set to run tests");
 
@@ -23,12 +23,12 @@ async fn store() -> RedisStore {
 
 #[tokio::test]
 async fn smoke() {
-    let _ = store().await;
+    let _ = store::<()>().await;
 }
 
 #[tokio::test]
 async fn loading_a_missing_session_returns_none() -> anyhow::Result<()> {
-    let store = store().await;
+    let store = store::<()>().await;
     let session_key = test_key();
 
     let record = store.load(&session_key).await?;
@@ -37,4 +37,4 @@ async fn loading_a_missing_session_returns_none() -> anyhow::Result<()> {
     Ok(())
 }
 
-test_suite!(store().await);
+test_suite!(store::<()>().await);

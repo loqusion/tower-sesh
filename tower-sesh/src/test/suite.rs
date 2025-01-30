@@ -3,8 +3,8 @@ use axum_test::TestServer;
 
 use crate::{config::CookieContentSecurity, SessionStore};
 
-pub async fn basic_workflow(
-    store: impl SessionStore,
+pub async fn basic_workflow<Data>(
+    store: impl SessionStore<Data>,
     policy: CookieContentSecurity,
 ) -> anyhow::Result<()> {
     let app = Router::new().route("/test", method_routing::get(|| async { "hi" }));

@@ -1,6 +1,7 @@
 use std::{
     borrow::Cow,
     future::Future,
+    marker::PhantomData,
     pin::Pin,
     sync::Arc,
     task::{ready, Context, Poll},
@@ -26,38 +27,60 @@ const DEFAULT_COOKIE_NAME: &str = "session_key";
 /// # Example
 ///
 /// TODO: Provide an example
+///
+/// # Test
+///
+/// TODO: Replace with example
+///
+/// ```no_run
+/// use std::sync::Arc;
+/// use tower_sesh::{store::MemoryStore, SessionLayer};
+///
+/// struct SessionData {
+///     foo: String,
+///     bar: u64,
+/// }
+///
+/// let key = cookie::Key::generate();
+/// let store = Arc::new(MemoryStore::<SessionData>::new());
+/// let session_layer = SessionLayer::new(store, key);
+/// ```
 #[derive(Debug)]
-pub struct SessionLayer<Store: SessionStore, C: CookieSecurity = PrivateCookie> {
+pub struct SessionLayer<Data, Store: SessionStore<Data>, C: CookieSecurity = PrivateCookie> {
     store: Arc<Store>,
     cookie_name: Cow<'static, str>,
     cookie_controller: C,
+    _marker: PhantomData<fn() -> Data>,
 }
 
-impl<Store: SessionStore> SessionLayer<Store> {
+impl<Data, Store: SessionStore<Data>> SessionLayer<Data, Store> {
     /// Create a new `SessionLayer`.
     ///
     /// TODO: More documentation
+    // TODO: Try to remove `cookie` from this crate's public API
     pub fn new(store: Arc<Store>, key: cookie::Key) -> Self {
         Self {
             store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
             cookie_controller: PrivateCookie::new(key),
+            _marker: PhantomData,
         }
     }
 }
 
 // TODO: Add customization for session expiry
-impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
+impl<Data, Store: SessionStore<Data>, C: CookieSecurity> SessionLayer<Data, Store, C> {
     /// Authenticate cookies.
     ///
     /// TODO: More documentation
     #[track_caller]
-    pub fn signed(self) -> SessionLayer<Store, SignedCookie> {
+    pub fn signed(self) -> SessionLayer<Data, Store, SignedCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
             store: self.store,
             cookie_name: self.cookie_name,
             cookie_controller: SignedCookie::new(key),
+            _marker: PhantomData,
         }
     }
 
@@ -65,12 +88,13 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     ///
     /// TODO: More documentation
     #[track_caller]
-    pub fn private(self) -> SessionLayer<Store, PrivateCookie> {
+    pub fn private(self) -> SessionLayer<Data, Store, PrivateCookie> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
             store: self.store,
             cookie_name: self.cookie_name,
             cookie_controller: PrivateCookie::new(key),
+            _marker: PhantomData,
         }
     }
 
@@ -122,29 +146,33 @@ impl<Store: SessionStore, C: CookieSecurity> SessionLayer<Store, C> {
     }
 }
 
-impl<Store: SessionStore> SessionLayer<Store, PlainCookie> {
+impl<Data, Store: SessionStore<Data>> SessionLayer<Data, Store, PlainCookie> {
     /// Create a new `SessionLayer` that doesn't sign or encrypt cookies.
-    pub fn plain(store: Arc<Store>) -> SessionLayer<Store, PlainCookie> {
+    pub fn plain(store: Arc<Store>) -> SessionLayer<Data, Store, PlainCookie> {
         SessionLayer {
             store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
             cookie_controller: PlainCookie,
+            _marker: PhantomData,
         }
     }
 }
 
-impl<Store: SessionStore, C: CookieSecurity> Clone for SessionLayer<Store, C> {
+impl<Data, Store: SessionStore<Data>, C: CookieSecurity> Clone for SessionLayer<Data, Store, C> {
     fn clone(&self) -> Self {
         Self {
             store: Arc::clone(&self.store),
             cookie_name: self.cookie_name.clone(),
             cookie_controller: self.cookie_controller.clone(),
+            _marker: PhantomData,
         }
     }
 }
 
-impl<S, Store: SessionStore, C: CookieSecurity> Layer<S> for SessionLayer<Store, C> {
-    type Service = SessionManager<S, Store, C>;
+impl<S, Data, Store: SessionStore<Data>, C: CookieSecurity> Layer<S>
+    for SessionLayer<Data, Store, C>
+{
+    type Service = SessionManager<S, Data, Store, C>;
 
     fn layer(&self, inner: S) -> Self::Service {
         SessionManager {
@@ -158,12 +186,12 @@ impl<S, Store: SessionStore, C: CookieSecurity> Layer<S> for SessionLayer<Store,
 ///
 /// [`Session`]: crate::session::Session
 #[derive(Clone, Debug)]
-pub struct SessionManager<S, Store: SessionStore, C: CookieSecurity> {
+pub struct SessionManager<S, Data, Store: SessionStore<Data>, C: CookieSecurity> {
     inner: S,
-    layer: SessionLayer<Store, C>,
+    layer: SessionLayer<Data, Store, C>,
 }
 
-impl<S, Store: SessionStore, C: CookieSecurity> SessionManager<S, Store, C> {
+impl<S, Data, Store: SessionStore<Data>, C: CookieSecurity> SessionManager<S, Data, Store, C> {
     fn session_cookie<'c>(&self, jar: &'c CookieJar) -> Option<Cookie<'c>> {
         self.layer
             .cookie_controller
@@ -171,14 +199,14 @@ impl<S, Store: SessionStore, C: CookieSecurity> SessionManager<S, Store, C> {
     }
 }
 
-impl<ReqBody, ResBody, S, Store: SessionStore, C: CookieSecurity> Service<Request<ReqBody>>
-    for SessionManager<S, Store, C>
+impl<ReqBody, ResBody, S, Data, Store: SessionStore<Data>, C: CookieSecurity>
+    Service<Request<ReqBody>> for SessionManager<S, Data, Store, C>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
 {
     type Response = S::Response;
     type Error = S::Error;
-    type Future = ResponseFuture<S::Future, C>;
+    type Future = ResponseFuture<S::Future, Data, C>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -243,22 +271,22 @@ where
 
 pin_project! {
     /// Response future for [`SessionManager`].
-    pub struct ResponseFuture<F, C: CookieSecurity> {
-        state: State<C>,
+    pub struct ResponseFuture<F, Data, C: CookieSecurity> {
+        state: State<Data, C>,
         #[pin]
         future: F,
     }
 }
 
-enum State<C> {
+enum State<Data, C> {
     Session {
-        session: Session,
+        session: Session<Data>,
         cookie_controller: C,
     },
     Fallback,
 }
 
-impl<F, B, E, C: CookieSecurity> Future for ResponseFuture<F, C>
+impl<F, B, E, Data, C: CookieSecurity> Future for ResponseFuture<F, Data, C>
 where
     F: Future<Output = Result<Response<B>, E>>,
 {
