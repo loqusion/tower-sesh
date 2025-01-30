@@ -31,7 +31,6 @@ tower-sesh-core = { version = "0.1.0", path = "../tower-sesh-core" }
 
 # optional dependencies
 axum = { version = "0.7.9", optional = true }
-axum-test = { version = "16.4.1", optional = true }
 tracing = { version = "0.1.41", optional = true }
 
 [dev-dependencies]
@@ -43,8 +42,6 @@ tokio = { version = "1.42.0", features = ["full"] }
 
 [features]
 default = ["axum", "tracing"]
-
-_test = ["axum", "axum-test", "tracing"]
 
 [lints]
 workspace = true

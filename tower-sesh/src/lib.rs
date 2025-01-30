@@ -18,8 +18,5 @@ pub mod value;
 
 #[doc(hidden)]
 pub mod config;
-#[cfg(feature = "_test")]
-#[doc(hidden)]
-pub mod test;
 
 mod util;
