@@ -18,24 +18,56 @@ impl fmt::Debug for SessionKey {
 impl SessionKey {
     const BASE64_ENGINE: base64::engine::GeneralPurpose =
         base64::engine::general_purpose::URL_SAFE_NO_PAD;
+
+    /// Length of a Base64 string returned by the [`encode`] method.
+    ///
+    /// [`encode`]: SessionKey::encode
     pub const ENCODED_LEN: usize = 22;
+
+    /// Length of output from decoding a Base64-encoded session key string with
+    /// the [`decode`] method.
+    ///
+    /// [`decode`]: SessionKey::decode
     const DECODED_LEN: usize = 16;
 
+    /// Returns a random [`SessionKey`], generated from [`ThreadRng`].
+    ///
+    /// Alternatively, you may wish to use [`generate_from_rng`] and pass your
+    /// own CSPRNG. See `ThreadRng`'s documentation for notes on security.
+    ///
+    /// [`ThreadRng`]: rand::rngs::ThreadRng
+    /// [`generate_from_rng`]: SessionKey::generate_from_rng
     #[must_use]
     pub fn generate() -> SessionKey {
         SessionKey::generate_from_rng(&mut rand::thread_rng())
     }
 
+    /// Returns a random [`SessionKey`], generated from `rng`.
+    ///
+    /// Alternatively, you may wish to use [`generate`]. See its documentation
+    /// for more.
+    ///
+    /// [`generate`]: SessionKey::generate
     #[must_use]
     pub fn generate_from_rng<R: CryptoRng + Rng>(rng: &mut R) -> SessionKey {
         SessionKey(rng.gen())
     }
 
+    /// Encodes this session key as a URL-safe Base64 string with no padding.
+    ///
+    /// The returned string uses the URL-safe and filename-safe alphabet (with
+    /// `-` and `_`) specified in [RFC 4648].
+    ///
+    /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-5
     #[must_use]
     pub fn encode(&self) -> String {
         SessionKey::BASE64_ENGINE.encode(self.0.get().to_le_bytes())
     }
 
+    /// Decodes a session key string encoded with the URL-safe Base64 alphabet
+    /// specified in [RFC 4648]. There must be no padding present in the input.
+    ///
+    /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-5
     pub fn decode(s: &str) -> Result<SessionKey, ParseSessionKeyError> {
         use base64::DecodeError;
 
