@@ -49,6 +49,7 @@ impl SessionKey {
     ///
     /// [`generate`]: SessionKey::generate
     #[must_use]
+    // TODO: Is `: CryptoRng + Rng` problematic if a different version of `rand` is used?
     pub fn generate_from_rng<R: CryptoRng + Rng>(rng: &mut R) -> SessionKey {
         SessionKey(rng.gen())
     }
