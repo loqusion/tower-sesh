@@ -69,24 +69,28 @@ impl SessionKey {
     /// specified in [RFC 4648]. There must be no padding present in the input.
     ///
     /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-5
-    pub fn decode(s: &str) -> Result<SessionKey, ParseSessionKeyError> {
-        use base64::DecodeError;
+    pub fn decode<B: AsRef<[u8]>>(b: B) -> Result<SessionKey, ParseSessionKeyError> {
+        fn _decode(b: &[u8]) -> Result<SessionKey, ParseSessionKeyError> {
+            use base64::DecodeError;
 
-        let mut buf = [0; const { SessionKey::DECODED_LEN }];
-        SessionKey::BASE64_ENGINE
-            .decode_slice(s.as_bytes(), &mut buf)
-            .and_then(|decoded_len| {
-                if decoded_len == SessionKey::DECODED_LEN {
-                    Ok(())
-                } else {
-                    Err(DecodeError::InvalidLength(decoded_len).into())
-                }
-            })?;
+            let mut buf = [0; const { SessionKey::DECODED_LEN }];
+            SessionKey::BASE64_ENGINE
+                .decode_slice(b, &mut buf)
+                .and_then(|decoded_len| {
+                    if decoded_len == SessionKey::DECODED_LEN {
+                        Ok(())
+                    } else {
+                        Err(DecodeError::InvalidLength(decoded_len).into())
+                    }
+                })?;
 
-        match u128::from_le_bytes(buf).try_into() {
-            Ok(v) => Ok(SessionKey(v)),
-            Err(_) => Err(ParseSessionKeyError::Zero),
+            match u128::from_le_bytes(buf).try_into() {
+                Ok(v) => Ok(SessionKey(v)),
+                Err(_) => Err(ParseSessionKeyError::Zero),
+            }
         }
+
+        _decode(b.as_ref())
     }
 }
 
