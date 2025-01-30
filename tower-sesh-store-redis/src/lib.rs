@@ -22,10 +22,10 @@ const DEFAULT_KEY_PREFIX: &str = "session_";
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub struct RedisStore<Data, C: GetConnection = ConnectionManagerWithRetry> {
+pub struct RedisStore<T, C: GetConnection = ConnectionManagerWithRetry> {
     client: C,
     config: RedisStoreConfig,
-    _marker: PhantomData<fn() -> Data>,
+    _marker: PhantomData<fn() -> T>,
 }
 
 struct RedisStoreConfig {
@@ -40,7 +40,7 @@ impl Default for RedisStoreConfig {
     }
 }
 
-impl<Data> RedisStore<Data> {
+impl<T> RedisStore<T> {
     /// Connect to a redis server and return a store.
     ///
     /// When opening a client a URL in the following format should be used:
@@ -60,7 +60,7 @@ impl<Data> RedisStore<Data> {
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
     /// ```
-    pub async fn open<T: IntoConnectionInfo>(params: T) -> RedisResult<RedisStore<Data>> {
+    pub async fn open<I: IntoConnectionInfo>(params: I) -> RedisResult<RedisStore<T>> {
         let client = Client::open(params)?;
         Self::with_client(client).await
     }
@@ -79,7 +79,7 @@ impl<Data> RedisStore<Data> {
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
     /// ```
-    pub async fn with_client(client: Client) -> RedisResult<RedisStore<Data>> {
+    pub async fn with_client(client: Client) -> RedisResult<RedisStore<T>> {
         let client = ConnectionManagerWithRetry::new(client).await?;
         Ok(Self {
             client,
@@ -92,7 +92,7 @@ impl<Data> RedisStore<Data> {
     pub async fn with_connection_manager_config(
         client: Client,
         config: ConnectionManagerConfig,
-    ) -> RedisResult<RedisStore<Data>> {
+    ) -> RedisResult<RedisStore<T>> {
         let client = ConnectionManagerWithRetry::new_with_config(client, config).await?;
         Ok(Self {
             client,
@@ -102,7 +102,7 @@ impl<Data> RedisStore<Data> {
     }
 }
 
-impl<Data, C: GetConnection> RedisStore<Data, C> {
+impl<T, C: GetConnection> RedisStore<T, C> {
     fn redis_key(&self, session_key: &SessionKey) -> String {
         let mut redis_key =
             String::with_capacity(self.config.key_prefix.len() + SessionKey::ENCODED_LEN);
@@ -117,11 +117,11 @@ impl<Data, C: GetConnection> RedisStore<Data, C> {
 }
 
 #[async_trait]
-impl<Data, C: GetConnection> SessionStore<Data> for RedisStore<Data, C>
+impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C>
 where
-    Data: 'static + Send + Sync,
+    T: 'static + Send + Sync,
 {
-    async fn create(&self, record: &Record<Data>) -> Result<SessionKey> {
+    async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
 
         let expiry = record.set_expiry();
@@ -154,7 +154,7 @@ where
         Err(err_max_iterations_reached())
     }
 
-    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<Data>>> {
+    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
@@ -178,7 +178,7 @@ where
         }
     }
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<Data>) -> Result<()> {
+    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
@@ -211,26 +211,26 @@ trait RecordExt {
     fn set_expiry(&self) -> SetExpiry;
 }
 
-impl<Data> RecordExt for Record<Data> {
+impl<T> RecordExt for Record<T> {
     fn set_expiry(&self) -> SetExpiry {
         SetExpiry::EXAT(todo!())
     }
 }
 
-fn serialize<Data>(record: &Record<Data>) -> Vec<u8> {
+fn serialize<T>(record: &Record<T>) -> Vec<u8> {
     todo!()
 }
 
-fn deserialize<Data>(s: &str, ttl: i64) -> Result<Record<Data>> {
+fn deserialize<T>(s: &str, ttl: i64) -> Result<Record<T>> {
     debug_assert!(ttl >= 0, "ttl is negative. This is a bug.");
     todo!()
 }
 
-struct RedisRecord<Data> {
-    data: Data,
+struct RedisRecord<T> {
+    data: T,
 }
-impl<Data> RedisRecord<Data> {
-    fn into_record(self, ttl: i64) -> Record<Data> {
+impl<T> RedisRecord<T> {
+    fn into_record(self, ttl: i64) -> Record<T> {
         todo!()
     }
 }

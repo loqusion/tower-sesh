@@ -7,7 +7,7 @@ use tower_sesh::{
 };
 use tower_sesh_store_redis::RedisStore;
 
-async fn store<Data>() -> RedisStore<Data> {
+async fn store<T>() -> RedisStore<T> {
     let url =
         env::var("REDIS_URL").expect("REDIS_URL environment variable must be set to run tests");
 

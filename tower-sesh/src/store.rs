@@ -18,22 +18,22 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 // TODO: `Record` should be removed because you can't construct a `Record` without
 // transferring ownership or cloning.
 #[async_trait]
-pub trait SessionStore<Data>: 'static + Send + Sync {
+pub trait SessionStore<T>: 'static + Send + Sync {
     /// Create a new session with the provided `session_state`.
     ///
     /// Returns the [`SessionKey`] for the newly created session.
     ///
     /// [`SessionKey`]: crate::session::SessionKey
-    async fn create(&self, record: &Record<Data>) -> Result<SessionKey>;
+    async fn create(&self, record: &Record<T>) -> Result<SessionKey>;
 
     /// Load the session state associated with a session key.
-    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<Data>>>;
+    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>>;
 
     /// Update an existing session associated with `session_key` with the
     /// provided `record`.
     ///
     /// If such a session does not exist, it will be created.
-    async fn update(&self, session_key: &SessionKey, record: &Record<Data>) -> Result<()>;
+    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()>;
 
     /// Delete the session associated with `session_key`.
     ///
@@ -42,36 +42,36 @@ pub trait SessionStore<Data>: 'static + Send + Sync {
 }
 
 #[derive(Clone)]
-pub struct MemoryStore<Data>(Arc<parking_lot::Mutex<HashMap<SessionKey, Record<Data>>>>);
+pub struct MemoryStore<T>(Arc<parking_lot::Mutex<HashMap<SessionKey, Record<T>>>>);
 
-impl<Data> Default for MemoryStore<Data> {
+impl<T> Default for MemoryStore<T> {
     fn default() -> Self {
         let store = HashMap::new();
         MemoryStore(Arc::new(parking_lot::Mutex::new(store)))
     }
 }
 
-impl<Data> MemoryStore<Data> {
+impl<T> MemoryStore<T> {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
 #[async_trait]
-impl<Data> SessionStore<Data> for MemoryStore<Data>
+impl<T> SessionStore<T> for MemoryStore<T>
 where
-    Data: 'static + Send + Sync,
+    T: 'static + Send + Sync,
 {
-    async fn create(&self, record: &Record<Data>) -> Result<SessionKey> {
+    async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
         let mut store_guard = self.0.lock();
         todo!()
     }
 
-    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<Data>>> {
+    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
         todo!()
     }
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<Data>) -> Result<()> {
+    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
         todo!()
     }
 
@@ -81,13 +81,13 @@ where
     }
 }
 
-pub struct CachingStore<Data, Cache: SessionStore<Data>, Store: SessionStore<Data>> {
+pub struct CachingStore<T, Cache: SessionStore<T>, Store: SessionStore<T>> {
     cache: Cache,
     store: Store,
-    _marker: PhantomData<fn() -> Data>,
+    _marker: PhantomData<fn() -> T>,
 }
 
-impl<Data, Cache: SessionStore<Data>, Store: SessionStore<Data>> CachingStore<Data, Cache, Store> {
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> CachingStore<T, Cache, Store> {
     pub fn from_cache_and_store(cache: Cache, store: Store) -> Self {
         Self {
             cache,
@@ -98,13 +98,13 @@ impl<Data, Cache: SessionStore<Data>, Store: SessionStore<Data>> CachingStore<Da
 }
 
 #[async_trait]
-impl<Data, Cache: SessionStore<Data>, Store: SessionStore<Data>> SessionStore<Data>
-    for CachingStore<Data, Cache, Store>
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> SessionStore<T>
+    for CachingStore<T, Cache, Store>
 where
-    Data: 'static + Send + Sync,
+    T: 'static + Send + Sync,
 {
     // FIXME: This has correctness issues.
-    async fn create(&self, record: &Record<Data>) -> Result<SessionKey> {
+    async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
         let session_key = SessionKey::generate();
 
         let store_fut = self.store.update(&session_key, record);
@@ -115,7 +115,7 @@ where
         Ok(session_key)
     }
 
-    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<Data>>> {
+    async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
         match self.cache.load(session_key).await {
             Ok(Some(record)) => Ok(Some(record)),
             Ok(None) | Err(_) => {
@@ -130,7 +130,7 @@ where
         }
     }
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<Data>) -> Result<()> {
+    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
         #![allow(clippy::clone_on_copy)]
 
         let store_fut = self.store.update(session_key, record);
@@ -152,12 +152,12 @@ where
 }
 
 #[derive(Clone, Debug)]
-pub struct Record<Data> {
-    data: Data,
+pub struct Record<T> {
+    data: T,
     expiry: OffsetDateTime,
 }
 
-impl<Data> Record<Data> {
+impl<T> Record<T> {
     pub fn unix_timestamp(&self) -> i64 {
         self.expiry.unix_timestamp()
     }

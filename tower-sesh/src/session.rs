@@ -6,11 +6,11 @@ use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
 
-pub struct Session<Data>(Arc<Mutex<SessionInner<Data>>>);
+pub struct Session<T>(Arc<Mutex<SessionInner<T>>>);
 
-struct SessionInner<Data> {
+struct SessionInner<T> {
     session_id: Option<SessionKey>,
-    data: Option<Data>,
+    data: Option<T>,
     status: SessionStatus,
 }
 
@@ -21,13 +21,13 @@ enum SessionStatus {
     Purged,
 }
 
-impl<Data> Session<Data>
+impl<T> Session<T>
 where
-    Data: 'static + Send + Sync,
+    T: 'static + Send + Sync,
 {
     pub(crate) fn extract(extensions: &mut Extensions) -> Option<Self> {
         extensions
-            .get::<Arc<Mutex<SessionInner<Data>>>>()
+            .get::<Arc<Mutex<SessionInner<T>>>>()
             .cloned()
             .map(Session)
     }
@@ -40,7 +40,7 @@ pub enum InsertError {}
 #[derive(Debug, thiserror::Error)]
 pub enum RemoveError {}
 
-impl<Data> Clone for Session<Data> {
+impl<T> Clone for Session<T> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
     }
@@ -48,9 +48,9 @@ impl<Data> Clone for Session<Data> {
 
 #[cfg(feature = "axum")]
 #[async_trait]
-impl<S, Data> axum::extract::FromRequestParts<S> for Session<Data>
+impl<S, T> axum::extract::FromRequestParts<S> for Session<T>
 where
-    Data: 'static + Send + Sync,
+    T: 'static + Send + Sync,
 {
     type Rejection = SessionRejection;
 
