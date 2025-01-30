@@ -1,20 +1,25 @@
+#[doc(inline)]
+pub use middleware::SessionLayer;
+#[doc(inline)]
+pub use session::Session;
+#[doc(inline)]
+pub use value::Value;
+
+// TODO: Remove `cookie` crate from public API if possible
+pub use ::cookie;
+
 #[macro_use]
 mod macros;
 
+pub mod middleware;
+pub mod session;
+pub mod store;
+pub mod value;
+
 #[doc(hidden)]
 pub mod config;
-mod util;
-
 #[cfg(feature = "_test")]
 #[doc(hidden)]
 pub mod test;
 
-pub mod middleware;
-pub use middleware::SessionLayer;
-pub mod session;
-pub use session::Session;
-pub mod store;
-pub mod value;
-pub use value::Value;
-
-pub use ::cookie;
+mod util;
