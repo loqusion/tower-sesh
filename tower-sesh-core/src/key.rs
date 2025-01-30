@@ -15,22 +15,6 @@ impl fmt::Debug for SessionKey {
     }
 }
 
-impl From<NonZeroU128> for SessionKey {
-    #[inline]
-    fn from(value: NonZeroU128) -> Self {
-        SessionKey(value)
-    }
-}
-
-impl TryFrom<u128> for SessionKey {
-    type Error = std::num::TryFromIntError;
-
-    #[inline]
-    fn try_from(value: u128) -> Result<Self, Self::Error> {
-        value.try_into().map(SessionKey)
-    }
-}
-
 impl SessionKey {
     const BASE64_ENGINE: base64::engine::GeneralPurpose =
         base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -70,6 +54,22 @@ impl SessionKey {
             Ok(v) => Ok(SessionKey(v)),
             Err(_) => Err(ParseSessionKeyError::Zero),
         }
+    }
+}
+
+impl SessionKey {
+    // Not public API. Only tests use this.
+    #[doc(hidden)]
+    #[inline]
+    pub fn from_non_zero_u128(value: NonZeroU128) -> SessionKey {
+        SessionKey(value)
+    }
+
+    // Not public API. Only tests use this.
+    #[doc(hidden)]
+    #[inline]
+    pub fn try_from_u128(value: u128) -> Result<SessionKey, std::num::TryFromIntError> {
+        value.try_into().map(SessionKey::from_non_zero_u128)
     }
 }
 
@@ -120,7 +120,7 @@ mod test {
 
     impl Arbitrary for SessionKey {
         fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-            SessionKey::from(NonZeroU128::arbitrary(g))
+            SessionKey::from_non_zero_u128(NonZeroU128::arbitrary(g))
         }
     }
 
