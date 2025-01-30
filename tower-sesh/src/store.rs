@@ -14,6 +14,9 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 // self-describing, i.e. it implements `Deserializer::deserialize_any`. (This
 // is because `Value`'s `Deserialize::deserialize` delegates to
 // `Deserializer::deserialize_any`.)
+//
+// TODO: `Record` should be removed because you can't construct a `Record` without
+// transferring ownership or cloning.
 #[async_trait]
 pub trait SessionStore<Data>: 'static + Send + Sync {
     /// Create a new session with the provided `session_state`.
@@ -100,6 +103,7 @@ impl<Data, Cache: SessionStore<Data>, Store: SessionStore<Data>> SessionStore<Da
 where
     Data: 'static + Send + Sync,
 {
+    // FIXME: This has correctness issues.
     async fn create(&self, record: &Record<Data>) -> Result<SessionKey> {
         let session_key = SessionKey::generate();
 
