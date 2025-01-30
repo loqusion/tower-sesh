@@ -6,7 +6,11 @@ use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
 };
-use tower_sesh::{record::Record, session::SessionKey, store::Error, SessionStore};
+use tower_sesh::{
+    session::SessionKey,
+    store::{Error, Record},
+    SessionStore,
+};
 
 // Required to use the redis asynchronous interface
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]

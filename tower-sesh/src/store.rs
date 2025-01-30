@@ -1,8 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
+use time::OffsetDateTime;
 
-use crate::{record::Record, session::SessionKey};
+use crate::session::SessionKey;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {}
@@ -124,5 +125,16 @@ impl<Cache: SessionStore, Store: SessionStore> SessionStore for CachingStore<Cac
         futures::try_join!(store_fut, cache_fut)?;
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Record {
+    expiry: OffsetDateTime,
+}
+
+impl Record {
+    pub fn unix_timestamp(&self) -> i64 {
+        self.expiry.unix_timestamp()
     }
 }

@@ -6,13 +6,10 @@ use http::Extensions;
 use parking_lot::Mutex;
 use rand::{CryptoRng, Rng};
 
-use crate::record::Record;
-
 pub struct Session(Arc<Mutex<SessionInner>>);
 
 struct SessionInner {
     session_id: Option<SessionKey>,
-    record: Option<Record>,
     status: SessionStatus,
 }
 
