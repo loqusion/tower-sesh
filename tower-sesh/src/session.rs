@@ -32,13 +32,6 @@ where
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum GetError {}
-#[derive(Debug, thiserror::Error)]
-pub enum InsertError {}
-#[derive(Debug, thiserror::Error)]
-pub enum RemoveError {}
-
 impl<T> Clone for Session<T> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0))
