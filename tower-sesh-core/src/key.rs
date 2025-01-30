@@ -105,6 +105,7 @@ impl SessionKey {
     }
 }
 
+/// Error returned from [`SessionKey::decode`].
 #[derive(Debug)]
 pub enum ParseSessionKeyError {
     Base64(base64::DecodeSliceError),
