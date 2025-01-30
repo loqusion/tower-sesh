@@ -1,0 +1,25 @@
+[package]
+name = "tower-sesh-core"
+description = "Tower middleware for session authentication via cookies"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+async-trait = "0.1.83"
+base64 = "0.22.1"
+rand = "0.8.5"
+time = "0.3.37"
+
+[dev-dependencies]
+quickcheck = "1.0.3"
+
+[features]
+
+[lints]
+workspace = true

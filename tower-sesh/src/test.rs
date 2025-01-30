@@ -1,6 +1,6 @@
 use std::sync::atomic::{self, AtomicU64};
 
-use crate::session::SessionKey;
+use tower_sesh_core::SessionKey;
 
 pub mod suite;
 

@@ -14,7 +14,6 @@ pub use middleware::SessionLayer;
 pub mod session;
 pub use session::Session;
 pub mod store;
-pub use store::SessionStore;
 pub mod value;
 pub use value::Value;
 

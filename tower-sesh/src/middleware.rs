@@ -11,11 +11,11 @@ use cookie::{Cookie, CookieJar, SameSite};
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
+use tower_sesh_core::SessionStore;
 
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
     session::Session,
-    store::SessionStore,
     util::CookieJarExt,
 };
 

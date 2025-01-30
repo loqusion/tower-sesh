@@ -1,7 +1,8 @@
 use axum::{routing::method_routing, Router};
 use axum_test::TestServer;
+use tower_sesh_core::SessionStore;
 
-use crate::{config::CookieContentSecurity, SessionStore};
+use crate::config::CookieContentSecurity;
 
 pub async fn basic_workflow<T>(
     store: impl SessionStore<T>,

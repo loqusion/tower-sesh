@@ -1,10 +1,8 @@
 use std::{env, time::Duration};
 
 use redis::aio::ConnectionManagerConfig;
-use tower_sesh::{
-    test::{test_key, test_suite},
-    SessionStore,
-};
+use tower_sesh::test::{test_key, test_suite};
+use tower_sesh_core::SessionStore;
 use tower_sesh_store_redis::RedisStore;
 
 async fn store<T>() -> RedisStore<T> {
