@@ -31,26 +31,6 @@ where
             .cloned()
             .map(Session)
     }
-
-    pub fn get<V>(&self, key: &str) -> Result<Option<&V>, GetError> {
-        let mut data = self.0.lock();
-        todo!()
-    }
-
-    pub fn insert<V>(&self, key: &str, value: V) -> Result<Option<V>, InsertError> {
-        let mut data = self.0.lock();
-        todo!()
-    }
-
-    pub fn remove<V>(&self, key: &str) -> Result<Option<V>, RemoveError> {
-        let mut data = self.0.lock();
-        todo!()
-    }
-
-    pub fn clear(&self) {
-        let mut data = self.0.lock();
-        todo!()
-    }
 }
 
 #[derive(Debug, thiserror::Error)]
