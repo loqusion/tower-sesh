@@ -110,7 +110,7 @@ impl SessionKey {
     }
 }
 
-/// Error returned from [`SessionKey::decode`].
+/// The error type returned when decoding a session key fails.
 #[derive(Debug)]
 pub enum DecodeSessionKeyError {
     Base64(base64::DecodeSliceError),
