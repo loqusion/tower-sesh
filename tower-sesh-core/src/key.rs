@@ -69,8 +69,8 @@ impl SessionKey {
     /// specified in [RFC 4648]. There must be no padding present in the input.
     ///
     /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-5
-    pub fn decode<B: AsRef<[u8]>>(b: B) -> Result<SessionKey, ParseSessionKeyError> {
-        fn _decode(b: &[u8]) -> Result<SessionKey, ParseSessionKeyError> {
+    pub fn decode<B: AsRef<[u8]>>(b: B) -> Result<SessionKey, DecodeSessionKeyError> {
+        fn _decode(b: &[u8]) -> Result<SessionKey, DecodeSessionKeyError> {
             use base64::DecodeError;
 
             let mut buf = [0; const { SessionKey::DECODED_LEN }];
@@ -86,7 +86,7 @@ impl SessionKey {
 
             match u128::from_le_bytes(buf).try_into() {
                 Ok(v) => Ok(SessionKey(v)),
-                Err(_) => Err(ParseSessionKeyError::Zero),
+                Err(_) => Err(DecodeSessionKeyError::Zero),
             }
         }
 
@@ -112,32 +112,32 @@ impl SessionKey {
 
 /// Error returned from [`SessionKey::decode`].
 #[derive(Debug)]
-pub enum ParseSessionKeyError {
+pub enum DecodeSessionKeyError {
     Base64(base64::DecodeSliceError),
     Zero,
 }
 
-impl StdError for ParseSessionKeyError {
+impl StdError for DecodeSessionKeyError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            ParseSessionKeyError::Base64(err) => Some(err),
-            ParseSessionKeyError::Zero => None,
+            DecodeSessionKeyError::Base64(err) => Some(err),
+            DecodeSessionKeyError::Zero => None,
         }
     }
 }
 
-impl fmt::Display for ParseSessionKeyError {
+impl fmt::Display for DecodeSessionKeyError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseSessionKeyError::Base64(_err) => f.write_str("failed to parse base64 string"),
-            ParseSessionKeyError::Zero => f.write_str("session id must be non-zero"),
+            DecodeSessionKeyError::Base64(_err) => f.write_str("failed to parse base64 string"),
+            DecodeSessionKeyError::Zero => f.write_str("session id must be non-zero"),
         }
     }
 }
 
-impl From<base64::DecodeSliceError> for ParseSessionKeyError {
+impl From<base64::DecodeSliceError> for DecodeSessionKeyError {
     fn from(value: base64::DecodeSliceError) -> Self {
-        ParseSessionKeyError::Base64(value)
+        DecodeSessionKeyError::Base64(value)
     }
 }
 
@@ -151,7 +151,7 @@ mod test {
         const INPUT: &str = "AAAAAAAAAAAAAAAAAAAAAA";
         let result = SessionKey::decode(INPUT);
         assert!(
-            matches!(result, Err(ParseSessionKeyError::Zero)),
+            matches!(result, Err(DecodeSessionKeyError::Zero)),
             "expected decoding to fail"
         );
     }
