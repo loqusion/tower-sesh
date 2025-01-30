@@ -6,7 +6,7 @@ use rand::{CryptoRng, Rng};
 /// A 128-bit session identifier.
 // `NonZeroU128` is used so that `Option<SessionKey>` has the same size as
 // `SessionKey`
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub struct SessionKey(NonZeroU128);
 
 impl fmt::Debug for SessionKey {
