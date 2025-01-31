@@ -75,9 +75,9 @@ where
 
 define_rejection! {
     #[status = INTERNAL_SERVER_ERROR]
-    #[body = "Missing request extension"]
-    /// Rejection for [`Session`] if an expected request extension
-    /// was not found.
+    #[body = "Failed to load session"]
+    /// Rejection for [`Session`] if an unrecoverable error occurred when
+    /// loading the session.
     pub struct SessionRejection;
 }
 
