@@ -65,7 +65,7 @@ where
                 // than an expected failure.
                 panic!(
                     "Missing request extension. `SessionManagerLayer` must be \
-                    called before the `Session` extractor is run. Also, check
+                    called before the `Session` extractor is run. Also, check \
                     that the generic type for `Session<T>` is correct."
                 )
             })
