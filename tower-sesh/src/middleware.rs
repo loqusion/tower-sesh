@@ -216,6 +216,12 @@ where
         let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
         session::lazy::insert(cookie, &self.layer.store, req.extensions_mut());
 
+        // pass the request to the inner service...
+
+        // FIXME: Don't panic here, propagate the error instead.
+        let session: Option<Session<T>> =
+            session::lazy::take(req.extensions_mut()).expect("this panic should be removed");
+
         todo!()
     }
 }

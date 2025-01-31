@@ -117,6 +117,16 @@ pub(crate) mod lazy {
         }
     }
 
+    pub(crate) fn take<T>(extensions: &mut Extensions) -> Result<Option<Session<T>>, Error>
+    where
+        T: 'static + Send,
+    {
+        match extensions.remove::<LazySession<T>>() {
+            Some(lazy_session) => Ok(lazy_session.get().cloned()),
+            None => Err(Error),
+        }
+    }
+
     enum LazySession<T> {
         Empty(Arc<OnceCell<Session<T>>>),
         Init {
@@ -172,6 +182,13 @@ pub(crate) mod lazy {
                     .get_or_init(init_session(cookie, store.as_ref()))
                     .await
                     .as_ref(),
+            }
+        }
+
+        fn get(&self) -> Option<&Session<T>> {
+            match self {
+                LazySession::Empty(session) => session.get(),
+                LazySession::Init { session, .. } => session.get().and_then(Option::as_ref),
             }
         }
     }
