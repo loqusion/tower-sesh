@@ -197,7 +197,6 @@ pub(crate) mod lazy {
         }
     }
 
-    #[derive(Debug)]
     pub(crate) struct Error;
 
     impl StdError for Error {
@@ -209,6 +208,12 @@ pub(crate) mod lazy {
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.write_str("missing request extension")
+        }
+    }
+
+    impl fmt::Debug for Error {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "Error({:?})", self.to_string())
         }
     }
 }
