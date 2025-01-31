@@ -15,7 +15,7 @@ use tower_sesh_core::SessionStore;
 
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
-    session::Session,
+    session::{self, Session},
     util::CookieJarExt,
 };
 
@@ -201,6 +201,7 @@ impl<ReqBody, ResBody, S, T, Store: SessionStore<T>, C: CookieSecurity> Service<
     for SessionManager<S, T, Store, C>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
+    T: 'static + Send + Sync,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -212,7 +213,10 @@ where
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let jar = CookieJar::from_headers(req.headers());
-        let cookie = self.session_cookie(&jar);
+        if let Some(cookie) = self.session_cookie(&jar).map(Cookie::into_owned) {
+            let store = Arc::clone(&self.layer.store);
+            session::lazy::insert(cookie, store, req.extensions_mut());
+        }
 
         todo!()
     }
