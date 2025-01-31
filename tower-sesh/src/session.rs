@@ -169,31 +169,34 @@ pub(crate) mod lazy {
                     store,
                     session,
                 } => session
-                    .get_or_init(LazySession::init_session(cookie, store.as_ref()))
+                    .get_or_init(init_session(cookie, store.as_ref()))
                     .await
                     .as_ref(),
             }
         }
+    }
 
-        async fn init_session(
-            cookie: &Cookie<'static>,
-            store: &dyn SessionStore<T>,
-        ) -> Option<Session<T>> {
-            let session_key = match SessionKey::decode(cookie.value()) {
-                Ok(session_key) => session_key,
-                Err(_) => return Some(Session::empty()),
-            };
+    async fn init_session<T>(
+        cookie: &Cookie<'static>,
+        store: &dyn SessionStore<T>,
+    ) -> Option<Session<T>>
+    where
+        T: 'static,
+    {
+        let session_key = match SessionKey::decode(cookie.value()) {
+            Ok(session_key) => session_key,
+            Err(_) => return Some(Session::empty()),
+        };
 
-            match store.load(&session_key).await {
-                Ok(Some(data)) => Some(Session::new(session_key, todo!())),
-                Ok(None) => Some(Session::empty()),
-                // TODO: We may want to ignore some types of errors here and
-                // simply return an empty session.
-                Err(err) => {
-                    // TODO: Better error reporting
-                    error!(%err);
-                    None
-                }
+        match store.load(&session_key).await {
+            Ok(Some(data)) => Some(Session::new(session_key, todo!())),
+            Ok(None) => Some(Session::empty()),
+            // TODO: We may want to ignore some types of errors here and
+            // simply return an empty session.
+            Err(err) => {
+                // TODO: Better error reporting
+                error!(%err);
+                None
             }
         }
     }
