@@ -215,57 +215,8 @@ where
         let cookie = self.session_cookie(&jar);
 
         todo!()
-        // if let Some(cookies) = req.extensions().get::<Cookies>().cloned() {
-        //     let cookie = self.session_cookie(&cookies).map(Cookie::into_owned);
-        //     let session = Session::from_or_empty(cookie);
-        //
-        //     req.extensions_mut().insert(session.clone());
-        //
-        //     ResponseFuture {
-        //         state: State::Session {
-        //             session,
-        //             cookies,
-        //             cookie_controller: self.layer.cookie_controller.clone(),
-        //         },
-        //         future: self.inner.call(req),
-        //     }
-        // } else {
-        //     error!("tower_cookies::CookieManagerLayer must be added before SessionLayer");
-        //
-        //     ResponseFuture {
-        //         state: State::Fallback,
-        //         future: self.inner.call(req),
-        //     }
-        // }
     }
 }
-
-// fn extract_session_key<B>(req: &Request<B>, config: &CookieConfiguration) -> Option<SessionKey> {
-//     let jar = CookieJar::from_headers(req.headers());
-//
-//     let cookie_result = match config.content_security {
-//         CookieContentSecurity::Signed => jar.signed(&config.key).get(&config.name),
-//         CookieContentSecurity::Private => jar.private(&config.key).get(&config.name),
-//     };
-//
-//     if cookie_result.is_none() && jar.get(&config.name).is_some() {
-//         warn!(
-//             "session cookie attached to the incoming request failed to pass cryptographic \
-//             checks (signature verification/decryption)."
-//         );
-//     }
-//
-//     match SessionKey::decode(cookie_result?.value()) {
-//         Ok(session_key) => Some(session_key),
-//         Err(err) => {
-//             warn!(
-//                 error = %err.display_chain(),
-//                 "invalid session key; ignoring"
-//             );
-//             None
-//         }
-//     }
-// }
 
 pin_project! {
     /// Response future for [`SessionManager`].
