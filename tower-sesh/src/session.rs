@@ -105,7 +105,7 @@ pub(crate) mod lazy {
         extensions.insert::<LazySession<T>>(lazy_session);
     }
 
-    pub(crate) async fn get_or_init<T>(
+    pub(super) async fn get_or_init<T>(
         extensions: &mut Extensions,
     ) -> Result<Option<Session<T>>, Error>
     where
