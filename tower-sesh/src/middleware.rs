@@ -36,6 +36,7 @@ const DEFAULT_COOKIE_NAME: &str = "session_key";
 /// use std::sync::Arc;
 /// use tower_sesh::{store::MemoryStore, SessionLayer};
 ///
+/// #[derive(Clone)]
 /// struct SessionData {
 ///     foo: String,
 ///     bar: u64,

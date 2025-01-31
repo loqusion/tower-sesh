@@ -1,17 +1,18 @@
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use async_trait::async_trait;
+use parking_lot::Mutex;
 use tower_sesh_core::{store::Error, Record, SessionKey, SessionStore};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Clone)]
-pub struct MemoryStore<T>(Arc<parking_lot::Mutex<HashMap<SessionKey, Record<T>>>>);
+pub struct MemoryStore<T>(Arc<Mutex<HashMap<SessionKey, Record<T>>>>);
 
 impl<T> Default for MemoryStore<T> {
     fn default() -> Self {
         let store = HashMap::new();
-        MemoryStore(Arc::new(parking_lot::Mutex::new(store)))
+        MemoryStore(Arc::new(Mutex::new(store)))
     }
 }
 
@@ -24,19 +25,22 @@ impl<T> MemoryStore<T> {
 #[async_trait]
 impl<T> SessionStore<T> for MemoryStore<T>
 where
-    T: 'static + Send + Sync,
+    T: 'static + Send + Sync + Clone,
 {
     async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
-        let mut store_guard = self.0.lock();
-        todo!()
+        let session_key = SessionKey::generate();
+        self.update(&session_key, record).await?;
+        Ok(session_key)
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
-        todo!()
+        let store_guard = self.0.lock();
+        Ok(store_guard.get(session_key).cloned())
     }
 
     async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
-        todo!()
+        self.0.lock().insert(session_key.clone(), record.clone());
+        Ok(())
     }
 
     async fn delete(&self, session_key: &SessionKey) -> Result<()> {
