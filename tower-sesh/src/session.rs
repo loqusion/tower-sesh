@@ -190,6 +190,7 @@ pub(crate) mod lazy {
                 // TODO: We may want to ignore some types of errors here and
                 // simply return an empty session.
                 Err(err) => {
+                    // TODO: Better error reporting
                     error!(%err);
                     None
                 }
