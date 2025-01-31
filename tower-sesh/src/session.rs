@@ -60,6 +60,15 @@ where
     ) -> Result<Self, Self::Rejection> {
         lazy::get_or_init(&mut parts.extensions)
             .await
+            .unwrap_or_else(|_| {
+                // Panic because this indicates a bug in the program rather
+                // than an expected failure.
+                panic!(
+                    "Missing request extension. `SessionManagerLayer` must be \
+                    called before the `Session` extractor is run. Also, check
+                    that the generic type for `Session<T>` is correct."
+                )
+            })
             .ok_or(SessionRejection)
     }
 }
@@ -73,7 +82,7 @@ define_rejection! {
 }
 
 pub(crate) mod lazy {
-    use std::sync::Arc;
+    use std::{error::Error as StdError, fmt, sync::Arc};
 
     use async_once_cell::OnceCell;
     use cookie::Cookie;
@@ -83,40 +92,53 @@ pub(crate) mod lazy {
     use super::Session;
 
     pub(crate) fn insert<T>(
-        cookie: Cookie<'static>,
-        store: Arc<dyn SessionStore<T>>,
+        cookie: Option<Cookie<'static>>,
+        store: &Arc<impl SessionStore<T>>,
         extensions: &mut Extensions,
     ) where
         T: 'static + Send,
     {
-        let lazy_session = LazySession::new(cookie, store);
+        let lazy_session = match cookie {
+            Some(cookie) => LazySession::new(cookie, Arc::clone(store)),
+            None => LazySession::empty(),
+        };
         extensions.insert::<LazySession<T>>(lazy_session);
     }
 
-    pub(super) async fn get_or_init<T>(extensions: &mut Extensions) -> Option<Session<T>>
+    pub(crate) async fn get_or_init<T>(
+        extensions: &mut Extensions,
+    ) -> Result<Option<Session<T>>, Error>
     where
         T: 'static + Send,
     {
-        let session = match extensions.get::<LazySession<T>>() {
-            Some(lazy_session) => lazy_session.get_or_init().await.cloned()?,
-            None => Session::empty(),
-        };
-
-        Some(session)
+        match extensions.get::<LazySession<T>>() {
+            Some(lazy_session) => Ok(lazy_session.get_or_init().await.cloned()),
+            None => Err(Error),
+        }
     }
 
-    struct LazySession<T> {
-        cookie: Cookie<'static>,
-        store: Arc<dyn SessionStore<T> + 'static>,
-        session: Arc<OnceCell<Option<Session<T>>>>,
+    enum LazySession<T> {
+        Empty(Arc<OnceCell<Session<T>>>),
+        Init {
+            cookie: Cookie<'static>,
+            store: Arc<dyn SessionStore<T> + 'static>,
+            session: Arc<OnceCell<Option<Session<T>>>>,
+        },
     }
 
     impl<T> Clone for LazySession<T> {
         fn clone(&self) -> Self {
-            LazySession {
-                cookie: self.cookie.clone(),
-                store: Arc::clone(&self.store),
-                session: Arc::clone(&self.session),
+            match self {
+                LazySession::Empty(session) => LazySession::Empty(Arc::clone(session)),
+                LazySession::Init {
+                    cookie,
+                    store,
+                    session,
+                } => LazySession::Init {
+                    cookie: cookie.clone(),
+                    store: Arc::clone(store),
+                    session: Arc::clone(session),
+                },
             }
         }
     }
@@ -125,33 +147,68 @@ pub(crate) mod lazy {
     where
         T: 'static,
     {
-        fn new(cookie: Cookie<'static>, store: Arc<dyn SessionStore<T>>) -> LazySession<T> {
-            LazySession {
+        fn new(cookie: Cookie<'static>, store: Arc<impl SessionStore<T>>) -> LazySession<T> {
+            LazySession::Init {
                 cookie,
                 store,
                 session: Arc::new(OnceCell::new()),
             }
         }
 
-        async fn get_or_init(&self) -> Option<&Session<T>> {
-            let init = async {
-                let session_key = match SessionKey::decode(self.cookie.value()) {
-                    Ok(session_key) => session_key,
-                    Err(_) => return Some(Session::empty()),
-                };
+        fn empty() -> LazySession<T> {
+            LazySession::Empty(Arc::new(OnceCell::new()))
+        }
 
-                match self.store.load(&session_key).await {
-                    Ok(Some(data)) => Some(Session::new(session_key, todo!())),
-                    Ok(None) => Some(Session::empty()),
-                    // TODO: We may want to ignore some types of errors here.
-                    Err(err) => {
-                        error!(%err);
-                        None
-                    }
+        async fn get_or_init(&self) -> Option<&Session<T>> {
+            match self {
+                LazySession::Empty(session) => {
+                    Some(session.get_or_init(async { Session::empty() }).await)
                 }
+                LazySession::Init {
+                    cookie,
+                    store,
+                    session,
+                } => session
+                    .get_or_init(LazySession::init_session(cookie, store.as_ref()))
+                    .await
+                    .as_ref(),
+            }
+        }
+
+        async fn init_session(
+            cookie: &Cookie<'static>,
+            store: &dyn SessionStore<T>,
+        ) -> Option<Session<T>> {
+            let session_key = match SessionKey::decode(cookie.value()) {
+                Ok(session_key) => session_key,
+                Err(_) => return Some(Session::empty()),
             };
 
-            self.session.get_or_init(init).await.as_ref()
+            match store.load(&session_key).await {
+                Ok(Some(data)) => Some(Session::new(session_key, todo!())),
+                Ok(None) => Some(Session::empty()),
+                // TODO: We may want to ignore some types of errors here and
+                // simply return an empty session.
+                Err(err) => {
+                    error!(%err);
+                    None
+                }
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub(crate) struct Error;
+
+    impl StdError for Error {
+        fn cause(&self) -> Option<&dyn StdError> {
+            None
+        }
+    }
+
+    impl fmt::Display for Error {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("missing request extension")
         }
     }
 }

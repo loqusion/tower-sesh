@@ -213,10 +213,8 @@ where
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let jar = CookieJar::from_headers(req.headers());
-        if let Some(cookie) = self.session_cookie(&jar).map(Cookie::into_owned) {
-            let store = Arc::clone(&self.layer.store);
-            session::lazy::insert(cookie, store, req.extensions_mut());
-        }
+        let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
+        session::lazy::insert(cookie, &self.layer.store, req.extensions_mut());
 
         todo!()
     }
