@@ -98,6 +98,11 @@ pub(crate) mod lazy {
     ) where
         T: 'static + Send,
     {
+        debug_assert!(
+            extensions.get::<LazySession<T>>().is_none(),
+            "`session::lazy::insert` was called more than once!"
+        );
+
         let lazy_session = match cookie {
             Some(cookie) => LazySession::new(cookie, Arc::clone(store)),
             None => LazySession::empty(),
