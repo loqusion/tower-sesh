@@ -58,7 +58,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
     ///
     /// TODO: More documentation
     // TODO: Try to remove `cookie` from this crate's public API
-    pub fn new(store: Arc<Store>, key: cookie::Key) -> Self {
+    pub fn new(store: Arc<Store>, key: cookie::Key) -> SessionLayer<T, Store> {
         Self {
             store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),

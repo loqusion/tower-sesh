@@ -24,7 +24,7 @@ impl<T> Session<T>
 where
     T: 'static + Send + Sync,
 {
-    pub(crate) fn extract(extensions: &mut Extensions) -> Option<Self> {
+    pub(crate) fn extract(extensions: &mut Extensions) -> Option<Session<T>> {
         extensions
             .get::<Arc<Mutex<SessionInner<T>>>>()
             .cloned()
@@ -34,7 +34,7 @@ where
 
 impl<T> Clone for Session<T> {
     fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
+        Session(Arc::clone(&self.0))
     }
 }
 
