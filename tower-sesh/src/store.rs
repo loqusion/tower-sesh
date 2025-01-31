@@ -2,7 +2,9 @@ use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use async_trait::async_trait;
 use parking_lot::Mutex;
-use tower_sesh_core::{store::Error, Record, SessionKey, SessionStore};
+use tower_sesh_core::{store::Error, Record, SessionKey};
+
+pub use tower_sesh_core::SessionStore;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
