@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// The default cookie name used by [`SessionLayer`].
-const DEFAULT_COOKIE_NAME: &str = "session";
+const DEFAULT_COOKIE_NAME: &str = "id";
 
 /// A layer that provides [`Session`] as a request extension.
 ///
@@ -101,9 +101,13 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [name] of the cookie used to store a session id.
     ///
-    /// Default: `"session"`
+    /// Default: `"id"`
+    ///
+    /// See also: [Session ID Name Fingerprinting] on the OWASP Session
+    /// Management Cheat Sheet.
     ///
     /// [name]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value
+    /// [Session ID Name Fingerprinting]: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-id-name-fingerprinting
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         self.cookie_name = name.into();
         self
