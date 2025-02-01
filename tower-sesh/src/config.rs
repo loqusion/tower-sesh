@@ -4,6 +4,7 @@ use std::{borrow::Cow, fmt};
 
 use cookie::{Cookie, CookieJar, Key};
 
+// Chosen to avoid session ID name fingerprinting.
 const DEFAULT_COOKIE_NAME: &str = "id";
 
 // Adapted from https://github.com/rwf2/cookie-rs.
