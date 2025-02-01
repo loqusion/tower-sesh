@@ -64,7 +64,7 @@ pub enum Value {
 }
 
 impl fmt::Debug for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Value::Null => f.write_str("Null"),
             Value::Bool(boolean) => f.debug_tuple("Bool").field(boolean).finish(),

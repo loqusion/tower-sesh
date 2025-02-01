@@ -52,7 +52,7 @@ impl SameSite {
 }
 
 impl fmt::Display for SameSite {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SameSite::Strict => f.write_str("Strict"),
             SameSite::Lax => f.write_str("Lax"),

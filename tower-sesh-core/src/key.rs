@@ -10,7 +10,7 @@ use rand::{CryptoRng, Rng};
 pub struct SessionKey(NonZeroU128);
 
 impl fmt::Debug for SessionKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("SessionKey([REDACTED])")
     }
 }
@@ -127,7 +127,7 @@ impl StdError for DecodeSessionKeyError {
 }
 
 impl fmt::Display for DecodeSessionKeyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DecodeSessionKeyError::Base64(_err) => f.write_str("failed to parse base64 string"),
             DecodeSessionKeyError::Zero => f.write_str("session id must be non-zero"),

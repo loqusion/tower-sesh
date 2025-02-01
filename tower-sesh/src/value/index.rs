@@ -150,7 +150,7 @@ mod private {
 struct Type<'a>(&'a Value);
 
 impl fmt::Display for Type<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self.0 {
             Value::Null => f.write_str("Null"),
             Value::Bool(_) => f.write_str("Bool"),

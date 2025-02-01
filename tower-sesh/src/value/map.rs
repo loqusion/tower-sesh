@@ -630,7 +630,7 @@ where
 
 impl fmt::Debug for Map<String, Value> {
     #[inline]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.map.fmt(f)
     }
 }
