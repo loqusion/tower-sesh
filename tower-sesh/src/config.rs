@@ -21,7 +21,7 @@ const DEFAULT_COOKIE_NAME: &str = "id";
 /// definition are subject to change.
 ///
 /// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
-// TODO: Derive Copy?
+// NOTE: `Copy` should not be implemented in case web standards change in the future.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SameSite {
