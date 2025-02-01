@@ -7,14 +7,14 @@ use std::{
     task::{ready, Context, Poll},
 };
 
-use cookie::{Cookie, CookieJar, SameSite};
+use cookie::{Cookie, CookieJar};
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 use tower_sesh_core::SessionStore;
 
 use crate::{
-    config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
+    config::{CookieSecurity, PlainCookie, PrivateCookie, SameSite, SignedCookie},
     session::{self, Session},
     util::CookieJarExt,
 };
@@ -42,7 +42,7 @@ const DEFAULT_COOKIE_NAME: &str = "id";
 ///     bar: u64,
 /// }
 ///
-/// let key = cookie::Key::generate();
+/// let key = &[0; 64];
 /// let store = Arc::new(MemoryStore::<SessionData>::new());
 /// let session_layer = SessionLayer::new(store, key);
 /// ```
@@ -58,8 +58,12 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
     /// Create a new `SessionLayer`.
     ///
     /// TODO: More documentation
-    // TODO: Try to remove `cookie` from this crate's public API
-    pub fn new(store: Arc<Store>, key: cookie::Key) -> SessionLayer<T, Store> {
+    #[track_caller]
+    pub fn new(store: Arc<Store>, key: &[u8]) -> SessionLayer<T, Store> {
+        let key = match cookie::Key::try_from(key) {
+            Ok(key) => key,
+            Err(_) => panic!("key must be 64 bytes in length"),
+        };
         Self {
             store,
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),

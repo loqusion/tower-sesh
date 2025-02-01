@@ -1,4 +1,66 @@
+//! Cookie configuration.
+
+use std::fmt;
+
 use cookie::{Cookie, CookieJar, Key};
+
+// Adapted from https://github.com/rwf2/cookie-rs.
+/// The `SameSite` cookie attribute.
+///
+/// A cookie with a `SameSite` attribute is imposed restrictions on when it is
+/// sent to the origin server in a cross-site request:
+///
+/// - `"Strict"`: The cookie is never sent in cross-site requests.
+/// - `"Lax"`: The cookie is only sent in cross-site requests with "safe" HTTP
+///   methods, i.e. `GET`, `HEAD`, `OPTIONS`, and `TRACE`.
+/// - `"None"`: The cookie is sent in all cross-site requests if the `"Secure"`
+///   flag is also set; otherwise, the cookie is ignored.
+///
+/// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
+/// definition are subject to change.
+///
+/// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
+// TODO: Derive Copy?
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SameSite {
+    /// The "Strict" `SameSite` attribute.
+    Strict,
+    /// The "Lax" `SameSite` attribute.
+    Lax,
+    /// The "None" `SameSite` attribute.
+    None,
+}
+
+impl SameSite {
+    #[allow(dead_code)]
+    pub(crate) fn from_cookie_same_site(value: cookie::SameSite) -> SameSite {
+        match value {
+            cookie::SameSite::Strict => SameSite::Strict,
+            cookie::SameSite::Lax => SameSite::Lax,
+            cookie::SameSite::None => SameSite::None,
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn into_cookie_same_site(self) -> cookie::SameSite {
+        match self {
+            SameSite::Strict => cookie::SameSite::Strict,
+            SameSite::Lax => cookie::SameSite::Lax,
+            SameSite::None => cookie::SameSite::None,
+        }
+    }
+}
+
+impl fmt::Display for SameSite {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SameSite::Strict => f.write_str("Strict"),
+            SameSite::Lax => f.write_str("Lax"),
+            SameSite::None => f.write_str("None"),
+        }
+    }
+}
 
 /// Trait used to control how cookies are stored and retrieved.
 #[doc(hidden)]
