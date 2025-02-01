@@ -13,7 +13,7 @@ impl<T> Clone for Session<T> {
 }
 
 struct SessionInner<T> {
-    session_id: Option<SessionKey>,
+    session_key: Option<SessionKey>,
     data: Option<T>,
     status: SessionStatus,
 }
@@ -29,7 +29,7 @@ use SessionStatus::*;
 impl<T> Session<T> {
     fn new(session_key: SessionKey, data: T) -> Session<T> {
         let inner = SessionInner {
-            session_id: Some(session_key),
+            session_key: Some(session_key),
             data: Some(data),
             status: Unchanged,
         };
@@ -38,7 +38,7 @@ impl<T> Session<T> {
 
     fn empty() -> Session<T> {
         let inner = SessionInner {
-            session_id: None,
+            session_key: None,
             data: None,
             status: Unchanged,
         };
