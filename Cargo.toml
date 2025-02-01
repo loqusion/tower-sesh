@@ -6,8 +6,8 @@ resolver = "2"
 authors = []
 license = "MIT"
 readme = "README.md"
-categories = ["asynchronous", "session", "tower"]
-keywords = []
+categories = ["asynchronous", "web-programming"]
+keywords = ["axum", "session", "tower"]
 edition = "2021"
 rust-version = "1.82.0"
 
