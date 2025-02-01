@@ -1,10 +1,5 @@
 use cookie::{Cookie, CookieJar, Key};
 
-pub enum CookieContentSecurity {
-    Signed,
-    Private,
-}
-
 /// Trait used to control how cookies are stored and retrieved.
 #[doc(hidden)]
 pub trait CookieSecurity: Clone {
