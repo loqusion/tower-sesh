@@ -14,13 +14,10 @@ use tower::{Layer, Service};
 use tower_sesh_core::SessionStore;
 
 use crate::{
-    config::{CookieSecurity, PlainCookie, PrivateCookie, SameSite, SignedCookie},
+    config::{Config, CookieSecurity, PlainCookie, PrivateCookie, SameSite, SignedCookie},
     session::{self, Session},
     util::CookieJarExt,
 };
-
-/// The default cookie name used by [`SessionLayer`].
-const DEFAULT_COOKIE_NAME: &str = "id";
 
 /// A layer that provides [`Session`] as a request extension.
 ///
@@ -49,7 +46,7 @@ const DEFAULT_COOKIE_NAME: &str = "id";
 #[derive(Debug)]
 pub struct SessionLayer<T, Store: SessionStore<T>, C: CookieSecurity = PrivateCookie> {
     store: Arc<Store>,
-    cookie_name: Cow<'static, str>,
+    config: Config,
     cookie_controller: C,
     _marker: PhantomData<fn() -> T>,
 }
@@ -66,7 +63,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
         };
         Self {
             store,
-            cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
+            config: Config::default(),
             cookie_controller: PrivateCookie::new(key),
             _marker: PhantomData,
         }
@@ -83,7 +80,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
             store: self.store,
-            cookie_name: self.cookie_name,
+            config: self.config,
             cookie_controller: SignedCookie::new(key),
             _marker: PhantomData,
         }
@@ -97,7 +94,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         let key = self.cookie_controller.into_key();
         SessionLayer {
             store: self.store,
-            cookie_name: self.cookie_name,
+            config: self.config,
             cookie_controller: PrivateCookie::new(key),
             _marker: PhantomData,
         }
@@ -117,7 +114,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [Session Management Cheat Sheet: Session ID Name Fingerprinting]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-id-name-fingerprinting
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
-        self.cookie_name = name.into();
+        self.config.cookie_name = name.into();
         self
     }
 
@@ -125,7 +122,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// [`Domain`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
-        todo!()
+        self.config.domain = Some(domain.into());
+        self
     }
 
     /// Set whether to add the [`HttpOnly`] attribute in the `Set-Cookie`
@@ -133,21 +131,24 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// [`HttpOnly`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly
     pub fn http_only(mut self, enable: bool) -> Self {
-        todo!()
+        self.config.http_only = enable;
+        self
     }
 
     /// Set the [`Path`] attribute in the `Set-Cookie` response header.
     ///
     /// [`Path`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
-        todo!()
+        self.config.path = path.into();
+        self
     }
 
     /// Set the [`SameSite`] attribute in the `Set-Cookie` response header.
     ///
     /// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
     pub fn same_site(mut self, same_site: SameSite) -> Self {
-        todo!()
+        self.config.same_site = same_site;
+        self
     }
 
     /// Set whether to add the [`Secure`] attribute in the `Set-Cookie`
@@ -155,7 +156,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// [`Secure`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure
     pub fn secure(mut self, enable: bool) -> Self {
-        todo!()
+        self.config.secure = enable;
+        self
     }
 }
 
@@ -164,7 +166,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store, PlainCookie> {
     pub fn plain(store: Arc<Store>) -> SessionLayer<T, Store, PlainCookie> {
         SessionLayer {
             store,
-            cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
+            config: Config::default(),
             cookie_controller: PlainCookie,
             _marker: PhantomData,
         }
@@ -175,7 +177,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> Clone for SessionLayer<T, Sto
     fn clone(&self) -> Self {
         Self {
             store: Arc::clone(&self.store),
-            cookie_name: self.cookie_name.clone(),
+            config: self.config.clone(),
             cookie_controller: self.cookie_controller.clone(),
             _marker: PhantomData,
         }
@@ -206,7 +208,7 @@ impl<S, T, Store: SessionStore<T>, C: CookieSecurity> SessionManager<S, T, Store
     fn session_cookie<'c>(&self, jar: &'c CookieJar) -> Option<Cookie<'c>> {
         self.layer
             .cookie_controller
-            .get(jar, &self.layer.cookie_name)
+            .get(jar, &self.layer.config.cookie_name)
     }
 }
 
