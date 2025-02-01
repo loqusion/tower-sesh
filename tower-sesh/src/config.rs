@@ -12,10 +12,9 @@ const DEFAULT_COOKIE_NAME: &str = "id";
 /// A cookie with a `SameSite` attribute is imposed restrictions on when it is
 /// sent to the origin server in a cross-site request:
 ///
-/// - `"Strict"`: The cookie is never sent in cross-site requests.
-/// - `"Lax"`: The cookie is only sent in cross-site requests with "safe" HTTP
-///   methods, i.e. `GET`, `HEAD`, `OPTIONS`, and `TRACE`.
-/// - `"None"`: The cookie is sent in all cross-site requests if the `"Secure"`
+/// - `Strict`: The cookie is never sent in cross-site requests.
+/// - `Lax`: The cookie is sent in cross-site top-level navigations.
+/// - `None`: The cookie is sent in all cross-site requests if the `Secure`
 ///   flag is also set; otherwise, the cookie is ignored.
 ///
 /// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
@@ -26,11 +25,8 @@ const DEFAULT_COOKIE_NAME: &str = "id";
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SameSite {
-    /// The "Strict" `SameSite` attribute.
     Strict,
-    /// The "Lax" `SameSite` attribute.
     Lax,
-    /// The "None" `SameSite` attribute.
     None,
 }
 
