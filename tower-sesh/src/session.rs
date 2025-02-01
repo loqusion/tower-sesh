@@ -47,6 +47,7 @@ impl<T> Session<T> {
 }
 
 #[cfg(feature = "axum")]
+#[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
 #[async_trait]
 impl<S, T> axum::extract::FromRequestParts<S> for Session<T>
 where

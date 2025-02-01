@@ -1,3 +1,5 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+
 #[doc(inline)]
 pub use middleware::SessionLayer;
 #[doc(inline)]
