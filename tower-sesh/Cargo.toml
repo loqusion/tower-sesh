@@ -1,7 +1,7 @@
 [package]
 name = "tower-sesh"
 description = "Tower middleware for session authentication via cookies"
-version.workspace = true
+version = "0.1.0-alpha.1"
 authors.workspace = true
 license.workspace = true
 readme.workspace = true
@@ -28,7 +28,7 @@ ryu = "1.0.18"
 serde = { workspace = true }
 time = "0.3.37"
 tower = "0.5.2"
-tower-sesh-core = { version = "0.1.0", path = "../tower-sesh-core" }
+tower-sesh-core = { version = "0.1.0-alpha.1", path = "../tower-sesh-core" }
 
 # optional dependencies
 axum = { version = "0.7.9", optional = true }
