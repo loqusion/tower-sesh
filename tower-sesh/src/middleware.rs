@@ -101,7 +101,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [name][mdn] of the cookie used to store a session id.
     ///
-    /// Default: `session_key`
+    /// Default: `"session_key"`
     ///
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
