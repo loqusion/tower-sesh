@@ -89,7 +89,7 @@ impl Default for Config {
 
 /// Trait used to control how cookies are stored and retrieved.
 #[doc(hidden)]
-pub trait CookieSecurity: Clone {
+pub trait CookieSecurity: Clone + private::Sealed {
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>>;
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>);
     fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>);
@@ -146,6 +146,7 @@ impl CookieSecurity for SignedCookie {
         self.key
     }
 }
+impl private::Sealed for SignedCookie {}
 
 impl CookieSecurity for PrivateCookie {
     #[inline]
@@ -168,6 +169,7 @@ impl CookieSecurity for PrivateCookie {
         self.key
     }
 }
+impl private::Sealed for PrivateCookie {}
 
 impl CookieSecurity for PlainCookie {
     #[inline]
@@ -190,4 +192,9 @@ impl CookieSecurity for PlainCookie {
     fn into_key(self) -> Key {
         unimplemented!("use `SessionLayer::new()` to sign or encrypt cookies")
     }
+}
+impl private::Sealed for PlainCookie {}
+
+mod private {
+    pub trait Sealed {}
 }
