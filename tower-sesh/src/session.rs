@@ -79,6 +79,7 @@ define_rejection! {
     #[body = "Failed to load session"]
     /// Rejection for [`Session`] if an unrecoverable error occurred when
     /// loading the session.
+    #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
     pub struct SessionRejection;
 }
 
