@@ -49,3 +49,13 @@ impl fmt::Display for Error {
         match *self {}
     }
 }
+
+#[cfg(test)]
+#[test]
+fn dyn_compatible() {
+    use std::sync::Arc;
+
+    const _: fn() = || {
+        let _dyn_store: Arc<dyn SessionStore<()>> = todo!();
+    };
+}
