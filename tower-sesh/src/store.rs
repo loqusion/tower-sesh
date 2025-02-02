@@ -50,6 +50,7 @@ where
         Ok(())
     }
 }
+impl<T> tower_sesh_core::__private::Sealed for MemoryStore<T> {}
 
 pub struct CachingStore<T, Cache: SessionStore<T>, Store: SessionStore<T>> {
     cache: Cache,
@@ -119,4 +120,8 @@ where
 
         Ok(())
     }
+}
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> tower_sesh_core::__private::Sealed
+    for CachingStore<T, Cache, Store>
+{
 }

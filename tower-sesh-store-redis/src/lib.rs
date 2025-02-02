@@ -202,6 +202,7 @@ where
         Ok(())
     }
 }
+impl<T, C: GetConnection> tower_sesh_core::__private::Sealed for RedisStore<T, C> {}
 
 trait RecordExt {
     fn set_expiry(&self) -> SetExpiry;

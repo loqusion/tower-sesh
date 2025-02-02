@@ -16,8 +16,41 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 // transferring ownership or cloning.
 //
 // TODO: Method signatures need a rework.
+
+/// # Implementing `SessionStore`
+///
+/// Implementing this trait is highly discouraged, as its API is unstable and
+/// may break implementors (for instance, by [adding a trait item]). As such,
+/// this trait is sealed with a public (but hidden from documentation) `Sealed`
+/// trait.
+///
+/// [adding a trait item]: https://doc.rust-lang.org/cargo/reference/semver.html#trait-new-item-no-default
+///
+/// To implement `SessionStore` anyway, implement the hidden `Sealed` trait too:
+///
+/// ```
+/// use async_trait::async_trait;
+/// use tower_sesh_core::{store::{Error, Record}, SessionKey, SessionStore};
+///
+/// struct StoreImpl<T> {
+///     /*...*/
+/// # _marker: std::marker::PhantomData<fn() -> T>,
+/// }
+///
+/// #[async_trait]
+/// impl<T> SessionStore<T> for StoreImpl<T>
+/// where
+///     T: 'static // + ...
+/// {
+///     async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { todo!() }
+///     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { todo!() }
+///     async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { todo!() }
+///     async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { todo!() }
+/// }
+/// impl<T> tower_sesh_core::__private::Sealed for StoreImpl<T> {} // Required!
+/// ```
 #[async_trait]
-pub trait SessionStore<T>: 'static + Send + Sync {
+pub trait SessionStore<T>: 'static + Send + Sync + crate::__private::Sealed {
     async fn create(&self, record: &Record<T>) -> Result<SessionKey>;
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>>;
