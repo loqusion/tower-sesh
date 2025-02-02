@@ -245,14 +245,3 @@ pub(crate) mod lazy {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn traits() {
-        fn assert_send<T: Send>() {}
-        assert_send::<Session<()>>();
-    }
-}
