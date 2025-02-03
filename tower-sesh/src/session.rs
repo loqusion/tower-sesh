@@ -57,7 +57,8 @@ impl<T> Session<T> {
         lock.data = Some(value);
         lock.status = Changed;
 
-        // SAFETY: `data` was just set.
+        // SAFETY: a `None` variant for `data` would have been replaced by a
+        // `Some` variant in the code above.
         unsafe { SessionGuard::new(lock) }
     }
 
@@ -66,7 +67,7 @@ impl<T> Session<T> {
         let lock = self.0.lock_arc();
 
         match &lock.data {
-            // SAFETY: `data` is `Some`.
+            // SAFETY: match arm guarantees `data` is `Some`.
             Some(_) => unsafe { Some(SessionGuard::new(lock)) },
             None => None,
         }
@@ -80,7 +81,8 @@ impl<T> Session<T> {
             lock.status = Changed;
         }
 
-        // SAFETY: If `data` is `None`, then `value` is inserted.
+        // SAFETY: a `None` variant for `data` would have been replaced by a
+        // `Some` variant in the code above.
         unsafe { SessionGuard::new(lock) }
     }
 
@@ -95,7 +97,8 @@ impl<T> Session<T> {
             lock.status = Changed;
         }
 
-        // SAFETY: If `data` is `None`, then `f()` is inserted.
+        // SAFETY: a `None` variant for `data` would have been replaced by a
+        // `Some` variant in the code above.
         unsafe { SessionGuard::new(lock) }
     }
 
@@ -118,8 +121,8 @@ pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>
 impl<T> SessionGuard<T> {
     /// # Safety
     ///
-    /// The caller of this method must ensure that `owned_guard.record` is not
-    /// `None`.
+    /// The caller of this method must ensure that `owned_guard.data` is a
+    /// `Some` variant.
     unsafe fn new(
         owned_guard: ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>,
     ) -> SessionGuard<T> {
@@ -132,8 +135,8 @@ impl<T> Deref for SessionGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        // SAFETY: `SessionGuard` holds the lock, so there is no way for `data`
-        // to be set to `None`.
+        // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
+        // to `None`.
         unsafe { self.0.data.as_ref().unwrap_unchecked() }
     }
 }
@@ -142,8 +145,8 @@ impl<T> DerefMut for SessionGuard<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.status = Changed;
 
-        // SAFETY: `SessionGuard` holds the lock, so there is no way for `data`
-        // to be set to `None`.
+        // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
+        // to `None`.
         unsafe { self.0.data.as_mut().unwrap_unchecked() }
     }
 }
