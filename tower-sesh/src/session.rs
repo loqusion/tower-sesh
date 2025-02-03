@@ -1,7 +1,10 @@
-use std::sync::Arc;
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 
 use async_trait::async_trait;
-use parking_lot::Mutex;
+use parking_lot::{ArcMutexGuard, Mutex};
 use tower_sesh_core::{Record, SessionKey};
 
 pub struct Session<T>(Arc<Mutex<SessionInner<T>>>);
@@ -20,8 +23,8 @@ struct SessionInner<T> {
 
 enum SessionStatus {
     Unchanged,
-    Renewed,
     Changed,
+    Renewed,
     Purged,
 }
 use SessionStatus::*;
@@ -43,6 +46,105 @@ impl<T> Session<T> {
             status: Unchanged,
         };
         Session(Arc::new(Mutex::new(inner)))
+    }
+
+    pub fn insert(&self, value: T) -> SessionGuard<T> {
+        let mut lock = self.0.lock_arc();
+
+        let record = Record::new(value, todo!());
+        lock.record = Some(record);
+        lock.status = Changed;
+
+        // SAFETY: `record` was just set.
+        unsafe { SessionGuard::new(lock) }
+    }
+
+    #[must_use]
+    pub fn get(&self) -> Option<SessionGuard<T>> {
+        let lock = self.0.lock_arc();
+
+        match &lock.record {
+            // SAFETY: `record` is `Some`.
+            Some(_) => unsafe { Some(SessionGuard::new(lock)) },
+            None => None,
+        }
+    }
+
+    pub fn get_or_insert(&self, value: T) -> SessionGuard<T> {
+        let mut lock = self.0.lock_arc();
+
+        if let None = &lock.record {
+            let record = Record::new(value, todo!());
+            lock.record = Some(record);
+            lock.status = Changed;
+        }
+
+        // SAFETY: If `record` is `None`, then `value` is inserted.
+        unsafe { SessionGuard::new(lock) }
+    }
+
+    pub fn get_or_insert_with<F>(&self, f: F) -> SessionGuard<T>
+    where
+        F: FnOnce() -> T,
+    {
+        let mut lock = self.0.lock_arc();
+
+        if let None = &lock.record {
+            let record = Record::new(f(), todo!());
+            lock.record = Some(record);
+            lock.status = Changed;
+        }
+
+        // SAFETY: If `None` is `None`, then `f()` is inserted.
+        unsafe { SessionGuard::new(lock) }
+    }
+
+    #[inline]
+    pub fn get_or_insert_default(&self) -> SessionGuard<T>
+    where
+        T: Default,
+    {
+        self.get_or_insert_with(T::default)
+    }
+}
+
+/// A wrapper around a RAII mutex guard. When this structure is dropped, the
+/// lock it holds will be unlocked.
+///
+/// The data protected by the mutex can be accessed through this guard via its
+/// [`Deref`] and [`DerefMut`] implementations.
+pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
+
+impl<T> SessionGuard<T> {
+    /// # Safety
+    ///
+    /// The caller of this method must ensure that `owned_guard.record` is not
+    /// `None`.
+    unsafe fn new(
+        owned_guard: ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>,
+    ) -> SessionGuard<T> {
+        debug_assert!(owned_guard.record.is_some());
+        SessionGuard(owned_guard)
+    }
+}
+
+impl<T> Deref for SessionGuard<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        // SAFETY: `SessionGuard` holds the lock, so there is no way for
+        // `record` to be set to `None`.
+        unsafe { &self.0.record.as_ref().unwrap_unchecked().data }
+    }
+}
+
+impl<T> DerefMut for SessionGuard<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.status = Changed;
+
+        // SAFETY: `SessionGuard` holds the lock, so there is no way for
+        // `record` to be set to `None`.
+        unsafe { &mut self.0.record.as_mut().unwrap_unchecked().data }
     }
 }
 
