@@ -17,6 +17,8 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 //
 // TODO: Method signatures need a rework.
 
+/// Backing storage for session data.
+///
 /// # Implementing `SessionStore`
 ///
 /// Implementing this trait is highly discouraged, as its API is unstable and
