@@ -63,15 +63,22 @@ pub trait SessionStore<T>: 'static + Send + Sync + crate::__private::Sealed {
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }
 
+pub type Ttl = OffsetDateTime;
+
 #[derive(Clone, Debug)]
+#[non_exhaustive]
 pub struct Record<T> {
-    data: T,
-    expiry: OffsetDateTime,
+    pub data: T,
+    pub ttl: Ttl,
 }
 
 impl<T> Record<T> {
+    pub fn new(data: T, ttl: Ttl) -> Record<T> {
+        Record { data, ttl }
+    }
+
     pub fn unix_timestamp(&self) -> i64 {
-        self.expiry.unix_timestamp()
+        self.ttl.unix_timestamp()
     }
 }
 
