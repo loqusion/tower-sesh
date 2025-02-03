@@ -23,7 +23,7 @@ cookie = { version = "0.18.1", features = [
     "percent-encode",
 ] }
 futures = "0.3.31"
-http = "1.2.0"
+http = "1.1.0"
 itoa = "1.0.14"
 parking_lot = { version = "0.12.3", features = ["arc_lock"] }
 pin-project-lite = "0.2.15"
