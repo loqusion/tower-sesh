@@ -32,22 +32,23 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 ///
 /// ```
 /// use async_trait::async_trait;
-/// use tower_sesh_core::{store::{Error, Record}, SessionKey, SessionStore};
+/// use tower_sesh_core::SessionStore;
+/// # use tower_sesh_core::{store::{Error, Record}, SessionKey};
 ///
 /// struct StoreImpl<T> {
-///     /*...*/
+///     /* ... */
 /// # _marker: std::marker::PhantomData<fn() -> T>,
 /// }
 ///
 /// #[async_trait]
 /// impl<T> SessionStore<T> for StoreImpl<T>
-/// where
-///     T: 'static // + ...
+/// # where T: 'static,
 /// {
-///     async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { todo!() }
-///     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { todo!() }
-///     async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { todo!() }
-///     async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { todo!() }
+///     /* ... */
+/// # async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { todo!() }
+/// # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { todo!() }
+/// # async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { todo!() }
+/// # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { todo!() }
 /// }
 /// impl<T> tower_sesh_core::__private::Sealed for StoreImpl<T> {} // Required!
 /// ```
