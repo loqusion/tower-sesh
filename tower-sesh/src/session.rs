@@ -65,9 +65,9 @@ where
             // Panic because this indicates a bug in the program rather than an
             // expected failure.
             Err(_) => panic!(
-                "Missing request extension. `SessionManagerLayer` must be \
-                called before the `Session` extractor is run. Also, check \
-                that the generic type for `Session<T>` is correct."
+                "Missing request extension. `SessionLayer` must be called \
+                before the `Session` extractor is run. Also, check that the \
+                generic type for `Session<T>` is correct."
             ),
         }
     }
