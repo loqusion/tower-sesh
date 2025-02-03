@@ -24,7 +24,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 /// Implementing this trait is highly discouraged, as its API is unstable and
 /// may break implementors (for instance, by [adding a trait item]). As such,
 /// this trait is sealed with a public (but hidden from documentation) `Sealed`
-/// trait.
+/// trait defined in the `tower-sesh-core` crate.
 ///
 /// [adding a trait item]: https://doc.rust-lang.org/cargo/reference/semver.html#trait-new-item-no-default
 ///
