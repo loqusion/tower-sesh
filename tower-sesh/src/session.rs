@@ -107,11 +107,11 @@ impl<T> Session<T> {
     }
 }
 
-/// A wrapper around a RAII mutex guard. When this structure is dropped, the
-/// lock it holds will be unlocked.
+/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
+/// data `T` can be accessed through this guard via its [`Deref`] and
+/// [`DerefMut`] implementations.
 ///
-/// The data protected by the mutex can be accessed through this guard via its
-/// [`Deref`] and [`DerefMut`] implementations.
+/// The lock is automatically released whenever the guard is dropped.
 pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
 
 impl<T> SessionGuard<T> {
@@ -147,11 +147,11 @@ impl<T> DerefMut for SessionGuard<T> {
     }
 }
 
-/// A wrapper around a RAII mutex guard. When this structure is dropped, the
-/// lock it holds will be unlocked.
+/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
+/// data `Option<T>` can be accessed through this guard via its [`Deref`] and
+/// [`DerefMut`] implementations.
 ///
-/// The optional data protected by the mutex can be accessed through this guard
-/// via its [`Deref`] and [`DerefMut`] implementations.
+/// The lock is automatically released whenever the guard is dropped.
 pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
 
 impl<T> OptionSessionGuard<T> {
