@@ -78,9 +78,12 @@ impl ConnectionLike for ConnectionManagerWithRetry {
 /// between threads.
 ///
 /// [`ConnectionLike`]: redis::aio::ConnectionLike
+///
+/// This trait is sealed and cannot be implemented for types outside of
+/// `tower-sesh-store-redis`.
 #[doc(hidden)]
 #[async_trait]
-pub trait GetConnection: Send + Sync + 'static {
+pub trait GetConnection: Send + Sync + 'static + private::Sealed {
     type Connection: ConnectionLike + Send;
 
     async fn connection(&self) -> Result<Self::Connection, GetConnectionError>;
@@ -94,8 +97,13 @@ impl GetConnection for ConnectionManagerWithRetry {
         Ok(self.clone())
     }
 }
+impl private::Sealed for ConnectionManagerWithRetry {}
 
 #[doc(hidden)]
 #[derive(Debug, thiserror::Error)]
 #[error("failed to acquire redis connection")]
 pub struct GetConnectionError(#[from] RedisError);
+
+mod private {
+    pub trait Sealed {}
+}
