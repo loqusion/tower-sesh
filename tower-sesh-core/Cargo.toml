@@ -10,6 +10,9 @@ keywords.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 
+[features]
+__private = []
+
 [dependencies]
 async-trait = "0.1.83"
 base64 = "0.22.1"
@@ -18,8 +21,6 @@ time = "0.3.37"
 
 [dev-dependencies]
 quickcheck = "1.0.3"
-
-[features]
 
 [lints]
 workspace = true
