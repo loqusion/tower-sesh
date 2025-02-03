@@ -23,13 +23,12 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 ///
 /// Implementing this trait is highly discouraged, as its API is unstable and
 /// may break implementors (for instance, by [adding a trait item]). As such,
-/// this trait is sealed with a `Sealed` trait that is only exported from the
-/// `tower-sesh-core` crate when the `__private` feature is enabled.
+/// this trait is sealed with a public (but hidden from documentation) `Sealed`
+/// trait.
 ///
 /// [adding a trait item]: https://doc.rust-lang.org/cargo/reference/semver.html#trait-new-item-no-default
 ///
-/// To implement `SessionStore` anyway, enable the `__private` feature and
-/// implement the `Sealed` trait:
+/// To implement `SessionStore` anyway, implement the hidden `Sealed` trait too:
 ///
 /// ```
 /// use async_trait::async_trait;
