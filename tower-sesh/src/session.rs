@@ -5,7 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use parking_lot::{ArcMutexGuard, Mutex};
-use tower_sesh_core::{Record, SessionKey};
+use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
 pub struct Session<T>(Arc<Mutex<SessionInner<T>>>);
 
@@ -17,7 +17,8 @@ impl<T> Clone for Session<T> {
 
 struct SessionInner<T> {
     session_key: Option<SessionKey>,
-    record: Option<Record<T>>,
+    data: Option<T>,
+    expires_at: Option<Ttl>,
     status: SessionStatus,
 }
 
@@ -33,7 +34,8 @@ impl<T> Session<T> {
     fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
         let inner = SessionInner {
             session_key: Some(session_key),
-            record: Some(record),
+            data: Some(record.data),
+            expires_at: Some(record.ttl),
             status: Unchanged,
         };
         Session(Arc::new(Mutex::new(inner)))
@@ -42,7 +44,8 @@ impl<T> Session<T> {
     fn empty() -> Session<T> {
         let inner = SessionInner {
             session_key: None,
-            record: None,
+            data: None,
+            expires_at: None,
             status: Unchanged,
         };
         Session(Arc::new(Mutex::new(inner)))
@@ -51,11 +54,10 @@ impl<T> Session<T> {
     pub fn insert(&self, value: T) -> SessionGuard<T> {
         let mut lock = self.0.lock_arc();
 
-        let record = Record::new(value, todo!());
-        lock.record = Some(record);
+        lock.data = Some(value);
         lock.status = Changed;
 
-        // SAFETY: `record` was just set.
+        // SAFETY: `data` was just set.
         unsafe { SessionGuard::new(lock) }
     }
 
@@ -63,8 +65,8 @@ impl<T> Session<T> {
     pub fn get(&self) -> Option<SessionGuard<T>> {
         let lock = self.0.lock_arc();
 
-        match &lock.record {
-            // SAFETY: `record` is `Some`.
+        match &lock.data {
+            // SAFETY: `data` is `Some`.
             Some(_) => unsafe { Some(SessionGuard::new(lock)) },
             None => None,
         }
@@ -73,13 +75,12 @@ impl<T> Session<T> {
     pub fn get_or_insert(&self, value: T) -> SessionGuard<T> {
         let mut lock = self.0.lock_arc();
 
-        if let None = &lock.record {
-            let record = Record::new(value, todo!());
-            lock.record = Some(record);
+        if let None = &lock.data {
+            lock.data = Some(value);
             lock.status = Changed;
         }
 
-        // SAFETY: If `record` is `None`, then `value` is inserted.
+        // SAFETY: If `data` is `None`, then `value` is inserted.
         unsafe { SessionGuard::new(lock) }
     }
 
@@ -89,13 +90,12 @@ impl<T> Session<T> {
     {
         let mut lock = self.0.lock_arc();
 
-        if let None = &lock.record {
-            let record = Record::new(f(), todo!());
-            lock.record = Some(record);
+        if let None = &lock.data {
+            lock.data = Some(f());
             lock.status = Changed;
         }
 
-        // SAFETY: If `None` is `None`, then `f()` is inserted.
+        // SAFETY: If `data` is `None`, then `f()` is inserted.
         unsafe { SessionGuard::new(lock) }
     }
 
@@ -123,7 +123,7 @@ impl<T> SessionGuard<T> {
     unsafe fn new(
         owned_guard: ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>,
     ) -> SessionGuard<T> {
-        debug_assert!(owned_guard.record.is_some());
+        debug_assert!(owned_guard.data.is_some());
         SessionGuard(owned_guard)
     }
 }
@@ -132,9 +132,9 @@ impl<T> Deref for SessionGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        // SAFETY: `SessionGuard` holds the lock, so there is no way for
-        // `record` to be set to `None`.
-        unsafe { &self.0.record.as_ref().unwrap_unchecked().data }
+        // SAFETY: `SessionGuard` holds the lock, so there is no way for `data`
+        // to be set to `None`.
+        unsafe { self.0.data.as_ref().unwrap_unchecked() }
     }
 }
 
@@ -142,9 +142,9 @@ impl<T> DerefMut for SessionGuard<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.status = Changed;
 
-        // SAFETY: `SessionGuard` holds the lock, so there is no way for
-        // `record` to be set to `None`.
-        unsafe { &mut self.0.record.as_mut().unwrap_unchecked().data }
+        // SAFETY: `SessionGuard` holds the lock, so there is no way for `data`
+        // to be set to `None`.
+        unsafe { self.0.data.as_mut().unwrap_unchecked() }
     }
 }
 
