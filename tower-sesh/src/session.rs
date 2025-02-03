@@ -63,14 +63,10 @@ impl<T> Session<T> {
     }
 
     #[must_use]
-    pub fn get(&self) -> Option<SessionGuard<T>> {
+    pub fn get(&self) -> OptionSessionGuard<T> {
         let lock = self.0.lock_arc();
 
-        match &lock.data {
-            // SAFETY: match arm guarantees `data` is `Some`.
-            Some(_) => unsafe { Some(SessionGuard::new(lock)) },
-            None => None,
-        }
+        OptionSessionGuard::new(lock)
     }
 
     pub fn get_or_insert(&self, value: T) -> SessionGuard<T> {
@@ -148,6 +144,35 @@ impl<T> DerefMut for SessionGuard<T> {
         // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
         // to `None`.
         unsafe { self.0.data.as_mut().unwrap_unchecked() }
+    }
+}
+
+/// A wrapper around a RAII mutex guard. When this structure is dropped, the
+/// lock it holds will be unlocked.
+///
+/// The optional data protected by the mutex can be accessed through this guard
+/// via its [`Deref`] and [`DerefMut`] implementations.
+pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
+
+impl<T> OptionSessionGuard<T> {
+    fn new(
+        owned_guard: ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>,
+    ) -> OptionSessionGuard<T> {
+        OptionSessionGuard(owned_guard)
+    }
+}
+
+impl<T> Deref for OptionSessionGuard<T> {
+    type Target = Option<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0.data
+    }
+}
+
+impl<T> DerefMut for OptionSessionGuard<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0.data
     }
 }
 
