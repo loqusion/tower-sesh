@@ -59,18 +59,17 @@ where
         parts: &mut http::request::Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        lazy::get_or_init(&mut parts.extensions)
-            .await
-            .unwrap_or_else(|_| {
-                // Panic because this indicates a bug in the program rather
-                // than an expected failure.
-                panic!(
-                    "Missing request extension. `SessionManagerLayer` must be \
-                    called before the `Session` extractor is run. Also, check \
-                    that the generic type for `Session<T>` is correct."
-                )
-            })
-            .ok_or(SessionRejection)
+        match lazy::get_or_init(&mut parts.extensions).await {
+            Ok(Some(session)) => Ok(session),
+            Ok(None) => Err(SessionRejection),
+            // Panic because this indicates a bug in the program rather than an
+            // expected failure.
+            Err(_) => panic!(
+                "Missing request extension. `SessionManagerLayer` must be \
+                called before the `Session` extractor is run. Also, check \
+                that the generic type for `Session<T>` is correct."
+            ),
+        }
     }
 }
 
