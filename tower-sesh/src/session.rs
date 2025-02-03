@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use parking_lot::Mutex;
-use tower_sesh_core::SessionKey;
+use tower_sesh_core::{Record, SessionKey};
 
 pub struct Session<T>(Arc<Mutex<SessionInner<T>>>);
 
@@ -14,7 +14,7 @@ impl<T> Clone for Session<T> {
 
 struct SessionInner<T> {
     session_key: Option<SessionKey>,
-    data: Option<T>,
+    record: Option<Record<T>>,
     status: SessionStatus,
 }
 
@@ -27,10 +27,10 @@ enum SessionStatus {
 use SessionStatus::*;
 
 impl<T> Session<T> {
-    fn new(session_key: SessionKey, data: T) -> Session<T> {
+    fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
         let inner = SessionInner {
             session_key: Some(session_key),
-            data: Some(data),
+            record: Some(record),
             status: Unchanged,
         };
         Session(Arc::new(Mutex::new(inner)))
@@ -39,7 +39,7 @@ impl<T> Session<T> {
     fn empty() -> Session<T> {
         let inner = SessionInner {
             session_key: None,
-            data: None,
+            record: None,
             status: Unchanged,
         };
         Session(Arc::new(Mutex::new(inner)))
@@ -212,7 +212,7 @@ pub(crate) mod lazy {
         };
 
         match store.load(&session_key).await {
-            Ok(Some(data)) => Some(Session::new(session_key, todo!())),
+            Ok(Some(record)) => Some(Session::new(session_key, record)),
             Ok(None) => Some(Session::empty()),
             // TODO: We may want to ignore some types of errors here and
             // simply return an empty session.
