@@ -52,7 +52,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 /// }
 /// impl<T> tower_sesh_core::__private::Sealed for StoreImpl<T> {} // Required!
 /// ```
-#[async_trait]
+#[cfg_attr(not(docsrs), async_trait)]
 pub trait SessionStore<T>: 'static + Send + Sync + crate::__private::Sealed {
     async fn create(&self, record: &Record<T>) -> Result<SessionKey>;
 
