@@ -75,7 +75,7 @@ impl<T> Session<T> {
     pub fn get_or_insert(&self, value: T) -> SessionGuard<T> {
         let mut lock = self.0.lock_arc();
 
-        if let None = &lock.data {
+        if lock.data.is_none() {
             lock.data = Some(value);
             lock.status = Changed;
         }
@@ -90,7 +90,7 @@ impl<T> Session<T> {
     {
         let mut lock = self.0.lock_arc();
 
-        if let None = &lock.data {
+        if lock.data.is_none() {
             lock.data = Some(f());
             lock.status = Changed;
         }
