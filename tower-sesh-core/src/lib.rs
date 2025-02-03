@@ -21,7 +21,7 @@ pub mod key;
 pub mod store;
 
 // Not public API. Meant to discourage implementing `SessionStore` to avoid
-// breaking changes in dependent crates.
+// breakage.
 #[doc(hidden)]
 pub mod __private {
     pub trait Sealed {}
