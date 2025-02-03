@@ -198,10 +198,22 @@ impl<S, T, Store: SessionStore<T>, C: CookieSecurity> Layer<S> for SessionLayer<
 /// A middleware that provides [`Session`] as a request extension.
 ///
 /// [`Session`]: crate::session::Session
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SessionManager<S, T, Store: SessionStore<T>, C: CookieSecurity> {
     inner: S,
     layer: SessionLayer<T, Store, C>,
+}
+
+impl<S, T, Store: SessionStore<T>, C: CookieSecurity> Clone for SessionManager<S, T, Store, C>
+where
+    S: Clone,
+{
+    fn clone(&self) -> Self {
+        SessionManager {
+            inner: self.inner.clone(),
+            layer: self.layer.clone(),
+        }
+    }
 }
 
 impl<S, T, Store: SessionStore<T>, C: CookieSecurity> SessionManager<S, T, Store, C> {
