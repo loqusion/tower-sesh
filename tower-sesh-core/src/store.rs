@@ -86,7 +86,7 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(not(docsrs), test))]
 #[test]
 fn dyn_compatible() {
     use std::sync::Arc;
