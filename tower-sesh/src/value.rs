@@ -49,7 +49,7 @@ pub use self::number::Number;
 /// [`Serialize::serialize`]: https://docs.rs/serde/latest/serde/trait.Serialize.html#tymethod.serialize
 /// [`Session`]: crate::Session
 /// [`serde_json::Value`]: https://docs.rs/serde_json/latest/serde_json/enum.Value.html
-/// [session store]: crate::SessionStore
+/// [session store]: crate::store::SessionStore
 #[derive(Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Value {
