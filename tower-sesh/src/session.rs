@@ -112,6 +112,14 @@ impl<T> Session<T> {
 /// [`DerefMut`] implementations.
 ///
 /// The lock is automatically released whenever the guard is dropped.
+//
+// # Invariants
+//
+// 1. When constructing `SessionGuard`, the `data` contained within
+//    `SessionInner` must contain a `Some` variant.
+// 2. After the previous invariant is met, and until the `SessionGuard` is
+//    dropped, the lock must never be released and `data` must never be replaced
+//    with `None`.
 pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
 
 impl<T> SessionGuard<T> {
