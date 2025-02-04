@@ -3,7 +3,7 @@ members = ["tower-sesh", "tower-sesh-*"]
 resolver = "2"
 
 [workspace.package]
-authors = []
+authors = ["loqusion <loqusion@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/loqusion/tower-sesh"
