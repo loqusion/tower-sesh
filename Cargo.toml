@@ -6,6 +6,7 @@ resolver = "2"
 authors = []
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/loqusion/tower-sesh"
 categories = ["asynchronous", "web-programming"]
 keywords = ["axum", "session", "tower"]
 edition = "2021"
