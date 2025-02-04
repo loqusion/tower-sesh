@@ -1,6 +1,8 @@
 [package]
 name = "tower-sesh-core"
-description = "Tower middleware for session authentication via cookies"
+description = """
+Core components for `tower-sesh` and related crates.
+"""
 version = "0.1.0-alpha.1"
 authors.workspace = true
 license.workspace = true

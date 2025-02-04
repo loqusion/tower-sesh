@@ -1,5 +1,8 @@
 [package]
 name = "tower-sesh-store-redis"
+description = """
+Redis store for `tower-sesh`.
+"""
 version = "0.1.0-alpha.1"
 authors.workspace = true
 license.workspace = true
