@@ -51,6 +51,13 @@ impl<T> Session<T> {
         Session(Arc::new(Mutex::new(inner)))
     }
 
+    #[must_use]
+    pub fn get(&self) -> OptionSessionGuard<T> {
+        let lock = self.0.lock_arc();
+
+        OptionSessionGuard::new(lock)
+    }
+
     pub fn insert(&self, value: T) -> SessionGuard<T> {
         let mut lock = self.0.lock_arc();
 
@@ -60,13 +67,6 @@ impl<T> Session<T> {
         // SAFETY: a `None` variant for `data` would have been replaced by a
         // `Some` variant in the code above.
         unsafe { SessionGuard::new(lock) }
-    }
-
-    #[must_use]
-    pub fn get(&self) -> OptionSessionGuard<T> {
-        let lock = self.0.lock_arc();
-
-        OptionSessionGuard::new(lock)
     }
 
     pub fn get_or_insert(&self, value: T) -> SessionGuard<T> {
