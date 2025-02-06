@@ -24,10 +24,10 @@
 //! # where T: 'static,
 //! {
 //!     /* ... */
-//! # async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { todo!() }
-//! # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { todo!() }
-//! # async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { todo!() }
-//! # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { todo!() }
+//! # async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { unimplemented!() }
+//! # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { unimplemented!() }
+//! # async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { unimplemented!() }
+//! # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { unimplemented!() }
 //! }
 //! ```
 
