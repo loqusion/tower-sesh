@@ -18,7 +18,7 @@ use tower_sesh_core::{
 
 pub mod client;
 
-const DEFAULT_KEY_PREFIX: &str = "session_";
+const DEFAULT_KEY_PREFIX: &str = "session:";
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
