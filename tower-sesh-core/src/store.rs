@@ -100,6 +100,7 @@ impl<T> Record<T> {
 
 /// An error returned by [`SessionStore`] methods.
 pub struct Error {
+    // TODO: Compare benchmarks when `kind` is boxed
     kind: ErrorKind,
 }
 
