@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use parking_lot::{ArcMutexGuard, Mutex};
 use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
-pub struct Session<T>(Arc<Mutex<SessionInner<T>>>);
+pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 
 impl<T> Clone for Session<T> {
     fn clone(&self) -> Self {
@@ -15,24 +15,24 @@ impl<T> Clone for Session<T> {
     }
 }
 
-struct SessionInner<T> {
+struct Inner<T> {
     session_key: Option<SessionKey>,
     data: Option<T>,
     expires_at: Option<Ttl>,
-    status: SessionStatus,
+    status: Status,
 }
 
-enum SessionStatus {
+enum Status {
     Unchanged,
     Changed,
     Renewed,
     Purged,
 }
-use SessionStatus::*;
+use Status::*;
 
 impl<T> Session<T> {
     fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
-        let inner = SessionInner {
+        let inner = Inner {
             session_key: Some(session_key),
             data: Some(record.data),
             expires_at: Some(record.ttl),
@@ -42,7 +42,7 @@ impl<T> Session<T> {
     }
 
     fn empty() -> Session<T> {
-        let inner = SessionInner {
+        let inner = Inner {
             session_key: None,
             data: None,
             expires_at: None,
@@ -120,16 +120,14 @@ impl<T> Session<T> {
 // 2. After the previous invariant is met, and until the `SessionGuard` is
 //    dropped, the lock must never be released and `data` must never be replaced
 //    with `None`.
-pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
+pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
 
 impl<T> SessionGuard<T> {
     /// # Safety
     ///
     /// The caller of this method must ensure that `owned_guard.data` is a
     /// `Some` variant.
-    unsafe fn new(
-        owned_guard: ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>,
-    ) -> SessionGuard<T> {
+    unsafe fn new(owned_guard: ArcMutexGuard<parking_lot::RawMutex, Inner<T>>) -> SessionGuard<T> {
         debug_assert!(owned_guard.data.is_some());
         SessionGuard(owned_guard)
     }
@@ -160,12 +158,10 @@ impl<T> DerefMut for SessionGuard<T> {
 /// [`DerefMut`] implementations.
 ///
 /// The lock is automatically released whenever the guard is dropped.
-pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>);
+pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
 
 impl<T> OptionSessionGuard<T> {
-    fn new(
-        owned_guard: ArcMutexGuard<parking_lot::RawMutex, SessionInner<T>>,
-    ) -> OptionSessionGuard<T> {
+    fn new(owned_guard: ArcMutexGuard<parking_lot::RawMutex, Inner<T>>) -> OptionSessionGuard<T> {
         OptionSessionGuard(owned_guard)
     }
 }
