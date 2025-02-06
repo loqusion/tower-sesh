@@ -376,7 +376,7 @@ pub(crate) mod lazy {
     pub(crate) struct Error;
 
     impl StdError for Error {
-        fn cause(&self) -> Option<&dyn StdError> {
+        fn source(&self) -> Option<&(dyn StdError + 'static)> {
             None
         }
     }
