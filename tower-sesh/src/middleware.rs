@@ -14,7 +14,7 @@ use tower::{Layer, Service};
 use tower_sesh_core::SessionStore;
 
 use crate::{
-    config::{Config, CookieSecurity, PlainCookie, PrivateCookie, SameSite, SignedCookie},
+    config::{CookieSecurity, PlainCookie, PrivateCookie, SameSite, SignedCookie},
     session::{self, Session},
     util::CookieJarExt,
 };
@@ -58,6 +58,35 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C: CookieSecurity = PrivateCo
 pub struct SessionManager<S, T, Store: SessionStore<T>, C: CookieSecurity> {
     inner: S,
     layer: SessionLayer<T, Store, C>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct Config {
+    pub(crate) cookie_name: Cow<'static, str>,
+    pub(crate) domain: Option<Cow<'static, str>>,
+    pub(crate) http_only: bool,
+    pub(crate) path: Cow<'static, str>,
+    pub(crate) same_site: SameSite,
+    pub(crate) secure: bool,
+}
+
+// Chosen to avoid session ID name fingerprinting.
+const DEFAULT_COOKIE_NAME: &str = "id";
+
+impl Default for Config {
+    /// Defaults are based on [OWASP recommendations].
+    ///
+    /// [OWASP recommendations]: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies
+    fn default() -> Self {
+        Config {
+            cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
+            domain: None,
+            http_only: true,
+            path: Cow::Borrowed("/"),
+            same_site: SameSite::Strict,
+            secure: true,
+        }
+    }
 }
 
 impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {

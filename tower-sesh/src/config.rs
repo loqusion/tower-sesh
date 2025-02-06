@@ -1,11 +1,8 @@
 //! Cookie configuration.
 
-use std::{borrow::Cow, fmt};
+use std::fmt;
 
 use cookie::{Cookie, CookieJar, Key};
-
-// Chosen to avoid session ID name fingerprinting.
-const DEFAULT_COOKIE_NAME: &str = "id";
 
 // Adapted from https://github.com/rwf2/cookie-rs.
 /// The `SameSite` cookie attribute.
@@ -57,32 +54,6 @@ impl fmt::Display for SameSite {
             SameSite::Strict => f.write_str("Strict"),
             SameSite::Lax => f.write_str("Lax"),
             SameSite::None => f.write_str("None"),
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct Config {
-    pub(crate) cookie_name: Cow<'static, str>,
-    pub(crate) domain: Option<Cow<'static, str>>,
-    pub(crate) http_only: bool,
-    pub(crate) path: Cow<'static, str>,
-    pub(crate) same_site: SameSite,
-    pub(crate) secure: bool,
-}
-
-impl Default for Config {
-    /// Defaults are based on [OWASP recommendations].
-    ///
-    /// [OWASP recommendations]: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies
-    fn default() -> Self {
-        Config {
-            cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
-            domain: None,
-            http_only: true,
-            path: Cow::Borrowed("/"),
-            same_site: SameSite::Strict,
-            secure: true,
         }
     }
 }
