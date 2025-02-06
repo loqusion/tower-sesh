@@ -134,12 +134,10 @@ define_rejection! {
     #[body = "Failed to load session"]
     /// Rejection for [`Session`] if an unrecoverable error occurred when
     /// loading the session.
-    #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
     pub struct SessionRejection;
 }
 
 #[cfg(feature = "axum")]
-#[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
 #[async_trait]
 impl<S, T> axum::extract::FromRequestParts<S> for Session<T>
 where
