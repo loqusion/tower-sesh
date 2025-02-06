@@ -18,7 +18,8 @@ pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 // # Invariants
 //
 // 1. When constructing `SessionGuard`, the `data` contained within
-//    `SessionInner` must contain a `Some` variant.
+//    `SessionInner` must contain a `Some` variant. This invariant must be met
+//    while the mutex lock is held.
 // 2. After the previous invariant is met, and until the `SessionGuard` is
 //    dropped, the lock must never be released and `data` must never be replaced
 //    with `None`.
