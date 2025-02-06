@@ -1,3 +1,5 @@
+//! Custom Redis connection implementations.
+
 use std::{error::Error, fmt};
 
 use async_trait::async_trait;
