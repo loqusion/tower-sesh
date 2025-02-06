@@ -104,6 +104,19 @@ impl<T> RedisStore<T> {
 }
 
 impl<T, C: GetConnection> RedisStore<T, C> {
+    /// Set the key prefix.
+    ///
+    /// `RedisStore` uses keys with the following format in its operations:
+    /// `<prefix><session_key>`.
+    ///
+    /// Default: `"session:"`
+    pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C> {
+        self.config.key_prefix = prefix.into();
+        self
+    }
+}
+
+impl<T, C: GetConnection> RedisStore<T, C> {
     fn redis_key(&self, session_key: &SessionKey) -> String {
         let mut redis_key =
             String::with_capacity(self.config.key_prefix.len() + SessionKey::ENCODED_LEN);
