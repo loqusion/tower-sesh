@@ -5,7 +5,10 @@ use std::{
 };
 
 use redis::aio::ConnectionManagerConfig;
-use tower_sesh_core::{store::SessionStoreImpl, SessionKey};
+use tower_sesh_core::{
+    store::{SessionStoreImpl, Ttl},
+    SessionKey,
+};
 use tower_sesh_store_redis::RedisStore;
 
 /// A session key that is safe to use in tests without fear of collisions.
@@ -50,6 +53,28 @@ async fn loading_a_missing_session_returns_none() -> anyhow::Result<()> {
 
     let record = store.load(&session_key).await?;
     assert!(record.is_none(), "expected no record");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn update_creates_missing_entry() -> anyhow::Result<()> {
+    let store = store::<String>().await;
+    let session_key = test_key();
+
+    store
+        .update(
+            &session_key,
+            &"hello world".to_owned(),
+            Ttl::now_utc() + Duration::from_secs(10),
+        )
+        .await?;
+
+    let rec = store.load(&session_key).await?;
+    assert_eq!(
+        rec.as_ref().map(|rec| rec.data.as_str()),
+        Some("hello world")
+    );
 
     Ok(())
 }
