@@ -1,3 +1,36 @@
+//! The `SessionStore` trait (and related items).
+//!
+//! # Implementing `SessionStore`
+//!
+//! `SessionStore` is sealed with the `SessionStoreImpl` trait. To implement
+//! `SessionStore`, implement `SessionStoreImpl` too:
+//!
+//! ```
+//! use async_trait::async_trait;
+//! use tower_sesh_core::{store::SessionStoreImpl, SessionStore};
+//! # use tower_sesh_core::{store::{Error, Record}, SessionKey};
+//!
+//! struct StoreImpl<T> {
+//!     /* ... */
+//! # _marker: std::marker::PhantomData<fn() -> T>,
+//! }
+//!
+//! impl<T> SessionStore<T> for StoreImpl<T>
+//! # where T: 'static,
+//! {}
+//!
+//! #[async_trait]
+//! impl<T> SessionStoreImpl<T> for StoreImpl<T>
+//! # where T: 'static,
+//! {
+//!     /* ... */
+//! # async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { todo!() }
+//! # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { todo!() }
+//! # async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { todo!() }
+//! # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { todo!() }
+//! }
+//! ```
+
 use std::{error::Error as StdError, fmt};
 
 use async_trait::async_trait;
@@ -19,39 +52,9 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 
 /// Backing storage for session data.
 ///
-/// # Implementing `SessionStore`
-///
-/// Implementing this trait is highly discouraged, as its API is unstable and
-/// may break implementors (for instance, by [adding a trait item]). As such,
-/// this trait is sealed with a public (but hidden from documentation) `Sealed`
-/// trait defined in the `tower-sesh-core` crate.
-///
-/// [adding a trait item]: https://doc.rust-lang.org/cargo/reference/semver.html#trait-new-item-no-default
-///
-/// To implement `SessionStore` anyway, implement the hidden `Sealed` trait too:
-///
-/// ```ignore
-/// use async_trait::async_trait;
-/// use tower_sesh_core::SessionStore;
-/// # use tower_sesh_core::{store::{Error, Record}, SessionKey};
-///
-/// struct StoreImpl<T> {
-///     /* ... */
-/// # _marker: std::marker::PhantomData<fn() -> T>,
-/// }
-///
-/// #[async_trait]
-/// impl<T> SessionStore<T> for StoreImpl<T>
-/// # where T: 'static,
-/// {
-///     /* ... */
-/// # async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { todo!() }
-/// # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { todo!() }
-/// # async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { todo!() }
-/// # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { todo!() }
-/// }
-/// impl<T> tower_sesh_core::__private::Sealed for StoreImpl<T> {} // Required!
-/// ```
+/// This trait is sealed and intended to be opaque. The details of this trait
+/// are open to change across non-major version bumps; as such, depending on
+/// them may cause breakage.
 pub trait SessionStore<T>: 'static + Send + Sync + SessionStoreImpl<T> {}
 
 /// The contents of this trait are meant to be kept private and __not__
