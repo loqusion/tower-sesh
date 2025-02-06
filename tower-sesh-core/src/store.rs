@@ -277,23 +277,19 @@ mod test {
 
     #[test]
     fn test_error_debug() {
-        insta::assert_debug_snapshot!(
-            error_store(),
-            @r#"
-            store::Error {
-                kind: "Store",
-                source: "Reconnecting failed: Connection refused (os error 111)",
-            }
-            "#
+        insta::assert_debug_snapshot!( error_store(), @r#"
+        store::Error {
+            kind: "Store",
+            source: "Reconnecting failed: Connection refused (os error 111)",
+        }
+        "#
         );
-        insta::assert_debug_snapshot!(
-            error_serde(),
-            @r#"
-            store::Error {
-                kind: "Serde",
-                source: Error("EOF while parsing a string", line: 1, column: 17),
-            }
-            "#
+        insta::assert_debug_snapshot!(error_serde(), @r#"
+        store::Error {
+            kind: "Serde",
+            source: Error("EOF while parsing a string", line: 1, column: 17),
+        }
+        "#
         );
         insta::assert_debug_snapshot!(error_msg(), @r#"
         store::Error {
