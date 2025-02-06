@@ -104,12 +104,23 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(all(not(docsrs), test))]
-#[test]
-fn dyn_compatible() {
-    use std::sync::Arc;
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    const _: fn() = || {
-        let _dyn_store: Arc<dyn SessionStore<()>> = todo!();
-    };
+    #[test]
+    fn store_dyn_compatible() {
+        use std::sync::Arc;
+
+        const _: fn() = || {
+            let _dyn_store: Arc<dyn SessionStore<()>> = todo!();
+        };
+    }
+
+    #[test]
+    fn error_constraints() {
+        fn require_traits<T: Send + Sync + 'static>() {}
+
+        require_traits::<Error>();
+    }
 }
