@@ -45,11 +45,6 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 // self-describing, i.e. it implements `Deserializer::deserialize_any`. (This
 // is because `Value`'s `Deserialize::deserialize` delegates to
 // `Deserializer::deserialize_any`.)
-//
-// TODO: `Record` should be removed because you can't construct a `Record` without
-// transferring ownership or cloning.
-//
-// TODO: Method signatures need a rework.
 
 /// Backing storage for session data.
 ///
