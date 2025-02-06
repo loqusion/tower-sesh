@@ -4,7 +4,7 @@ compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enab
 use std::{borrow::Cow, marker::PhantomData};
 
 use async_trait::async_trait;
-use client::{ConnectionManagerWithRetry, GetConnection};
+use connection::{ConnectionManagerWithRetry, GetConnection};
 use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
@@ -16,7 +16,7 @@ use tower_sesh_core::{
     Record, SessionKey, SessionStore,
 };
 
-pub mod client;
+pub mod connection;
 
 const DEFAULT_KEY_PREFIX: &str = "session:";
 
