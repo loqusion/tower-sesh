@@ -93,14 +93,9 @@ impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> SessionStoreImpl<T>
 where
     T: 'static + Send + Sync,
 {
-    // FIXME: This has correctness issues.
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
-        let session_key = SessionKey::generate();
-
-        let store_fut = self.store.update(&session_key, data, ttl);
-        let cache_fut = self.cache.update(&session_key, data, ttl);
-
-        futures::try_join!(store_fut, cache_fut)?;
+        let session_key = self.store.create(data, ttl).await?;
+        self.cache.update(&session_key, data, ttl).await?;
 
         Ok(session_key)
     }
