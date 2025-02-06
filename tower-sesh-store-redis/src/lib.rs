@@ -6,7 +6,12 @@ use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
 };
-use tower_sesh_core::{store::Error, store::SessionStoreImpl, Record, SessionKey, SessionStore};
+use serde::Serialize;
+use tower_sesh_core::{
+    store::Error,
+    store::{SessionStoreImpl, Ttl},
+    Record, SessionKey, SessionStore,
+};
 
 // Required to use the redis asynchronous interface
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
@@ -112,18 +117,21 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 }
 
-impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where T: 'static + Send + Sync {}
+impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where
+    T: 'static + Send + Sync + Serialize
+{
+}
 
 #[async_trait]
 impl<T, C: GetConnection> SessionStoreImpl<T> for RedisStore<T, C>
 where
-    T: 'static + Send + Sync,
+    T: 'static + Send + Sync + Serialize,
 {
-    async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
+    async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
 
-        let expiry = record.set_expiry();
-        let serialized = serialize(record);
+        let expiry = set_expiry_from_ttl(ttl);
+        let serialized = serialize(data)?;
 
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
@@ -176,12 +184,12 @@ where
         }
     }
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
+    async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
-        let expiry = record.set_expiry();
-        let serialized = serialize(record);
+        let expiry = set_expiry_from_ttl(ttl);
+        let serialized = serialize(data)?;
 
         let _: () = conn
             .set_options(
@@ -195,6 +203,18 @@ where
         Ok(())
     }
 
+    async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
+        let key = self.redis_key(session_key);
+        let mut conn = self.connection().await?;
+
+        let _: () = conn
+            .expire_at(key, ttl.unix_timestamp())
+            .await
+            .map_err(|err| todo!())?;
+
+        todo!()
+    }
+
     async fn delete(&self, session_key: &SessionKey) -> Result<()> {
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
@@ -205,18 +225,15 @@ where
     }
 }
 
-trait RecordExt {
-    fn set_expiry(&self) -> SetExpiry;
+fn set_expiry_from_ttl(ttl: Ttl) -> SetExpiry {
+    SetExpiry::EXAT(todo!())
 }
 
-impl<T> RecordExt for Record<T> {
-    fn set_expiry(&self) -> SetExpiry {
-        SetExpiry::EXAT(todo!())
-    }
-}
-
-fn serialize<T>(record: &Record<T>) -> Vec<u8> {
-    todo!()
+fn serialize<T>(value: &T) -> Result<Vec<u8>>
+where
+    T: Serialize,
+{
+    rmp_serde::to_vec_named(value).map_err(|_| todo!())
 }
 
 fn deserialize<T>(s: &str, ttl: i64) -> Result<Record<T>> {

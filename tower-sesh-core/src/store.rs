@@ -8,7 +8,7 @@
 //! ```
 //! use async_trait::async_trait;
 //! use tower_sesh_core::{store::SessionStoreImpl, SessionStore};
-//! # use tower_sesh_core::{store::{Error, Record}, SessionKey};
+//! # use tower_sesh_core::{store::{Error, Record, Ttl}, SessionKey};
 //!
 //! struct StoreImpl<T> {
 //!     /* ... */
@@ -24,9 +24,10 @@
 //! # where T: 'static,
 //! {
 //!     /* ... */
-//! # async fn create(&self, record: &Record<T>) -> Result<SessionKey, Error> { unimplemented!() }
+//! # async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey, Error> { unimplemented!() }
 //! # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { unimplemented!() }
-//! # async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<(), Error> { unimplemented!() }
+//! # async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<(), Error> { unimplemented!() }
+//! # async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<(), Error> { unimplemented!() }
 //! # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { unimplemented!() }
 //! }
 //! ```
@@ -62,11 +63,13 @@ pub trait SessionStore<T>: 'static + Send + Sync + SessionStoreImpl<T> {}
 #[doc(hidden)]
 #[async_trait]
 pub trait SessionStoreImpl<T>: 'static + Send + Sync {
-    async fn create(&self, record: &Record<T>) -> Result<SessionKey>;
+    async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey>;
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>>;
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()>;
+    async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()>;
+
+    async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()>;
 
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }

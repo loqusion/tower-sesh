@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use parking_lot::Mutex;
 use tower_sesh_core::{store::Error, Record, SessionKey};
 
-pub use tower_sesh_core::{store::SessionStoreImpl, SessionStore};
+pub use tower_sesh_core::{
+    store::{SessionStoreImpl, Ttl},
+    SessionStore,
+};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -31,9 +34,9 @@ impl<T> SessionStoreImpl<T> for MemoryStore<T>
 where
     T: 'static + Send + Sync + Clone,
 {
-    async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
+    async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let session_key = SessionKey::generate();
-        self.update(&session_key, record).await?;
+        self.update(&session_key, data, ttl).await?;
         Ok(session_key)
     }
 
@@ -42,8 +45,16 @@ where
         Ok(store_guard.get(session_key).cloned())
     }
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
-        self.0.lock().insert(session_key.clone(), record.clone());
+    async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
+        let record = Record::new(data.clone(), ttl);
+        self.0.lock().insert(session_key.clone(), record);
+        Ok(())
+    }
+
+    async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
+        if let Some(record) = self.0.lock().get_mut(session_key) {
+            record.ttl = ttl;
+        }
         Ok(())
     }
 
@@ -83,11 +94,11 @@ where
     T: 'static + Send + Sync,
 {
     // FIXME: This has correctness issues.
-    async fn create(&self, record: &Record<T>) -> Result<SessionKey> {
+    async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let session_key = SessionKey::generate();
 
-        let store_fut = self.store.update(&session_key, record);
-        let cache_fut = self.cache.update(&session_key, record);
+        let store_fut = self.store.update(&session_key, data, ttl);
+        let cache_fut = self.cache.update(&session_key, data, ttl);
 
         futures::try_join!(store_fut, cache_fut)?;
 
@@ -101,7 +112,10 @@ where
                 let record = self.store.load(session_key).await?;
 
                 if let Some(record) = record.as_ref() {
-                    let _ = self.cache.update(session_key, record).await;
+                    let _ = self
+                        .cache
+                        .update(session_key, &record.data, record.ttl)
+                        .await;
                 }
 
                 Ok(record)
@@ -109,9 +123,18 @@ where
         }
     }
 
-    async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
-        let store_fut = self.store.update(session_key, record);
-        let cache_fut = self.cache.update(session_key, record);
+    async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
+        let store_fut = self.store.update(session_key, data, ttl);
+        let cache_fut = self.cache.update(session_key, data, ttl);
+
+        futures::try_join!(store_fut, cache_fut)?;
+
+        Ok(())
+    }
+
+    async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
+        let store_fut = self.store.update_ttl(session_key, ttl);
+        let cache_fut = self.cache.update_ttl(session_key, ttl);
 
         futures::try_join!(store_fut, cache_fut)?;
 
