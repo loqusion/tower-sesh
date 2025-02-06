@@ -9,7 +9,7 @@ use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
 };
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
     store::Error,
     store::{SessionStoreImpl, Ttl},
@@ -116,15 +116,23 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 }
 
+macro_rules! ensure_redis_ttl {
+    ($ttl:expr) => {
+        if $ttl < 0 {
+            return Err(todo!("ttl out of range error"));
+        }
+    };
+}
+
 impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where
-    T: 'static + Send + Sync + Serialize
+    T: 'static + Send + Sync + Serialize + DeserializeOwned
 {
 }
 
 #[async_trait]
 impl<T, C: GetConnection> SessionStoreImpl<T> for RedisStore<T, C>
 where
-    T: 'static + Send + Sync + Serialize,
+    T: 'static + Send + Sync + Serialize + DeserializeOwned,
 {
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
@@ -166,20 +174,23 @@ where
         const WEEK_IN_SECONDS: i64 = 60 * 60 * 24 * 7;
         const DEFAULT_EXPIRY: i64 = 2 * WEEK_IN_SECONDS;
 
-        let (value, expire_time) = redis::pipe()
+        let (value, timestamp) = redis::pipe()
             .atomic()
             .expire(&key, DEFAULT_EXPIRY) // Ensure the key has a timeout if one isn't set
             .arg("NX")
             .ignore()
             .get(&key)
             .expire_time(&key)
-            .query_async::<(Option<String>, i64)>(&mut conn)
+            .query_async::<(Option<Vec<u8>>, i64)>(&mut conn)
             .await
             .map_err(|err| todo!())?;
 
         match value {
             None => Ok(None),
-            Some(value) => Some(deserialize(&value, expire_time)).transpose(),
+            Some(value) => {
+                ensure_redis_ttl!(timestamp);
+                Some(deserialize(&value).and_then(|data| to_record(data, timestamp))).transpose()
+            }
         }
     }
 
@@ -235,17 +246,17 @@ where
     rmp_serde::to_vec_named(value).map_err(|_| todo!())
 }
 
-fn deserialize<T>(s: &str, ttl: i64) -> Result<Record<T>> {
-    debug_assert!(ttl >= 0, "ttl is negative. This is a bug.");
-    todo!()
+fn deserialize<T>(s: &[u8]) -> Result<T>
+where
+    T: DeserializeOwned,
+{
+    rmp_serde::from_slice(s).map_err(|_| todo!())
 }
 
-struct RedisRecord<T> {
-    data: T,
-}
-impl<T> RedisRecord<T> {
-    fn into_record(self, ttl: i64) -> Record<T> {
-        todo!()
+fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
+    match Ttl::from_unix_timestamp(timestamp) {
+        Ok(ttl) => Ok(Record::new(data, ttl)),
+        Err(err) => todo!(),
     }
 }
 
