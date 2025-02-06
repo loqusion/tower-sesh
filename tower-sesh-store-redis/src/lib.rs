@@ -117,9 +117,12 @@ impl<T, C: GetConnection> RedisStore<T, C> {
 }
 
 macro_rules! ensure_redis_ttl {
-    ($ttl:expr) => {
+    ($ttl:ident) => {
         if $ttl < 0 {
-            return Err(todo!("ttl out of range error"));
+            return Err(Error::message(format!(
+                "unexpected timestamp value: {}",
+                $ttl
+            )));
         }
     };
 }
@@ -236,7 +239,11 @@ where
 }
 
 fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
-    let timestamp = u64::try_from(ttl.unix_timestamp()).map_err(|err| todo!())?;
+    let timestamp = u64::try_from(ttl.unix_timestamp()).map_err(
+        #[cold]
+        |_| Error::message(format!("unexpected negative timestamp: {}", ttl)),
+    )?;
+
     Ok(SetExpiry::EXAT(timestamp))
 }
 
@@ -257,10 +264,10 @@ where
 fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
     match Ttl::from_unix_timestamp(timestamp) {
         Ok(ttl) => Ok(Record::new(data, ttl)),
-        Err(err) => todo!(),
+        Err(err) => Err(Error::message(format!("invalid timestamp: {}", err))),
     }
 }
 
 fn err_max_iterations_reached() -> Error {
-    todo!()
+    Error::message("max iterations reached when handling session key collisions")
 }
