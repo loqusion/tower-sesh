@@ -74,6 +74,10 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }
 
+/// An instant in time, represented as a date and time with a timezone offset.
+///
+/// Used to represent a session's expiration time, after which a
+/// [`SessionStore`] implementation should delete the session.
 pub type Ttl = OffsetDateTime;
 
 #[derive(Clone, Debug)]
