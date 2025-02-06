@@ -112,7 +112,7 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 
     async fn connection(&self) -> Result<<C as GetConnection>::Connection> {
-        self.client.connection().await.map_err(|err| todo!())
+        self.client.connection().await.map_err(Error::store)
     }
 }
 
@@ -156,7 +156,7 @@ where
                         .with_expiration(expiry),
                 )
                 .await
-                .map_err(|err| todo!())?;
+                .map_err(Error::store)?;
 
             match v {
                 redis::Value::Nil => {} // Conflict with NX: key exists
@@ -183,7 +183,7 @@ where
             .expire_time(&key)
             .query_async::<(Option<Vec<u8>>, i64)>(&mut conn)
             .await
-            .map_err(|err| todo!())?;
+            .map_err(Error::store)?;
 
         match value {
             None => Ok(None),
@@ -208,7 +208,7 @@ where
                 SetOptions::default().with_expiration(expiry),
             )
             .await
-            .map_err(|err| todo!())?;
+            .map_err(Error::store)?;
 
         Ok(())
     }
@@ -220,7 +220,7 @@ where
         let _: () = conn
             .expire_at(key, ttl.unix_timestamp())
             .await
-            .map_err(|err| todo!())?;
+            .map_err(Error::store)?;
 
         todo!()
     }
@@ -229,7 +229,7 @@ where
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
-        let _: () = conn.del(&key).await.map_err(|err| todo!())?;
+        let _: () = conn.del(&key).await.map_err(Error::store)?;
 
         Ok(())
     }
@@ -244,14 +244,14 @@ fn serialize<T>(value: &T) -> Result<Vec<u8>>
 where
     T: Serialize,
 {
-    rmp_serde::to_vec_named(value).map_err(|_| todo!())
+    rmp_serde::to_vec_named(value).map_err(Error::serde)
 }
 
 fn deserialize<T>(s: &[u8]) -> Result<T>
 where
     T: DeserializeOwned,
 {
-    rmp_serde::from_slice(s).map_err(|_| todo!())
+    rmp_serde::from_slice(s).map_err(Error::serde)
 }
 
 fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
