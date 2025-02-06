@@ -9,11 +9,27 @@ use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
 pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 
-impl<T> Clone for Session<T> {
-    fn clone(&self) -> Self {
-        Session(Arc::clone(&self.0))
-    }
-}
+/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
+/// data `T` can be accessed through this guard via its [`Deref`] and
+/// [`DerefMut`] implementations.
+///
+/// The lock is automatically released whenever the guard is dropped.
+//
+// # Invariants
+//
+// 1. When constructing `SessionGuard`, the `data` contained within
+//    `SessionInner` must contain a `Some` variant.
+// 2. After the previous invariant is met, and until the `SessionGuard` is
+//    dropped, the lock must never be released and `data` must never be replaced
+//    with `None`.
+pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
+
+/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
+/// data `Option<T>` can be accessed through this guard via its [`Deref`] and
+/// [`DerefMut`] implementations.
+///
+/// The lock is automatically released whenever the guard is dropped.
+pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
 
 struct Inner<T> {
     session_key: Option<SessionKey>,
@@ -107,20 +123,47 @@ impl<T> Session<T> {
     }
 }
 
-/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
-/// data `T` can be accessed through this guard via its [`Deref`] and
-/// [`DerefMut`] implementations.
-///
-/// The lock is automatically released whenever the guard is dropped.
-//
-// # Invariants
-//
-// 1. When constructing `SessionGuard`, the `data` contained within
-//    `SessionInner` must contain a `Some` variant.
-// 2. After the previous invariant is met, and until the `SessionGuard` is
-//    dropped, the lock must never be released and `data` must never be replaced
-//    with `None`.
-pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
+impl<T> Clone for Session<T> {
+    fn clone(&self) -> Self {
+        Session(Arc::clone(&self.0))
+    }
+}
+
+define_rejection! {
+    #[status = INTERNAL_SERVER_ERROR]
+    #[body = "Failed to load session"]
+    /// Rejection for [`Session`] if an unrecoverable error occurred when
+    /// loading the session.
+    #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
+    pub struct SessionRejection;
+}
+
+#[cfg(feature = "axum")]
+#[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
+#[async_trait]
+impl<S, T> axum::extract::FromRequestParts<S> for Session<T>
+where
+    T: 'static + Send + Sync,
+{
+    type Rejection = SessionRejection;
+
+    async fn from_request_parts(
+        parts: &mut http::request::Parts,
+        _state: &S,
+    ) -> Result<Self, Self::Rejection> {
+        match lazy::get_or_init(&mut parts.extensions).await {
+            Ok(Some(session)) => Ok(session),
+            Ok(None) => Err(SessionRejection),
+            // Panic because this indicates a bug in the program rather than an
+            // expected failure.
+            Err(_) => panic!(
+                "Missing request extension. `SessionLayer` must be called \
+                before the `Session` extractor is run. Also, check that the \
+                generic type for `Session<T>` is correct."
+            ),
+        }
+    }
+}
 
 impl<T> SessionGuard<T> {
     /// # Safety
@@ -153,13 +196,6 @@ impl<T> DerefMut for SessionGuard<T> {
     }
 }
 
-/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
-/// data `Option<T>` can be accessed through this guard via its [`Deref`] and
-/// [`DerefMut`] implementations.
-///
-/// The lock is automatically released whenever the guard is dropped.
-pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
-
 impl<T> OptionSessionGuard<T> {
     fn new(owned_guard: ArcMutexGuard<parking_lot::RawMutex, Inner<T>>) -> OptionSessionGuard<T> {
         OptionSessionGuard(owned_guard)
@@ -178,42 +214,6 @@ impl<T> DerefMut for OptionSessionGuard<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0.data
     }
-}
-
-#[cfg(feature = "axum")]
-#[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
-#[async_trait]
-impl<S, T> axum::extract::FromRequestParts<S> for Session<T>
-where
-    T: 'static + Send + Sync,
-{
-    type Rejection = SessionRejection;
-
-    async fn from_request_parts(
-        parts: &mut http::request::Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
-        match lazy::get_or_init(&mut parts.extensions).await {
-            Ok(Some(session)) => Ok(session),
-            Ok(None) => Err(SessionRejection),
-            // Panic because this indicates a bug in the program rather than an
-            // expected failure.
-            Err(_) => panic!(
-                "Missing request extension. `SessionLayer` must be called \
-                before the `Session` extractor is run. Also, check that the \
-                generic type for `Session<T>` is correct."
-            ),
-        }
-    }
-}
-
-define_rejection! {
-    #[status = INTERNAL_SERVER_ERROR]
-    #[body = "Failed to load session"]
-    /// Rejection for [`Session`] if an unrecoverable error occurred when
-    /// loading the session.
-    #[cfg_attr(docsrs, doc(cfg(feature = "axum")))]
-    pub struct SessionRejection;
 }
 
 pub(crate) mod lazy {

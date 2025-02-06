@@ -51,6 +51,15 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C: CookieSecurity = PrivateCo
     _marker: PhantomData<fn() -> T>,
 }
 
+/// A middleware that provides [`Session`] as a request extension.
+///
+/// [`Session`]: crate::session::Session
+#[derive(Debug)]
+pub struct SessionManager<S, T, Store: SessionStore<T>, C: CookieSecurity> {
+    inner: S,
+    layer: SessionLayer<T, Store, C>,
+}
+
 impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
     /// Create a new `SessionLayer`.
     ///
@@ -193,15 +202,6 @@ impl<S, T, Store: SessionStore<T>, C: CookieSecurity> Layer<S> for SessionLayer<
             layer: self.clone(),
         }
     }
-}
-
-/// A middleware that provides [`Session`] as a request extension.
-///
-/// [`Session`]: crate::session::Session
-#[derive(Debug)]
-pub struct SessionManager<S, T, Store: SessionStore<T>, C: CookieSecurity> {
-    inner: S,
-    layer: SessionLayer<T, Store, C>,
 }
 
 impl<S, T, Store: SessionStore<T>, C: CookieSecurity> Clone for SessionManager<S, T, Store, C>
