@@ -155,10 +155,10 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [name] of the cookie used to store a session id.
     ///
-    /// Default: `"id"`
-    ///
     /// It is recommended that the name should not be extremely descriptive nor
     /// offer unneccessary details about the purpose and meaning of the ID.
+    ///
+    /// Default: `"id"`
     ///
     /// See also: OWASP [Session Management Cheat Sheet: Session ID Name
     /// Fingerprinting].
