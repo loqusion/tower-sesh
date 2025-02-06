@@ -1,3 +1,5 @@
+use std::{error::Error, fmt};
+
 use async_trait::async_trait;
 use futures::FutureExt;
 use redis::{
@@ -100,9 +102,31 @@ impl GetConnection for ConnectionManagerWithRetry {
 impl private::Sealed for ConnectionManagerWithRetry {}
 
 #[doc(hidden)]
-#[derive(Debug, thiserror::Error)]
-#[error("failed to acquire redis connection")]
-pub struct GetConnectionError(#[from] RedisError);
+pub struct GetConnectionError(RedisError);
+
+impl fmt::Debug for GetConnectionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("GetConnectionError").field(&self.0).finish()
+    }
+}
+
+impl fmt::Display for GetConnectionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("failed to acquire redis connection")
+    }
+}
+
+impl Error for GetConnectionError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+impl From<RedisError> for GetConnectionError {
+    fn from(value: RedisError) -> Self {
+        Self(value)
+    }
+}
 
 mod private {
     pub trait Sealed {}
