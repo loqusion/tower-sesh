@@ -7,6 +7,11 @@ use async_trait::async_trait;
 use parking_lot::{Mutex, MutexGuard};
 use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
+/// TODO
+///
+/// # Session Migration
+///
+/// TODO
 pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 
 /// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
