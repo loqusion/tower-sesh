@@ -101,6 +101,7 @@ impl GetConnection for ConnectionManagerWithRetry {
 }
 impl private::Sealed for ConnectionManagerWithRetry {}
 
+/// An error returned by [`GetConnection`] methods.
 #[doc(hidden)]
 pub struct GetConnectionError(RedisError);
 

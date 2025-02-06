@@ -88,6 +88,7 @@ impl<T> RedisStore<T> {
         })
     }
 
+    // Not public API. Only tests use this.
     #[doc(hidden)]
     pub async fn with_connection_manager_config(
         client: Client,
