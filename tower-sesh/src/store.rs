@@ -110,8 +110,6 @@ where
     }
 
     async fn update(&self, session_key: &SessionKey, record: &Record<T>) -> Result<()> {
-        #![allow(clippy::clone_on_copy)]
-
         let store_fut = self.store.update(session_key, record);
         let cache_fut = self.cache.update(session_key, record);
 
