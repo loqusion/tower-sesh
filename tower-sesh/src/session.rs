@@ -211,6 +211,8 @@ impl<T> Deref for OptionSessionGuard<'_, T> {
 
 impl<T> DerefMut for OptionSessionGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.status = Changed;
+
         &mut self.0.data
     }
 }
