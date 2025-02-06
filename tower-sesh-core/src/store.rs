@@ -105,6 +105,8 @@ pub enum ErrorKind {
     Store(Box<dyn StdError + Send + Sync>),
     /// Error occurred while serializing/deserializing.
     Serde(Box<dyn StdError + Send + Sync>),
+    /// Catchall error message
+    Message(Box<str>),
 }
 
 // TODO: Compare benchmarks when #[cold] is added to constructors
@@ -127,6 +129,13 @@ impl Error {
         }
     }
 
+    #[must_use]
+    pub fn message(msg: impl Into<Box<str>>) -> Error {
+        Error {
+            kind: ErrorKind::Message(msg.into()),
+        }
+    }
+
     /// Returns the corresponding `ErrorKind` for this error.
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
@@ -139,6 +148,9 @@ impl fmt::Debug for Error {
 
         use ErrorKind::*;
         match &self.kind {
+            Message(msg) => {
+                builder.field("message", msg);
+            }
             Store(err) => {
                 builder.field("kind", &"Store");
                 builder.field("source", err);
@@ -157,6 +169,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ErrorKind::*;
         match &self.kind {
+            Message(msg) => f.write_str(msg),
             Store(_) => f.write_str("session store error"),
             Serde(_) => f.write_str("session serialization error"),
         }
@@ -167,6 +180,7 @@ impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         use ErrorKind::*;
         match &self.kind {
+            Message(_) => None,
             Store(err) => Some(err.as_ref()),
             Serde(err) => Some(err.as_ref()),
         }
