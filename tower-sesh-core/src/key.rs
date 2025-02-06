@@ -9,9 +9,10 @@ use rand::{CryptoRng, Rng};
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct SessionKey(NonZeroU128);
 
+/// Debug implementation does not leak secret
 impl fmt::Debug for SessionKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("SessionKey([REDACTED])")
+        f.write_str("SessionKey(..)")
     }
 }
 
@@ -173,6 +174,6 @@ mod test {
     #[test]
     fn debug_redacts_content() {
         let s = SessionKey::generate();
-        assert_eq!(format!("{:?}", s), "SessionKey([REDACTED])");
+        assert_eq!(format!("{:?}", s), "SessionKey(..)");
     }
 }
