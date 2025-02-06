@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use parking_lot::{ArcMutexGuard, Mutex};
+use parking_lot::{Mutex, MutexGuard};
 use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
 pub struct Session<T>(Arc<Mutex<Inner<T>>>);
@@ -23,14 +23,14 @@ pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 // 2. After the previous invariant is met, and until the `SessionGuard` is
 //    dropped, the lock must never be released and `data` must never be replaced
 //    with `None`.
-pub struct SessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
+pub struct SessionGuard<'a, T>(MutexGuard<'a, Inner<T>>);
 
 /// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
 /// data `Option<T>` can be accessed through this guard via its [`Deref`] and
 /// [`DerefMut`] implementations.
 ///
 /// The lock is automatically released whenever the guard is dropped.
-pub struct OptionSessionGuard<T>(ArcMutexGuard<parking_lot::RawMutex, Inner<T>>);
+pub struct OptionSessionGuard<'a, T>(MutexGuard<'a, Inner<T>>);
 
 struct Inner<T> {
     session_key: Option<SessionKey>,
@@ -69,14 +69,14 @@ impl<T> Session<T> {
     }
 
     #[must_use]
-    pub fn get(&self) -> OptionSessionGuard<T> {
-        let lock = self.0.lock_arc();
+    pub fn get(&self) -> OptionSessionGuard<'_, T> {
+        let lock = self.0.lock();
 
         OptionSessionGuard::new(lock)
     }
 
-    pub fn insert(&self, value: T) -> SessionGuard<T> {
-        let mut lock = self.0.lock_arc();
+    pub fn insert(&self, value: T) -> SessionGuard<'_, T> {
+        let mut lock = self.0.lock();
 
         lock.data = Some(value);
         lock.status = Changed;
@@ -86,8 +86,8 @@ impl<T> Session<T> {
         unsafe { SessionGuard::new(lock) }
     }
 
-    pub fn get_or_insert(&self, value: T) -> SessionGuard<T> {
-        let mut lock = self.0.lock_arc();
+    pub fn get_or_insert(&self, value: T) -> SessionGuard<'_, T> {
+        let mut lock = self.0.lock();
 
         if lock.data.is_none() {
             lock.data = Some(value);
@@ -99,11 +99,11 @@ impl<T> Session<T> {
         unsafe { SessionGuard::new(lock) }
     }
 
-    pub fn get_or_insert_with<F>(&self, f: F) -> SessionGuard<T>
+    pub fn get_or_insert_with<F>(&self, f: F) -> SessionGuard<'_, T>
     where
         F: FnOnce() -> T,
     {
-        let mut lock = self.0.lock_arc();
+        let mut lock = self.0.lock();
 
         if lock.data.is_none() {
             lock.data = Some(f());
@@ -116,7 +116,7 @@ impl<T> Session<T> {
     }
 
     #[inline]
-    pub fn get_or_insert_default(&self) -> SessionGuard<T>
+    pub fn get_or_insert_default(&self) -> SessionGuard<'_, T>
     where
         T: Default,
     {
@@ -164,18 +164,18 @@ where
     }
 }
 
-impl<T> SessionGuard<T> {
+impl<'a, T> SessionGuard<'a, T> {
     /// # Safety
     ///
     /// The caller of this method must ensure that `owned_guard.data` is a
     /// `Some` variant.
-    unsafe fn new(owned_guard: ArcMutexGuard<parking_lot::RawMutex, Inner<T>>) -> SessionGuard<T> {
-        debug_assert!(owned_guard.data.is_some());
-        SessionGuard(owned_guard)
+    unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
+        debug_assert!(guard.data.is_some());
+        SessionGuard(guard)
     }
 }
 
-impl<T> Deref for SessionGuard<T> {
+impl<T> Deref for SessionGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -185,7 +185,7 @@ impl<T> Deref for SessionGuard<T> {
     }
 }
 
-impl<T> DerefMut for SessionGuard<T> {
+impl<T> DerefMut for SessionGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.status = Changed;
 
@@ -195,13 +195,13 @@ impl<T> DerefMut for SessionGuard<T> {
     }
 }
 
-impl<T> OptionSessionGuard<T> {
-    fn new(owned_guard: ArcMutexGuard<parking_lot::RawMutex, Inner<T>>) -> OptionSessionGuard<T> {
+impl<'a, T> OptionSessionGuard<'a, T> {
+    fn new(owned_guard: MutexGuard<'a, Inner<T>>) -> Self {
         OptionSessionGuard(owned_guard)
     }
 }
 
-impl<T> Deref for OptionSessionGuard<T> {
+impl<T> Deref for OptionSessionGuard<'_, T> {
     type Target = Option<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -209,7 +209,7 @@ impl<T> Deref for OptionSessionGuard<T> {
     }
 }
 
-impl<T> DerefMut for OptionSessionGuard<T> {
+impl<T> DerefMut for OptionSessionGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0.data
     }
