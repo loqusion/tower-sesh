@@ -80,9 +80,7 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 /// [`SessionStore`] implementation should delete the session.
 pub type Ttl = OffsetDateTime;
 
-/// A struct containing a session's data and [expiration time].
-///
-/// [expiration time]: Ttl
+/// A struct containing a session's data and expiration time.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct Record<T> {
