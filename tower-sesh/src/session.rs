@@ -39,13 +39,27 @@ struct Inner<T> {
     status: Status,
 }
 
+/// # State transitions
+///
+/// Unchanged -> Changed | Renewed | Purged
+/// Renewed -> Changed | Purged
+/// Changed -> Purged
+/// Purged
 enum Status {
     Unchanged,
-    Changed,
     Renewed,
+    Changed,
     Purged,
 }
 use Status::*;
+
+impl<T> Inner<T> {
+    fn changed(&mut self) {
+        if !matches!(self.status, Purged) {
+            self.status = Changed;
+        }
+    }
+}
 
 impl<T> Session<T> {
     fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
@@ -79,7 +93,7 @@ impl<T> Session<T> {
         let mut lock = self.0.lock();
 
         lock.data = Some(value);
-        lock.status = Changed;
+        lock.changed();
 
         // SAFETY: a `None` variant for `data` would have been replaced by a
         // `Some` variant in the code above.
@@ -91,7 +105,7 @@ impl<T> Session<T> {
 
         if lock.data.is_none() {
             lock.data = Some(value);
-            lock.status = Changed;
+            lock.changed();
         }
 
         // SAFETY: a `None` variant for `data` would have been replaced by a
@@ -107,7 +121,7 @@ impl<T> Session<T> {
 
         if lock.data.is_none() {
             lock.data = Some(f());
-            lock.status = Changed;
+            lock.changed();
         }
 
         // SAFETY: a `None` variant for `data` would have been replaced by a
@@ -187,7 +201,7 @@ impl<T> Deref for SessionGuard<'_, T> {
 
 impl<T> DerefMut for SessionGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.status = Changed;
+        self.0.changed();
 
         // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
         // to `None`.
@@ -211,7 +225,7 @@ impl<T> Deref for OptionSessionGuard<'_, T> {
 
 impl<T> DerefMut for OptionSessionGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.status = Changed;
+        self.0.changed();
 
         &mut self.0.data
     }
