@@ -93,23 +93,125 @@ impl<T> Record<T> {
     }
 }
 
-#[derive(Debug)]
-pub enum Error {}
+/// An error returned by [`SessionStore`] methods.
+pub struct Error {
+    kind: ErrorKind,
+}
 
-impl StdError for Error {}
+/// Represents all the ways a [`SessionStore`] method can fail.
+#[non_exhaustive]
+pub enum ErrorKind {
+    /// Error occurred while interacting with the underlying storage mechanism.
+    Store(Box<dyn StdError + Send + Sync>),
+    /// Error occurred while serializing/deserializing.
+    Serde(Box<dyn StdError + Send + Sync>),
+}
+
+// TODO: Compare benchmarks when #[cold] is added to constructors
+impl Error {
+    /// Creates a new error from an error emitted by the underlying storage
+    /// mechanism.
+    #[must_use]
+    pub fn store(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Error {
+        Error {
+            kind: ErrorKind::Store(err.into()),
+        }
+    }
+
+    /// Creates a new error from an error emitted when serializing/deserializing
+    /// data.
+    #[must_use]
+    pub fn serde(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Error {
+        Error {
+            kind: ErrorKind::Serde(err.into()),
+        }
+    }
+
+    /// Returns the corresponding `ErrorKind` for this error.
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
+    }
+}
+
+impl fmt::Debug for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut builder = f.debug_struct("store::Error");
+
+        use ErrorKind::*;
+        match &self.kind {
+            Store(err) => {
+                builder.field("kind", &"Store");
+                builder.field("source", err);
+            }
+            Serde(err) => {
+                builder.field("kind", &"Serde");
+                builder.field("source", err);
+            }
+        }
+
+        builder.finish()
+    }
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {}
+        use ErrorKind::*;
+        match &self.kind {
+            Store(_) => f.write_str("session store error"),
+            Serde(_) => f.write_str("session serialization error"),
+        }
+    }
+}
+
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        use ErrorKind::*;
+        match &self.kind {
+            Store(err) => Some(err.as_ref()),
+            Serde(err) => Some(err.as_ref()),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::iter;
+
+    use serde::Deserialize;
+
     use super::*;
 
+    trait ErrorExt {
+        fn display_chain(&self) -> DisplayChain<'_>;
+    }
+
+    impl<E> ErrorExt for E
+    where
+        E: StdError + 'static,
+    {
+        fn display_chain(&self) -> DisplayChain<'_> {
+            DisplayChain { inner: self }
+        }
+    }
+
+    struct DisplayChain<'a> {
+        inner: &'a (dyn StdError + 'static),
+    }
+
+    impl fmt::Display for DisplayChain<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.inner)?;
+
+            for error in iter::successors(Some(self.inner), |err| (*err).source()).skip(1) {
+                write!(f, ": {}", error)?;
+            }
+
+            Ok(())
+        }
+    }
+
     #[test]
-    fn store_dyn_compatible() {
+    fn test_store_dyn_compatible() {
         use std::sync::Arc;
 
         const _: fn() = || {
@@ -118,9 +220,61 @@ mod test {
     }
 
     #[test]
-    fn error_constraints() {
+    fn test_error_constraints() {
         fn require_traits<T: Send + Sync + 'static>() {}
 
         require_traits::<Error>();
+    }
+
+    fn error_store() -> Error {
+        let err = "Reconnecting failed: Connection refused (os error 111)";
+        Error::store(err)
+    }
+
+    fn error_serde() -> Error {
+        #[derive(Debug, Deserialize)]
+        struct Data {
+            #[allow(dead_code)]
+            hello: String,
+        }
+
+        let err = serde_json::from_str::<Data>(r#"{"hello": "world}"#).unwrap_err();
+        Error::serde(err)
+    }
+
+    #[test]
+    fn test_error_display() {
+        insta::assert_snapshot!(error_store(), @"session store error");
+        insta::assert_snapshot!(
+            error_store().display_chain(),
+            @"session store error: Reconnecting failed: Connection refused (os error 111)"
+        );
+        insta::assert_snapshot!(error_serde(), @"session serialization error");
+        insta::assert_snapshot!(
+            error_serde().display_chain(),
+            @"session serialization error: EOF while parsing a string at line 1 column 17"
+        );
+    }
+
+    #[test]
+    fn test_error_debug() {
+        insta::assert_debug_snapshot!(
+            error_store(),
+            @r#"
+            store::Error {
+                kind: "Store",
+                source: "Reconnecting failed: Connection refused (os error 111)",
+            }
+            "#
+        );
+        insta::assert_debug_snapshot!(
+            error_serde(),
+            @r#"
+            store::Error {
+                kind: "Serde",
+                source: Error("EOF while parsing a string", line: 1, column: 17),
+            }
+            "#
+        );
     }
 }
