@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use parking_lot::{Mutex, MutexGuard};
 use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
-/// TODO
+/// Extractor to read and mutate session data.
 ///
 /// # Session Migration
 ///
