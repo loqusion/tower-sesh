@@ -145,7 +145,7 @@ where
 
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
-        const MAX_RETRIES: usize = 4;
+        const MAX_RETRIES: usize = 8;
         for _ in 0..MAX_RETRIES {
             let session_key = SessionKey::generate();
             let key = self.redis_key(&session_key);
