@@ -1,3 +1,5 @@
+//! `SessionKey` and related items.
+
 use std::{error::Error as StdError, fmt, num::NonZeroU128};
 
 use base64::Engine;

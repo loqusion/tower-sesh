@@ -1,4 +1,4 @@
-//! The `SessionStore` trait (and related items).
+//! The `SessionStore` trait and related items.
 //!
 //! # Implementing `SessionStore`
 //!
