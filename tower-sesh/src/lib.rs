@@ -1,5 +1,14 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
+//! **🚧 UNDER CONSTRUCTION 🚧**
+//!
+//! This crate is being actively developed. Its public API is open to change at
+//! any time.
+//!
+//! To track development of this crate, visit its [GitHub repository].
+//!
+//! [GitHub repository]: https://github.com/loqusion/tower-sesh
+
 #[doc(inline)]
 pub use middleware::SessionLayer;
 #[doc(inline)]
