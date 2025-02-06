@@ -1,3 +1,6 @@
+#[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
+compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
+
 use std::{borrow::Cow, marker::PhantomData};
 
 use async_trait::async_trait;
@@ -12,10 +15,6 @@ use tower_sesh_core::{
     store::{SessionStoreImpl, Ttl},
     Record, SessionKey, SessionStore,
 };
-
-// Required to use the redis asynchronous interface
-#[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
-compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
 
 pub mod client;
 
