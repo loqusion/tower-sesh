@@ -256,6 +256,10 @@ mod test {
         Error::serde(err)
     }
 
+    fn error_msg() -> Error {
+        Error::message("max iterations reached when handling session key collisions")
+    }
+
     #[test]
     fn test_error_display() {
         insta::assert_snapshot!(error_store(), @"session store error");
@@ -268,6 +272,7 @@ mod test {
             error_serde().display_chain(),
             @"session serialization error: EOF while parsing a string at line 1 column 17"
         );
+        insta::assert_snapshot!(error_msg(), @"max iterations reached when handling session key collisions");
     }
 
     #[test]
@@ -290,5 +295,10 @@ mod test {
             }
             "#
         );
+        insta::assert_debug_snapshot!(error_msg(), @r#"
+        store::Error {
+            message: "max iterations reached when handling session key collisions",
+        }
+        "#);
     }
 }
