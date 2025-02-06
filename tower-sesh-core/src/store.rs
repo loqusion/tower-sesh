@@ -80,6 +80,9 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 /// [`SessionStore`] implementation should delete the session.
 pub type Ttl = OffsetDateTime;
 
+/// A struct containing a session's data and [expiration time].
+///
+/// [expiration time]: Ttl
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct Record<T> {
@@ -133,6 +136,7 @@ impl Error {
         }
     }
 
+    /// Creates a new error from a string containing a custom error message.
     #[must_use]
     pub fn message(msg: impl Into<Box<str>>) -> Error {
         Error {
