@@ -87,6 +87,16 @@ impl<T> Session<T> {
         Session(Arc::new(Mutex::new(inner)))
     }
 
+    fn ignored(session_key: SessionKey) -> Session<T> {
+        let inner = Inner {
+            session_key: Some(session_key),
+            data: None,
+            expires_at: None,
+            status: Unchanged,
+        };
+        Session(Arc::new(Mutex::new(inner)))
+    }
+
     #[must_use]
     pub fn get(&self) -> OptionSessionGuard<'_, T> {
         let lock = self.0.lock();
@@ -242,7 +252,9 @@ pub(crate) mod lazy {
     use async_once_cell::OnceCell;
     use cookie::Cookie;
     use http::Extensions;
-    use tower_sesh_core::{SessionKey, SessionStore};
+    use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
+
+    use crate::middleware::SessionConfig;
 
     use super::Session;
 
@@ -250,6 +262,7 @@ pub(crate) mod lazy {
         cookie: Option<Cookie<'static>>,
         store: &Arc<impl SessionStore<T>>,
         extensions: &mut Extensions,
+        session_config: SessionConfig,
     ) where
         T: 'static + Send,
     {
@@ -259,7 +272,7 @@ pub(crate) mod lazy {
         );
 
         let lazy_session = match cookie {
-            Some(cookie) => LazySession::new(cookie, Arc::clone(store)),
+            Some(cookie) => LazySession::new(cookie, Arc::clone(store), session_config),
             None => LazySession::empty(),
         };
         extensions.insert::<LazySession<T>>(lazy_session);
@@ -293,6 +306,7 @@ pub(crate) mod lazy {
             cookie: Cookie<'static>,
             store: Arc<dyn SessionStore<T> + 'static>,
             session: Arc<OnceCell<Option<Session<T>>>>,
+            config: SessionConfig,
         },
     }
 
@@ -304,10 +318,12 @@ pub(crate) mod lazy {
                     cookie,
                     store,
                     session,
+                    config,
                 } => LazySession::Init {
                     cookie: cookie.clone(),
                     store: Arc::clone(store),
                     session: Arc::clone(session),
+                    config: config.clone(),
                 },
             }
         }
@@ -317,11 +333,16 @@ pub(crate) mod lazy {
     where
         T: 'static,
     {
-        fn new(cookie: Cookie<'static>, store: Arc<impl SessionStore<T>>) -> LazySession<T> {
+        fn new(
+            cookie: Cookie<'static>,
+            store: Arc<impl SessionStore<T>>,
+            config: SessionConfig,
+        ) -> LazySession<T> {
             LazySession::Init {
                 cookie,
                 store,
                 session: Arc::new(OnceCell::new()),
+                config,
             }
         }
 
@@ -338,8 +359,9 @@ pub(crate) mod lazy {
                     cookie,
                     store,
                     session,
+                    config,
                 } => session
-                    .get_or_init(init_session(cookie, store.as_ref()))
+                    .get_or_init(init_session(cookie, store.as_ref(), config))
                     .await
                     .as_ref(),
             }
@@ -356,6 +378,7 @@ pub(crate) mod lazy {
     async fn init_session<T>(
         cookie: &Cookie<'static>,
         store: &dyn SessionStore<T>,
+        config: &SessionConfig,
     ) -> Option<Session<T>>
     where
         T: 'static,
@@ -368,12 +391,17 @@ pub(crate) mod lazy {
         match store.load(&session_key).await {
             Ok(Some(record)) => Some(Session::new(session_key, record)),
             Ok(None) => Some(Session::empty()),
-            // TODO: We may want to ignore some types of errors here and
-            // simply return an empty session.
             Err(err) => {
-                // TODO: Better error reporting
-                error!(%err);
-                None
+                match err.kind() {
+                    ErrorKind::Serde(_) if config.ignore_invalid_sessions => {
+                        Some(Session::ignored(session_key))
+                    }
+                    _ => {
+                        // TODO: Better error reporting
+                        error!(%err);
+                        None
+                    }
+                }
             }
         }
     }

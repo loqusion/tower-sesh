@@ -68,6 +68,12 @@ pub(crate) struct Config {
     pub(crate) path: Cow<'static, str>,
     pub(crate) same_site: SameSite,
     pub(crate) secure: bool,
+    pub(crate) session_config: SessionConfig,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct SessionConfig {
+    pub(crate) ignore_invalid_sessions: bool,
 }
 
 // Chosen to avoid session ID name fingerprinting.
@@ -85,6 +91,15 @@ impl Default for Config {
             path: Cow::Borrowed("/"),
             same_site: SameSite::Strict,
             secure: true,
+            session_config: SessionConfig::default(),
+        }
+    }
+}
+
+impl Default for SessionConfig {
+    fn default() -> Self {
+        SessionConfig {
+            ignore_invalid_sessions: true,
         }
     }
 }
@@ -197,6 +212,26 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         self.config.secure = enable;
         self
     }
+
+    /// Set whether session deserialization failures will be ignored.
+    ///
+    /// If set to `false`, attempting to extract a session with [`Session`] will
+    /// fail when deserializing session data from the store fails.
+    ///
+    /// If set to `true`, deserialization failures are treated as if there is
+    /// no existing session. In that case, an empty `Session` object is
+    /// provided, and writing to it will overwrite the existing session.
+    ///
+    /// Default is `true`.
+    ///
+    /// TODO: Link to [Session Migration], which should talk about strategies
+    /// for mitigating session invalidation.
+    ///
+    /// [Session Migration]: crate::Session#session-migration
+    pub fn ignore_invalid_sessions(mut self, enable: bool) -> Self {
+        self.config.session_config.ignore_invalid_sessions = enable;
+        self
+    }
 }
 
 impl<T, Store: SessionStore<T>> SessionLayer<T, Store, PlainCookie> {
@@ -270,7 +305,12 @@ where
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let jar = CookieJar::from_headers(req.headers());
         let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
-        session::lazy::insert(cookie, &self.layer.store, req.extensions_mut());
+        session::lazy::insert(
+            cookie,
+            &self.layer.store,
+            req.extensions_mut(),
+            self.layer.config.session_config.clone(),
+        );
 
         // pass the request to the inner service...
 
