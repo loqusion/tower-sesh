@@ -220,12 +220,11 @@ where
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
-        let _: () = conn
-            .expire_at(key, ttl.unix_timestamp())
-            .await
-            .map_err(Error::store)?;
+        let timestamp = timestamp_from_ttl(ttl)?;
 
-        todo!()
+        let _: () = conn.expire_at(key, timestamp).await.map_err(Error::store)?;
+
+        Ok(())
     }
 
     async fn delete(&self, session_key: &SessionKey) -> Result<()> {
@@ -245,6 +244,18 @@ fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
     )?;
 
     Ok(SetExpiry::EXAT(timestamp))
+}
+
+fn timestamp_from_ttl(ttl: Ttl) -> Result<i64> {
+    let timestamp = ttl.unix_timestamp();
+    if timestamp < 0 {
+        Err(Error::message(format!(
+            "unexpected negative timestamp: {}",
+            ttl
+        )))
+    } else {
+        Ok(timestamp)
+    }
 }
 
 fn serialize<T>(value: &T) -> Result<Vec<u8>>
