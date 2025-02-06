@@ -5,7 +5,7 @@ use std::{
 };
 
 use redis::aio::ConnectionManagerConfig;
-use tower_sesh_core::{SessionKey, SessionStore};
+use tower_sesh_core::{store::SessionStoreImpl, SessionKey};
 use tower_sesh_store_redis::RedisStore;
 
 /// A session key that is safe to use in tests without fear of collisions.

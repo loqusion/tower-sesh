@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use parking_lot::Mutex;
 use tower_sesh_core::{store::Error, Record, SessionKey};
 
-pub use tower_sesh_core::SessionStore;
+pub use tower_sesh_core::{store::SessionStoreImpl, SessionStore};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -24,8 +24,10 @@ impl<T> MemoryStore<T> {
     }
 }
 
+impl<T> SessionStore<T> for MemoryStore<T> where T: 'static + Send + Sync + Clone {}
+
 #[async_trait]
-impl<T> SessionStore<T> for MemoryStore<T>
+impl<T> SessionStoreImpl<T> for MemoryStore<T>
 where
     T: 'static + Send + Sync + Clone,
 {
@@ -50,7 +52,6 @@ where
         Ok(())
     }
 }
-impl<T> tower_sesh_core::__private::Sealed for MemoryStore<T> {}
 
 pub struct CachingStore<T, Cache: SessionStore<T>, Store: SessionStore<T>> {
     cache: Cache,
@@ -68,8 +69,15 @@ impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> CachingStore<T, Cache, S
     }
 }
 
-#[async_trait]
 impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> SessionStore<T>
+    for CachingStore<T, Cache, Store>
+where
+    T: 'static + Send + Sync,
+{
+}
+
+#[async_trait]
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> SessionStoreImpl<T>
     for CachingStore<T, Cache, Store>
 where
     T: 'static + Send + Sync,
@@ -120,8 +128,4 @@ where
 
         Ok(())
     }
-}
-impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> tower_sesh_core::__private::Sealed
-    for CachingStore<T, Cache, Store>
-{
 }

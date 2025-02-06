@@ -30,7 +30,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 ///
 /// To implement `SessionStore` anyway, implement the hidden `Sealed` trait too:
 ///
-/// ```
+/// ```ignore
 /// use async_trait::async_trait;
 /// use tower_sesh_core::SessionStore;
 /// # use tower_sesh_core::{store::{Error, Record}, SessionKey};
@@ -52,8 +52,13 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 /// }
 /// impl<T> tower_sesh_core::__private::Sealed for StoreImpl<T> {} // Required!
 /// ```
-#[cfg_attr(not(docsrs), async_trait)]
-pub trait SessionStore<T>: 'static + Send + Sync + crate::__private::Sealed {
+pub trait SessionStore<T>: 'static + Send + Sync + SessionStoreImpl<T> {}
+
+/// The contents of this trait are meant to be kept private and __not__
+/// part of `SessionStore`'s public API. The details will change over time.
+#[doc(hidden)]
+#[async_trait]
+pub trait SessionStoreImpl<T>: 'static + Send + Sync {
     async fn create(&self, record: &Record<T>) -> Result<SessionKey>;
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>>;

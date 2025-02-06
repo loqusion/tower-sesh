@@ -6,7 +6,7 @@ use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
 };
-use tower_sesh_core::{store::Error, Record, SessionKey, SessionStore};
+use tower_sesh_core::{store::Error, store::SessionStoreImpl, Record, SessionKey, SessionStore};
 
 // Required to use the redis asynchronous interface
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
@@ -112,8 +112,10 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 }
 
+impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where T: 'static + Send + Sync {}
+
 #[async_trait]
-impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C>
+impl<T, C: GetConnection> SessionStoreImpl<T> for RedisStore<T, C>
 where
     T: 'static + Send + Sync,
 {
@@ -202,7 +204,6 @@ where
         Ok(())
     }
 }
-impl<T, C: GetConnection> tower_sesh_core::__private::Sealed for RedisStore<T, C> {}
 
 trait RecordExt {
     fn set_expiry(&self) -> SetExpiry;

@@ -19,10 +19,3 @@ pub use crate::store::{Record, SessionStore};
 
 pub mod key;
 pub mod store;
-
-// Not public API. Meant to discourage implementing `SessionStore` to avoid
-// breakage.
-#[doc(hidden)]
-pub mod __private {
-    pub trait Sealed {}
-}
