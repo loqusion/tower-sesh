@@ -137,7 +137,7 @@ where
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
 
-        let expiry = set_expiry_from_ttl(ttl);
+        let expiry = set_expiry_from_ttl(ttl)?;
         let serialized = serialize(data)?;
 
         // Collision resolution
@@ -198,7 +198,7 @@ where
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
-        let expiry = set_expiry_from_ttl(ttl);
+        let expiry = set_expiry_from_ttl(ttl)?;
         let serialized = serialize(data)?;
 
         let _: () = conn
@@ -235,8 +235,9 @@ where
     }
 }
 
-fn set_expiry_from_ttl(ttl: Ttl) -> SetExpiry {
-    SetExpiry::EXAT(todo!())
+fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
+    let timestamp = u64::try_from(ttl.unix_timestamp()).map_err(|err| todo!())?;
+    Ok(SetExpiry::EXAT(timestamp))
 }
 
 fn serialize<T>(value: &T) -> Result<Vec<u8>>
