@@ -693,7 +693,6 @@ impl Value {
     /// assert_eq!(v.get("x"), Some(&Value::Null));
     /// ```
     pub fn take(&mut self) -> Value {
-        Some(3).take();
         mem::replace(self, Value::Null)
     }
 }
