@@ -30,26 +30,18 @@ pub use self::number::Number;
 
 /// A loosely typed value that can be stored in a session.
 ///
-/// ~~Any data of type `T` inserted into a [`Session`] is first converted to
-/// `Value` via `T`'s [`Serialize::serialize`] implementation. Then, the value
-/// is inserted into a [session store] via `Value`'s `Serialize::serialize`
-/// implementation.~~
-/// TODO: Actually, I'm thinking about making `Session` generic so that it
-/// _may_ use `Value` (i.e. `Session<Value>`), but may use some other type
-/// instead.
+/// Though this data structure looks quite similar to (and is, in fact, largely
+/// based on) [`serde_json::Value`], there are a few key differences:
 ///
-/// TODO: discuss NaN, infinity, and i128/u128
+/// - Special floating-point values ([∞][infinity], [−∞][neg-infinity], and
+///   [NaN]) are not implicitly coerced to `Null` in conversion methods.
+/// - Byte arrays are added, enabling more efficient
+///   serialization/deserialization for some data formats.
 ///
-/// ~~Though this data structure looks quite similar to (and is, in fact,
-/// partially based on) [`serde_json::Value`], session stores may use any
-/// self-describing data format for storage, not just JSON.~~
-/// TODO: Actually, supporting _any_ self-describing data format may be too
-/// ambitious. For now, stick with JSON and MessagePack.
-///
-/// [`Serialize::serialize`]: https://docs.rs/serde/latest/serde/trait.Serialize.html#tymethod.serialize
-/// [`Session`]: crate::Session
 /// [`serde_json::Value`]: https://docs.rs/serde_json/latest/serde_json/enum.Value.html
-/// [session store]: crate::store::SessionStore
+/// [infinity]: f64::INFINITY
+/// [neg-infinity]: f64::NEG_INFINITY
+/// [NaN]: f64::NAN
 #[derive(Clone, Default, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Value {
@@ -107,7 +99,7 @@ impl Value {
     /// # use tower_sesh::Value;
     /// #
     /// let map = Value::from_iter([
-    ///     ("A", &["a", "á", "à"] as &[&str]),
+    ///     ("A", &["a", "á", "à"] as &[_]),
     ///     ("B", &["b", "b́"]),
     ///     ("C", &["c", "ć", "ć̣", "ḉ"]),
     /// ]);
@@ -215,6 +207,9 @@ impl Value {
     /// [`as_array_mut`] are guaranteed to return the vector representing the
     /// array.
     ///
+    /// **NOTE**: If the `Value` is a `ByteArray`, this method will return
+    /// `false`.
+    ///
     /// [`as_array`]: Value::as_array
     /// [`as_array_mut`]: Value::as_array_mut
     ///
@@ -223,12 +218,14 @@ impl Value {
     /// #
     /// let map = Value::from_iter([
     ///     ("a", Value::from(["an", "array"])),
-    ///     ("b", Value::from_iter([("a", "map")])),
+    ///     ("b", Value::from_bytes(b"a byte array")),
+    ///     ("c", Value::from_iter([("a", "map")])),
     /// ]);
     ///
     /// assert!(map["a"].is_array());
     ///
     /// assert!(!map["b"].is_array());
+    /// assert!(!map["c"].is_array());
     /// ```
     pub fn is_array(&self) -> bool {
         self.as_array().is_some()
@@ -237,17 +234,22 @@ impl Value {
     /// If the `Value` is an `Array`, returns the associated vector. Returns
     /// `None` otherwise.
     ///
+    /// **NOTE**: If the `Value` is a `ByteArray`, this method will return
+    /// `None`.
+    ///
     /// ```
     /// # use tower_sesh::Value;
     /// #
     /// let v = Value::from_iter([
     ///     ("a", Value::from(["an", "array"])),
-    ///     ("b", Value::from_iter([("a", "map")])),
+    ///     ("b", Value::from_bytes(b"a byte array")),
+    ///     ("c", Value::from_iter([("a", "map")])),
     /// ]);
     ///
     /// assert_eq!(v["a"].as_array().unwrap().len(), 2);
     ///
     /// assert_eq!(v["b"].as_array(), None);
+    /// assert_eq!(v["c"].as_array(), None);
     /// ```
     pub fn as_array(&self) -> Option<&Vec<Value>> {
         match self {
@@ -258,6 +260,9 @@ impl Value {
 
     /// If the `Value` is an `Array`, returns the associated mutable vector.
     /// Returns `None` otherwise.
+    ///
+    /// **NOTE**: If the `Value` is a `ByteArray`, this method will return
+    /// `None`.
     ///
     /// ```
     /// # use tower_sesh::{value::Map, Value};
@@ -288,12 +293,14 @@ impl Value {
     /// #
     /// let v = Value::from_iter([
     ///     ("a", Value::from("some string")),
-    ///     ("b", Value::from(false)),
+    ///     ("b", Value::from_bytes(b"some bytes")),
+    ///     ("c", Value::from(false)),
     /// ]);
     ///
     /// assert!(v["a"].is_string());
     ///
     /// assert!(!v["b"].is_string());
+    /// assert!(!v["c"].is_string());
     /// ```
     pub fn is_string(&self) -> bool {
         self.as_str().is_some()
@@ -307,12 +314,14 @@ impl Value {
     /// #
     /// let v = Value::from_iter([
     ///     ("a", Value::from("some string")),
-    ///     ("b", Value::from(false)),
+    ///     ("b", Value::from_bytes(b"some bytes")),
+    ///     ("c", Value::from(false)),
     /// ]);
     ///
     /// assert_eq!(v["a"].as_str(), Some("some string"));
     ///
     /// assert_eq!(v["b"].as_str(), None);
+    /// assert_eq!(v["c"].as_str(), None);
     /// ```
     pub fn as_str(&self) -> Option<&str> {
         match self {
@@ -335,7 +344,7 @@ impl Value {
     /// let v = Value::from_iter([
     ///     ("a", Value::from_bytes(b"some bytes")),
     ///     ("b", Value::from(false)),
-    ///     ("c", Value::from("not bytes")),
+    ///     ("c", Value::from("some string")),
     /// ]);
     ///
     /// assert!(v["a"].is_bytes());
@@ -356,7 +365,7 @@ impl Value {
     /// let v = Value::from_iter([
     ///     ("a", Value::from_bytes(b"some bytes")),
     ///     ("b", Value::from(false)),
-    ///     ("c", Value::from("not bytes")),
+    ///     ("c", Value::from("some string")),
     /// ]);
     ///
     /// assert_eq!(v["a"].as_bytes(), Some(b"some bytes".as_slice()));
@@ -402,7 +411,7 @@ impl Value {
     /// #
     /// let v = Value::from_iter([
     ///     ("a", Value::from(1)),
-    ///     ("b", Value::try_from(2.2f64).unwrap()),
+    ///     ("b", Value::try_from(2.2f64).unwrap_or_default()),
     ///     ("c", Value::from(-3)),
     ///     ("d", Value::from("4")),
     /// ]);
@@ -435,7 +444,7 @@ impl Value {
     /// let v = Value::from_iter([
     ///     ("a", Value::from(64)),
     ///     ("b", Value::from(big)),
-    ///     ("c", Value::try_from(256.0).unwrap()),
+    ///     ("c", Value::try_from(256.0).unwrap_or_default()),
     /// ]);
     ///
     /// assert!(v["a"].is_i64());
@@ -467,7 +476,7 @@ impl Value {
     /// let v = Value::from_iter([
     ///     ("a", Value::from(64)),
     ///     ("b", Value::from(-64)),
-    ///     ("c", Value::try_from(256.0).unwrap()),
+    ///     ("c", Value::try_from(256.0).unwrap_or_default()),
     /// ]);
     ///
     /// assert!(v["a"].is_u64());
@@ -502,7 +511,7 @@ impl Value {
     /// # use tower_sesh::Value;
     /// #
     /// let v = Value::from_iter([
-    ///     ("a", Value::try_from(256.0).unwrap()),
+    ///     ("a", Value::try_from(256.0).unwrap_or_default()),
     ///     ("b", Value::from(64)),
     ///     ("c", Value::from(-64)),
     /// ]);
@@ -530,7 +539,7 @@ impl Value {
     /// let v = Value::from_iter([
     ///     ("a", Value::from(64)),
     ///     ("b", Value::from(big)),
-    ///     ("c", Value::try_from(256.0).unwrap()),
+    ///     ("c", Value::try_from(256.0).unwrap_or_default()),
     /// ]);
     ///
     /// assert_eq!(v["a"].as_i64(), Some(64));
@@ -553,7 +562,7 @@ impl Value {
     /// let v = Value::from_iter([
     ///     ("a", Value::from(64)),
     ///     ("b", Value::from(-64)),
-    ///     ("c", Value::try_from(256.0).unwrap()),
+    ///     ("c", Value::try_from(256.0).unwrap_or_default()),
     /// ]);
     ///
     /// assert_eq!(v["a"].as_u64(), Some(64));
@@ -574,7 +583,7 @@ impl Value {
     /// # use tower_sesh::Value;
     /// #
     /// let v = Value::from_iter([
-    ///     ("a", Value::try_from(256.0).unwrap()),
+    ///     ("a", Value::try_from(256.0).unwrap_or_default()),
     ///     ("b", Value::from(64)),
     ///     ("c", Value::from(-64)),
     /// ]);
@@ -649,13 +658,15 @@ impl Value {
     /// #
     /// let v = Value::from_iter([
     ///     ("a", Value::Null),
-    ///     ("b", Value::from(false)),
+    ///     ("b", Value::try_from(f64::NAN).unwrap_or_default()),
+    ///     ("c", Value::from(false)),
     /// ]);
     ///
     /// assert!(v["a"].is_null());
+    /// assert!(v["b"].is_null());
     ///
     /// // The boolean `false` is not null.
-    /// assert!(!v["b"].is_null());
+    /// assert!(!v["c"].is_null());
     /// ```
     pub fn is_null(&self) -> bool {
         self.as_null().is_some()
@@ -668,13 +679,15 @@ impl Value {
     /// #
     /// let v = Value::from_iter([
     ///     ("a", Value::Null),
-    ///     ("b", Value::from(false)),
+    ///     ("b", Value::try_from(f64::NAN).unwrap_or_default()),
+    ///     ("c", Value::from(false)),
     /// ]);
     ///
     /// assert_eq!(v["a"].as_null(), Some(()));
+    /// assert_eq!(v["b"].as_null(), Some(()));
     ///
     /// // The boolean `false` is not null.
-    /// assert_eq!(v["b"].as_null(), None);
+    /// assert_eq!(v["c"].as_null(), None);
     /// ```
     pub fn as_null(&self) -> Option<()> {
         match *self {
