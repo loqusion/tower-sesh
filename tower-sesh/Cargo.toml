@@ -28,7 +28,7 @@ cookie = { version = "0.18.1", features = [
 futures = "0.3.31"
 http = "1"
 itoa = "1.0.14"
-parking_lot = { version = "0.12.3", features = ["arc_lock"] }
+parking_lot = { version = "0.12.3" }
 pin-project-lite = "0.2.15"
 ryu = "1.0.18"
 serde = { workspace = true }
