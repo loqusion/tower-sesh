@@ -51,10 +51,13 @@ fn value_string() {
     "#);
 }
 
-#[ignore = "unimplemented"]
 #[test]
 fn value_byte_array() {
-    assert_debug_snapshot!(Value::ByteArray(vec![b's']), @"");
+    assert_debug_snapshot!(Value::from_bytes(b"hello\xFFworld"), @r#"
+    ByteArray(
+        "hello\xFFworld",
+    )
+    "#);
 }
 
 #[test]

@@ -9,7 +9,10 @@
 //!
 //! [documentation for `Value`]: Value
 
-use std::{fmt, mem};
+use std::{
+    fmt::{self, Write},
+    mem,
+};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -62,10 +65,50 @@ impl fmt::Debug for Value {
             Value::Bool(boolean) => f.debug_tuple("Bool").field(boolean).finish(),
             Value::Number(number) => fmt::Debug::fmt(number, f),
             Value::String(string) => f.debug_tuple("String").field(string).finish(),
-            Value::ByteArray(bytes) => todo!("bytes debug"),
+            Value::ByteArray(bytes) => f
+                .debug_tuple("ByteArray")
+                .field(&DebugByteArray(bytes))
+                .finish(),
             Value::Array(vec) => f.debug_tuple("Array").field(vec).finish(),
             Value::Map(map) => f.debug_tuple("Map").field(map).finish(),
         }
+    }
+}
+
+struct DebugByteArray<'a>(&'a [u8]);
+
+// Copied from https://doc.rust-lang.org/1.84.1/src/core/str/lossy.rs.html#113-145.
+impl fmt::Debug for DebugByteArray<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char('"')?;
+
+        for chunk in self.0.utf8_chunks() {
+            // Valid part.
+            // Here we partially parse UTF-8 again which is suboptimal.
+            {
+                let valid = chunk.valid();
+                let mut from = 0;
+                for (i, c) in valid.char_indices() {
+                    let esc = c.escape_debug();
+                    // If char needs escaping, flush backlog so far and write, else skip
+                    if esc.len() != 1 {
+                        f.write_str(&valid[from..i])?;
+                        for c in esc {
+                            f.write_char(c)?;
+                        }
+                        from = i + c.len_utf8();
+                    }
+                }
+                f.write_str(&valid[from..])?;
+            }
+
+            // Broken parts of string as hex escape.
+            for &b in chunk.invalid() {
+                write!(f, "\\x{:02X}", b)?;
+            }
+        }
+
+        f.write_char('"')
     }
 }
 
