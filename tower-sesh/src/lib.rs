@@ -1,5 +1,7 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
+//! A Tower middleware for strongly typed, efficient sessions.
+//!
 //! **🚧 UNDER CONSTRUCTION 🚧**
 //!
 //! This crate is being actively developed. Its public API is open to change at
