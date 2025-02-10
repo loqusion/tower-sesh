@@ -103,6 +103,7 @@ assert_value!(tower_sesh::middleware::SessionManager<(), YY, tower_sesh::store::
 assert_value!(tower_sesh::session::SessionGuard<YY>: !Send & Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<YN>: !Send & !Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<NN>: !Send & !Sync & Unpin);
+#[cfg(feature = "axum")]
 assert_value!(tower_sesh::session::SessionRejection: Send & Sync & Unpin);
 assert_value!(tower_sesh::store::CachingStore<YY, tower_sesh::store::MemoryStore<YY>, tower_sesh::store::MemoryStore<YY>>: Send & Sync & Unpin);
 assert_value!(tower_sesh::value::Map<String, tower_sesh::Value>: Send & Sync & Unpin);
