@@ -3,6 +3,7 @@
 use std::{error::Error as StdError, fmt};
 
 pub struct Error {
+    // TODO: Compare benchmarks when `err` is boxed.
     err: ErrorImpl,
 }
 
