@@ -37,14 +37,16 @@ jobs:
       - name: rustfmt
         run: cargo fmt --all --check
 
-  check-msrv:
-    name: "cargo check MSRV"
+  hack-check:
+    name: "cargo hack check"
     needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@cargo-hack
-      - run: cargo hack check --rust-version --workspace --all-targets --ignore-private
+      - run: |
+          cargo hack check --rust-version --workspace --all-targets --ignore-private --exclude tower-sesh-store-redis --feature-powerset
+          cargo hack check --rust-version --all-targets --package tower-sesh-store-redis
 
   ### test jobs
 
