@@ -73,7 +73,7 @@ pub(crate) struct Config {
 
 #[derive(Clone, Debug)]
 pub(crate) struct SessionConfig {
-    pub(crate) ignore_invalid_sessions: bool,
+    pub(crate) ignore_invalid_session: bool,
 }
 
 // Chosen to avoid session ID name fingerprinting.
@@ -99,7 +99,7 @@ impl Default for Config {
 impl Default for SessionConfig {
     fn default() -> Self {
         SessionConfig {
-            ignore_invalid_sessions: true,
+            ignore_invalid_session: true,
         }
     }
 }
@@ -228,8 +228,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// for mitigating session invalidation.
     ///
     /// [Session Migration]: crate::Session#session-migration
-    pub fn ignore_invalid_sessions(mut self, enable: bool) -> Self {
-        self.config.session_config.ignore_invalid_sessions = enable;
+    pub fn ignore_invalid_session(mut self, enable: bool) -> Self {
+        self.config.session_config.ignore_invalid_session = enable;
         self
     }
 }

@@ -393,7 +393,7 @@ pub(crate) mod lazy {
             Ok(None) => Some(Session::empty()),
             Err(err) => {
                 match err.kind() {
-                    ErrorKind::Serde(_) if config.ignore_invalid_sessions => {
+                    ErrorKind::Serde(_) if config.ignore_invalid_session => {
                         Some(Session::ignored(session_key))
                     }
                     _ => {
