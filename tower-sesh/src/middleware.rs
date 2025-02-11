@@ -213,19 +213,19 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         self
     }
 
-    /// Set whether session deserialization failures will be ignored.
+    /// Changes behavior of the [`Session`] extractor when an error occurs
+    /// while deserializing session data.
     ///
-    /// If set to `false`, attempting to extract a session with [`Session`] will
-    /// fail when deserializing session data from the store fails.
+    /// If `false`, a deserialization error will cause the extractor to fail.
     ///
-    /// If set to `true`, deserialization failures are treated as if there is
-    /// no existing session. In that case, an empty `Session` object is
-    /// provided, and writing to it will overwrite the existing session.
+    /// If `true`, a deserialization error will be treated as if there is no
+    /// existing session. In that case, an empty `Session` object is provided,
+    /// and writing to it will overwrite the existing session.
     ///
     /// Default is `true`.
     ///
     /// TODO: Link to [Session Migration], which should talk about strategies
-    /// for mitigating session invalidation.
+    /// for avoiding session invalidation.
     ///
     /// [Session Migration]: crate::Session#session-migration
     pub fn ignore_invalid_session(mut self, enable: bool) -> Self {
