@@ -155,16 +155,14 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [name] of the cookie used to store a session id.
     ///
-    /// It is recommended that the name should not be extremely descriptive nor
-    /// offer unneccessary details about the purpose and meaning of the ID.
+    /// It is [recommended by OWASP] that the name should not be extremely
+    /// descriptive nor offer unneccessary details about the purpose and meaning
+    /// of the cookie.
     ///
     /// Default: `"id"`
     ///
-    /// See also: OWASP [Session Management Cheat Sheet: Session ID Name
-    /// Fingerprinting].
-    ///
     /// [name]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value
-    /// [Session Management Cheat Sheet: Session ID Name Fingerprinting]:
+    /// [recommended by OWASP]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-id-name-fingerprinting
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         self.config.cookie_name = name.into();
