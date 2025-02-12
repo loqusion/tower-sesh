@@ -222,7 +222,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// Default is `true`.
     ///
-    /// TODO: Link to [Session Migration], which should talk about strategies
+    /// TODO: Link to [Session migration], which should talk about strategies
     /// for avoiding session invalidation.
     ///
     /// [Session Migration]: crate::Session#session-migration

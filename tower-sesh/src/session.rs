@@ -9,7 +9,7 @@ use tower_sesh_core::{store::Ttl, Record, SessionKey};
 
 /// Extractor to read and mutate session data.
 ///
-/// # Session Migration
+/// # Session migration
 ///
 /// TODO
 ///
