@@ -15,7 +15,9 @@ use tower_sesh_core::{store::Ttl, Record, SessionKey};
 ///
 /// # Logging rejections
 ///
-/// TODO
+/// To see the logs, enable the `tracing` feature for `tower-sesh` (enabled by
+/// default) and the `tower_sesh::rejection=trace` tracing target, for example
+/// with `RUST_LOG=info,tower_sesh::rejection=trace cargo run`.
 pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 
 /// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
