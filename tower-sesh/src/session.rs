@@ -202,7 +202,7 @@ where
 impl<'a, T> SessionGuard<'a, T> {
     /// # Safety
     ///
-    /// The caller of this method must ensure that `owned_guard.data` is a
+    /// The caller of this method must ensure that `guard.data` is a
     /// `Some` variant.
     unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         debug_assert!(guard.data.is_some());
@@ -231,8 +231,8 @@ impl<T> DerefMut for SessionGuard<'_, T> {
 }
 
 impl<'a, T> OptionSessionGuard<'a, T> {
-    fn new(owned_guard: MutexGuard<'a, Inner<T>>) -> Self {
-        OptionSessionGuard(owned_guard)
+    fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
+        OptionSessionGuard(guard)
     }
 }
 
