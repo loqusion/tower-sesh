@@ -44,10 +44,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: taiki-e/install-action@cargo-hack
+      - uses: taiki-e/install-action@cargo-minimal-versions
       - name: Check feature powerset
         run: |
           cargo hack check --rust-version --workspace --all-targets --ignore-private --exclude tower-sesh-store-redis --feature-powerset --optional-deps
           cargo hack check --rust-version --all-targets --package tower-sesh-store-redis
+      - name: Check minimal versions
+        run: |
+          cargo minimal-versions check --workspace --ignore-private --detach-path-deps
 
   ### test jobs
 
