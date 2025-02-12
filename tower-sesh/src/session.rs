@@ -260,7 +260,7 @@ pub(crate) mod lazy {
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 
-    use crate::middleware::SessionConfig;
+    use crate::{middleware::SessionConfig, util::ErrorExt};
 
     use super::Session;
 
@@ -404,7 +404,7 @@ pub(crate) mod lazy {
                     }
                     _ => {
                         // TODO: Better error reporting
-                        error!(%err);
+                        error!(message = %err.display_chain());
                         None
                     }
                 }
