@@ -11,7 +11,7 @@ macro_rules! __log_rejection {
         {
             #[cfg(feature = "tracing")]
             ::tracing::event!(
-                target: "axum::rejection",
+                target: "tower_sesh::rejection",
                 ::tracing::Level::TRACE,
                 status = $status.as_u16(),
                 body = $body_text,
