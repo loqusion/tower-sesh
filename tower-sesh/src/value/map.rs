@@ -93,23 +93,13 @@ impl Map<String, Value> {
     ///
     /// ```
     /// use tower_sesh::value::Map;
-    /// # use std::collections::BTreeMap;
     ///
-    /// # fn test() {
     /// let mut map = Map::new();
     /// map.insert("sesh".to_owned(), "a".into());
-    /// # assert_eq!(
-    /// #     map.get_key_value("sesh")
-    /// #         .and_then(|(k, v)| Some(k.as_str()).zip(v.as_str())),
-    /// #     Some(("sesh", "a"))
-    /// # );
-    /// # assert_eq!(map.get_key_value("notexist"), None);
-    /// # }
-    /// # test();
-    /// #
-    /// # let mut map = BTreeMap::new();
-    /// # map.insert("sesh", "a");
-    /// assert_eq!(map.get_key_value("sesh"), Some((&"sesh", &"a")));
+    /// let entry = map
+    ///     .get_key_value("sesh")
+    ///     .and_then(|(k, v)| Some(k.as_str()).zip(v.as_str()));
+    /// assert_eq!(entry, Some(("sesh", "a")));
     /// assert_eq!(map.get_key_value("notexist"), None);
     /// ```
     #[inline]
@@ -232,24 +222,15 @@ impl Map<String, Value> {
     ///
     /// ```
     /// use tower_sesh::value::Map;
-    /// # use std::collections::BTreeMap;
     ///
-    /// # fn test() {
     /// let mut map = Map::new();
     /// map.insert("sesh".to_owned(), "a".into());
-    /// # assert_eq!(
-    /// #     map
-    /// #         .remove_entry("sesh")
-    /// #         .as_ref()
-    /// #         .and_then(|(k, v)| Some(k.as_str()).zip(v.as_str())),
-    /// #     Some(("sesh", "a"))
-    /// # );
-    /// # assert_eq!(map.remove_entry("sesh"), None);
-    /// # }
-    /// # test();
-    /// # let mut map = BTreeMap::new();
-    /// # map.insert("sesh", "a");
-    /// assert_eq!(map.remove_entry("sesh"), Some(("sesh", "a")));
+    /// let entry = map.remove_entry("sesh");
+    /// assert_eq!(
+    ///     entry.as_ref()
+    ///         .and_then(|(k, v)| Some(k.as_str()).zip(v.as_str())),
+    ///     Some(("sesh", "a"))
+    /// );
     /// assert_eq!(map.remove_entry("sesh"), None);
     /// ```
     #[inline]
