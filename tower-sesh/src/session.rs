@@ -12,6 +12,10 @@ use tower_sesh_core::{store::Ttl, Record, SessionKey};
 /// # Session Migration
 ///
 /// TODO
+///
+/// # Logging rejections
+///
+/// TODO
 pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 
 /// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
