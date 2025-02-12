@@ -1222,7 +1222,8 @@ delegate_debug!(Values<'a>);
 ///
 /// [`values_mut`]: Map::values_mut
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-#[derive(Default)]
+// NOTE: `impl Default for btree_map::ValuesMut` was stabilized in 1.82.0
+// #[derive(Default)]
 pub struct ValuesMut<'a> {
     iter: ValuesMutImpl<'a>,
 }
