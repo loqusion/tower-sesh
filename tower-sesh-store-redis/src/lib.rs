@@ -52,7 +52,7 @@ impl Default for RedisStoreConfig {
 impl<T> RedisStore<T> {
     /// Connect to a redis server and return a store.
     ///
-    /// When opening a client a URL in the following format should be used:
+    /// A URL of the following format should be used:
     ///
     /// ```not_rust
     /// {redis|rediss}://[<username>][:<password>@]<hostname>[:port][/<db>]
