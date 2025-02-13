@@ -21,7 +21,7 @@ use crate::{
 
 /// A layer that provides [`Session`] as a request extension.
 ///
-/// # Example
+/// # Examples
 ///
 /// TODO: Provide an example
 ///

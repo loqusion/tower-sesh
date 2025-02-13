@@ -58,7 +58,7 @@ impl<T> RedisStore<T> {
     /// {redis|rediss}://[<username>][:<password>@]<hostname>[:port][/<db>]
     /// ```
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```no_run
     /// use tower_sesh_store_redis::RedisStore;
@@ -77,7 +77,7 @@ impl<T> RedisStore<T> {
 
     /// Create a new redis store with the provided client.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```no_run
     /// use tower_sesh_store_redis::RedisStore;
