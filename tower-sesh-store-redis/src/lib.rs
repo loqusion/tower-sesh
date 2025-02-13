@@ -117,10 +117,9 @@ impl<T> RedisStore<T> {
 }
 
 impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
-    /// Set the key prefix.
+    /// Set the prefix used in Redis keys used to store sessions.
     ///
-    /// `RedisStore` uses keys with the following format in its operations:
-    /// `<prefix><session_key>`.
+    /// Keys are formatted like: `<prefix><session_key>`.
     ///
     /// Default: `"session:"`
     pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C, R> {
