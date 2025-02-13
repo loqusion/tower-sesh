@@ -19,3 +19,7 @@ pub use crate::store::{Record, SessionStore};
 
 pub mod key;
 pub mod store;
+
+const WEEK_IN_SECONDS: u32 = 60 * 60 * 24 * 7;
+/// Default TTL for a session, in seconds.
+pub const DEFAULT_SESSION_EXPIRY_SECONDS: u32 = 2 * WEEK_IN_SECONDS;

@@ -14,9 +14,8 @@ use redis::{
 use rng::PhantomThreadRng;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
-    store::Error,
-    store::{SessionStoreImpl, Ttl},
-    Record, SessionKey, SessionStore,
+    store::{Error, SessionStoreImpl, Ttl},
+    Record, SessionKey, SessionStore, DEFAULT_SESSION_EXPIRY_SECONDS,
 };
 
 pub mod connection;
@@ -254,12 +253,9 @@ where
         let key = self.redis_key(session_key);
         let mut conn = self.connection().await?;
 
-        const WEEK_IN_SECONDS: i64 = 60 * 60 * 24 * 7;
-        const DEFAULT_EXPIRY: i64 = 2 * WEEK_IN_SECONDS;
-
         let (value, timestamp) = redis::pipe()
             .atomic()
-            .expire(&key, DEFAULT_EXPIRY) // Ensure the key has a timeout if one isn't set
+            .expire(&key, i64::from(DEFAULT_SESSION_EXPIRY_SECONDS)) // Ensure the key has a timeout if one isn't set
             .arg("NX")
             .ignore()
             .get(&key)
