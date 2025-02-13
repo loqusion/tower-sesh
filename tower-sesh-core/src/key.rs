@@ -3,7 +3,7 @@
 use std::{error::Error as StdError, fmt, num::NonZeroU128};
 
 use base64::Engine;
-use rand::{CryptoRng, Rng};
+use rand::TryCryptoRng;
 
 /// A 128-bit session identifier.
 // `NonZeroU128` is used so that `Option<SessionKey>` has the same size as
@@ -42,7 +42,7 @@ impl SessionKey {
     /// [`generate_from_rng`]: SessionKey::generate_from_rng
     #[must_use]
     pub fn generate() -> SessionKey {
-        SessionKey::generate_from_rng(&mut rand::thread_rng())
+        SessionKey::generate_from_rng(&mut rand::rng())
     }
 
     /// Returns a random [`SessionKey`], generated from `rng`.
@@ -50,11 +50,26 @@ impl SessionKey {
     /// Alternatively, you may wish to use [`generate`]. See its documentation
     /// for more.
     ///
+    /// # Panics
+    ///
+    /// If the RNG passed is [fallible] and yields an error, this function will
+    /// panic.
+    ///
     /// [`generate`]: SessionKey::generate
+    /// [fallible]: rand::TryRngCore
     #[must_use]
-    // TODO: Is `: CryptoRng + Rng` problematic if a different version of `rand` is used?
-    pub fn generate_from_rng<R: CryptoRng + Rng>(rng: &mut R) -> SessionKey {
-        SessionKey(rng.gen())
+    pub fn generate_from_rng<R: TryCryptoRng>(rng: &mut R) -> SessionKey {
+        fn generate_u128<R: TryCryptoRng>(rng: &mut R) -> u128 {
+            let x = u128::from(rng.try_next_u64().unwrap());
+            let y = u128::from(rng.try_next_u64().unwrap());
+            (y << 64) | x
+        }
+
+        loop {
+            if let Some(n) = NonZeroU128::new(generate_u128(rng)) {
+                return SessionKey(n);
+            }
+        }
     }
 
     /// Encodes this session key as a URL-safe Base64 string with no padding.
