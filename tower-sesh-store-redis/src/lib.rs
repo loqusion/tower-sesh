@@ -11,7 +11,7 @@ use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
 };
-use rng::DummyThreadRng;
+use rng::PhantomThreadRng;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
     store::Error,
@@ -29,7 +29,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 pub struct RedisStore<
     T,
     C: GetConnection = ConnectionManagerWithRetry,
-    R: TryCryptoRng = DummyThreadRng,
+    R: TryCryptoRng = PhantomThreadRng,
 > {
     client: C,
     config: RedisStoreConfig,
@@ -367,7 +367,7 @@ mod test {
     fn test_constraints() {
         fn require_traits<T: SessionStore<()> + Send + Sync + 'static>() {}
 
-        require_traits::<RedisStore<(), ConnectionManagerWithRetry, DummyThreadRng>>();
+        require_traits::<RedisStore<(), ConnectionManagerWithRetry, PhantomThreadRng>>();
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, OsRng>>();
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, StdRng>>();
         require_traits::<

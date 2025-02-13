@@ -2,10 +2,10 @@ use rand::{CryptoRng, RngCore};
 
 /// A marker type indicating that `RngStore` should use `ThreadRng`.
 #[non_exhaustive]
-pub struct DummyThreadRng;
+pub struct PhantomThreadRng;
 
 /// All methods are unimplemented.
-impl RngCore for DummyThreadRng {
+impl RngCore for PhantomThreadRng {
     fn next_u32(&mut self) -> u32 {
         unreachable!()
     }
@@ -20,4 +20,4 @@ impl RngCore for DummyThreadRng {
     }
 }
 
-impl CryptoRng for DummyThreadRng {}
+impl CryptoRng for PhantomThreadRng {}
