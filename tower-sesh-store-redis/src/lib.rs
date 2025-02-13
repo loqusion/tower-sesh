@@ -143,7 +143,7 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
     /// # type SessionData = ();
     /// #
     /// # tokio_test::block_on(async {
-    /// const RESEED_THRESHOLD: u64 = 64; // This will reseed every ≤64 session keys
+    /// const RESEED_THRESHOLD: u64 = 64; // This will reseed for every ≤64 session keys
     /// let rng = ReseedingRng::<ChaCha12Core, _>::new(RESEED_THRESHOLD * 16, OsRng)?;
     /// let store = RedisStore::<SessionData>::open("redis://127.0.0.1/")
     ///     .await?
