@@ -151,6 +151,12 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
     /// # Ok::<_, anyhow::Error>(())
     /// # }).unwrap();
     /// ```
+    ///
+    /// # Note about performance
+    ///
+    /// The RNG passed to this method is synchronized between threads with a
+    /// mutex. This can cause performance degradation, especially in a
+    /// multi-threaded context.
     pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C, Rng>
     where
         Rng: TryCryptoRng + Send + 'static,
