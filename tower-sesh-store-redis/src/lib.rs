@@ -55,7 +55,7 @@ impl<T> RedisStore<T> {
     /// When opening a client a URL in the following format should be used:
     ///
     /// ```not_rust
-    /// redis://<host>:<port>/...
+    /// {redis|rediss}://[<username>][:<password>@]<hostname>[:port][/<db>]
     /// ```
     ///
     /// # Example
