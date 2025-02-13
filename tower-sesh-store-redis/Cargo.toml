@@ -22,6 +22,8 @@ tokio-comp = ["redis/tokio-comp"]
 [dependencies]
 async-trait = "0.1.83"
 futures = "0.3.31"
+parking_lot = "0.12.3"
+rand = { workspace = true }
 redis = { version = "0.27.6", features = ["aio", "connection-manager"] }
 rmp-serde = "1.3.0"
 serde = { workspace = true }
@@ -29,6 +31,7 @@ tower-sesh-core = { version = "=0.1.0-alpha.2", path = "../tower-sesh-core" }
 
 [dev-dependencies]
 anyhow = "1.0.94"
+rand_chacha = "0.9.0"
 tokio = { version = "1.42.0", features = ["full"] }
 tokio-test = "0.4.4"
 
