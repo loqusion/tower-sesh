@@ -355,6 +355,7 @@ fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
     }
 }
 
+#[cold]
 fn err_max_iterations_reached() -> Error {
     Error::message("max iterations reached when handling session key collisions")
 }
