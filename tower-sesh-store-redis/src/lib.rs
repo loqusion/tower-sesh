@@ -63,8 +63,9 @@ impl<T> RedisStore<T> {
     /// ```no_run
     /// use tower_sesh_store_redis::RedisStore;
     ///
-    /// # tokio_test::block_on(async {
     /// # type SessionData = ();
+    /// #
+    /// # tokio_test::block_on(async {
     /// let store = RedisStore::<SessionData>::open("redis://127.0.0.1/").await?;
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
@@ -81,9 +82,10 @@ impl<T> RedisStore<T> {
     /// ```no_run
     /// use tower_sesh_store_redis::RedisStore;
     ///
+    /// # type SessionData = ();
+    /// #
     /// # tokio_test::block_on(async {
     /// let client = redis::Client::open("redis://127.0.0.1/")?;
-    /// # type SessionData = ();
     /// let store = RedisStore::<SessionData>::with_client(client).await?;
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
