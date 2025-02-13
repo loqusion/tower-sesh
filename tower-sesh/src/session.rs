@@ -204,6 +204,7 @@ impl<'a, T> SessionGuard<'a, T> {
     ///
     /// The caller of this method must ensure that `guard.data` is a
     /// `Some` variant.
+    #[track_caller]
     unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         debug_assert!(guard.data.is_some());
         SessionGuard(guard)
