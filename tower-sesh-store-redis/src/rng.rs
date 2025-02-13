@@ -1,3 +1,5 @@
+//! Types related to the `rand` crate.
+
 use rand::{CryptoRng, RngCore};
 
 /// A marker type indicating that `RngStore` should use `ThreadRng`.
