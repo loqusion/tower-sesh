@@ -36,45 +36,6 @@ impl SessionKey {
     /// [`decode`]: SessionKey::decode
     const DECODED_LEN: usize = 16;
 
-    /// Returns a random [`SessionKey`], generated from [`ThreadRng`].
-    ///
-    /// Alternatively, you may wish to use [`generate_from_rng`] and pass your
-    /// own CSPRNG. See `ThreadRng`'s documentation for notes on security.
-    ///
-    /// [`ThreadRng`]: rand::rngs::ThreadRng
-    /// [`generate_from_rng`]: SessionKey::generate_from_rng
-    #[must_use]
-    pub fn generate() -> SessionKey {
-        SessionKey::generate_from_rng(&mut rand::rng())
-    }
-
-    /// Returns a random [`SessionKey`], generated from `rng`.
-    ///
-    /// Alternatively, you may wish to use [`generate`]. See its documentation
-    /// for more.
-    ///
-    /// # Panics
-    ///
-    /// If the RNG passed is [fallible] and yields an error, this function will
-    /// panic.
-    ///
-    /// [`generate`]: SessionKey::generate
-    /// [fallible]: rand::TryRngCore
-    #[must_use]
-    pub fn generate_from_rng<R: TryCryptoRng>(rng: &mut R) -> SessionKey {
-        fn generate_u128<R: TryCryptoRng>(rng: &mut R) -> u128 {
-            let x = u128::from(rng.try_next_u64().unwrap());
-            let y = u128::from(rng.try_next_u64().unwrap());
-            (y << 64) | x
-        }
-
-        loop {
-            if let Some(n) = NonZeroU128::new(generate_u128(rng)) {
-                return SessionKey(n);
-            }
-        }
-    }
-
     /// Encodes this session key as a URL-safe Base64 string with no padding.
     ///
     /// The returned string uses the URL-safe and filename-safe alphabet (with
