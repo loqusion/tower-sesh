@@ -35,7 +35,7 @@ where
     T: 'static + Send + Sync + Clone,
 {
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
-        let session_key = SessionKey::generate();
+        let session_key = rand::random();
         self.update(&session_key, data, ttl).await?;
         Ok(session_key)
     }

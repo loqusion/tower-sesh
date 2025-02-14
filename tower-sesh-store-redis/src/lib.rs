@@ -6,7 +6,7 @@ use std::{borrow::Cow, marker::PhantomData};
 use async_trait::async_trait;
 use connection::{ConnectionManagerWithRetry, GetConnection};
 use parking_lot::Mutex;
-use rand::TryCryptoRng;
+use rand::{Rng, TryCryptoRng};
 use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
@@ -185,9 +185,10 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
     fn generate_key(&self) -> SessionKey {
         if let Some(rng) = &self.rng {
             let mut lock = rng.lock();
-            SessionKey::generate_from_rng(&mut *lock)
+            let mut rng = rng::UnwrapErrBorrowed(&mut *lock);
+            rng.random()
         } else {
-            SessionKey::generate()
+            rand::rng().random()
         }
     }
 }
