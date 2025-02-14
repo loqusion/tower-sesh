@@ -30,6 +30,7 @@ http = "1"
 itoa = "1.0.14"
 parking_lot = { version = "0.12.3" }
 pin-project-lite = "0.2.15"
+rand = { workspace = true, features = ["thread_rng"] }
 ryu = "1.0.18"
 serde = { workspace = true }
 time = "0.3.37"
