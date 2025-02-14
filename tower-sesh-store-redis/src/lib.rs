@@ -225,6 +225,10 @@ where
         let expiry = set_expiry_from_ttl(ttl)?;
         let serialized = serialize(data)?;
 
+        let options = SetOptions::default()
+            .conditional_set(ExistenceCheck::NX) // Only set the key if it does not exist
+            .with_expiration(expiry);
+
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
         const MAX_RETRIES: usize = 8;
@@ -233,13 +237,7 @@ where
             let key = self.redis_key(&session_key);
 
             let v: redis::Value = conn
-                .set_options(
-                    &key,
-                    &serialized,
-                    SetOptions::default()
-                        .conditional_set(ExistenceCheck::NX)
-                        .with_expiration(expiry),
-                )
+                .set_options(&key, &serialized, options)
                 .await
                 .map_err(Error::store)?;
 
@@ -283,12 +281,10 @@ where
         let expiry = set_expiry_from_ttl(ttl)?;
         let serialized = serialize(data)?;
 
+        let options = SetOptions::default().with_expiration(expiry);
+
         let _: () = conn
-            .set_options(
-                &key,
-                serialized,
-                SetOptions::default().with_expiration(expiry),
-            )
+            .set_options(&key, serialized, options)
             .await
             .map_err(Error::store)?;
 
