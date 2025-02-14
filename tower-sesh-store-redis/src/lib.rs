@@ -6,7 +6,7 @@ use std::{borrow::Cow, marker::PhantomData};
 use async_trait::async_trait;
 use connection::{ConnectionManagerWithRetry, GetConnection};
 use parking_lot::Mutex;
-use rand::{Rng, TryCryptoRng};
+use rand::{CryptoRng, Rng};
 use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
@@ -28,7 +28,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 pub struct RedisStore<
     T,
     C: GetConnection = ConnectionManagerWithRetry,
-    R: TryCryptoRng = PhantomThreadRng,
+    R: CryptoRng = PhantomThreadRng,
 > {
     client: C,
     config: RedisStoreConfig,
@@ -115,7 +115,7 @@ impl<T> RedisStore<T> {
     }
 }
 
-impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
+impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// Set the prefix used in Redis keys used to store sessions.
     ///
     /// Keys are formatted like: `<prefix><session_key>`.
@@ -158,7 +158,7 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
     /// multi-threaded context.
     pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C, Rng>
     where
-        Rng: TryCryptoRng + Send + 'static,
+        Rng: CryptoRng + Send + 'static,
     {
         RedisStore {
             client: self.client,
@@ -169,7 +169,7 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
     }
 }
 
-impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
+impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     fn redis_key(&self, session_key: &SessionKey) -> String {
         let mut redis_key =
             String::with_capacity(self.config.key_prefix.len() + SessionKey::ENCODED_LEN);
@@ -184,9 +184,7 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
 
     fn random_key(&self) -> SessionKey {
         if let Some(rng) = &self.rng {
-            let mut lock = rng.lock();
-            let mut rng = rng::UnwrapErrBorrowed(&mut *lock);
-            rng.random()
+            rng.lock().random()
         } else {
             rand::rng().random()
         }
@@ -204,7 +202,7 @@ macro_rules! ensure_redis_ttl {
     };
 }
 
-impl<T, C: GetConnection, R: TryCryptoRng> SessionStore<T> for RedisStore<T, C, R>
+impl<T, C: GetConnection, R: CryptoRng> SessionStore<T> for RedisStore<T, C, R>
 where
     T: 'static + Send + Sync + Serialize + DeserializeOwned,
     R: 'static + Send,
@@ -212,7 +210,7 @@ where
 }
 
 #[async_trait]
-impl<T, C: GetConnection, R: TryCryptoRng> SessionStoreImpl<T> for RedisStore<T, C, R>
+impl<T, C: GetConnection, R: CryptoRng> SessionStoreImpl<T> for RedisStore<T, C, R>
 where
     T: 'static + Send + Sync + Serialize + DeserializeOwned,
     R: 'static + Send,
@@ -373,7 +371,6 @@ mod test {
         fn require_traits<T: SessionStore<()> + Send + Sync + 'static>() {}
 
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, PhantomThreadRng>>();
-        require_traits::<RedisStore<(), ConnectionManagerWithRetry, OsRng>>();
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, StdRng>>();
         require_traits::<
             RedisStore<(), ConnectionManagerWithRetry, ReseedingRng<ChaCha12Core, OsRng>>,
