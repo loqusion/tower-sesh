@@ -8,6 +8,7 @@ use std::{
 };
 
 use cookie::{Cookie, CookieJar};
+use futures::{future::BoxFuture, FutureExt};
 use http::{Request, Response};
 use pin_project_lite::pin_project;
 use tower::{Layer, Service};
@@ -294,7 +295,7 @@ where
 {
     type Response = S::Response;
     type Error = S::Error;
-    type Future = ResponseFuture<S::Future, T, C>;
+    type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
 
     fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
@@ -316,7 +317,7 @@ where
         let session: Option<Session<T>> =
             session::lazy::take(req.extensions_mut()).expect("this panic should be removed");
 
-        todo!()
+        async { todo!() }.boxed()
     }
 }
 
