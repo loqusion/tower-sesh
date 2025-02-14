@@ -59,7 +59,8 @@ jobs:
       - uses: taiki-e/install-action@cargo-minimal-versions
       - name: Check minimal versions
         run: |
-          cargo minimal-versions check --workspace --ignore-private --detach-path-deps
+          # TODO: Add --detach-path-deps when pre-release is over
+          cargo minimal-versions check --workspace --ignore-private
 
   ### test jobs
 
