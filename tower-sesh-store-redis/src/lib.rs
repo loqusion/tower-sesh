@@ -1,3 +1,7 @@
+//! The Redis store for [`tower-sesh`].
+//!
+//! [`tower-sesh`]: https://docs.rs/tower-sesh/latest/tower_sesh/
+
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
 compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
 
