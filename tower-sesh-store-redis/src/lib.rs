@@ -313,20 +313,16 @@ where
 }
 
 fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
-    let timestamp = u64::try_from(ttl.unix_timestamp()).map_err(
-        #[cold]
-        |_| err_negative_unix_timestamp(ttl),
-    )?;
-
-    Ok(SetExpiry::EXAT(timestamp))
+    match u64::try_from(ttl.unix_timestamp()) {
+        Ok(timestamp) => Ok(SetExpiry::EXAT(timestamp)),
+        Err(_) => Err(err_negative_unix_timestamp(ttl)),
+    }
 }
 
 fn timestamp_from_ttl(ttl: Ttl) -> Result<i64> {
-    let timestamp = ttl.unix_timestamp();
-    if timestamp < 0 {
-        Err(err_negative_unix_timestamp(ttl))
-    } else {
-        Ok(timestamp)
+    match ttl.unix_timestamp() {
+        timestamp if timestamp >= 0 => Ok(timestamp),
+        _ => Err(err_negative_unix_timestamp(ttl)),
     }
 }
 
