@@ -182,7 +182,7 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
         self.client.connection().await.map_err(Error::store)
     }
 
-    fn generate_key(&self) -> SessionKey {
+    fn random_key(&self) -> SessionKey {
         if let Some(rng) = &self.rng {
             let mut lock = rng.lock();
             let mut rng = rng::UnwrapErrBorrowed(&mut *lock);
@@ -227,7 +227,7 @@ where
         // (This is statistically improbable for a sufficiently large session key)
         const MAX_RETRIES: usize = 8;
         for _ in 0..MAX_RETRIES {
-            let session_key = self.generate_key();
+            let session_key = self.random_key();
             let key = self.redis_key(&session_key);
 
             let v: redis::Value = conn
