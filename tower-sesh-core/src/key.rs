@@ -3,7 +3,10 @@
 use std::{error::Error as StdError, fmt, num::NonZeroU128};
 
 use base64::Engine;
-use rand::TryCryptoRng;
+use rand::{
+    distr::{Distribution, StandardUniform},
+    TryCryptoRng,
+};
 
 /// A 128-bit session identifier.
 // `NonZeroU128` is used so that `Option<SessionKey>` has the same size as
@@ -112,6 +115,12 @@ impl SessionKey {
     }
 }
 
+impl Distribution<SessionKey> for StandardUniform {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SessionKey {
+        SessionKey(rng.random())
+    }
+}
+
 impl SessionKey {
     // Not public API. Only tests use this.
     #[doc(hidden)]
@@ -190,7 +199,7 @@ mod test {
 
     #[test]
     fn debug_redacts_content() {
-        let s = SessionKey::generate();
+        let s = rand::random::<SessionKey>();
         assert_eq!(format!("{:?}", s), "SessionKey(..)");
     }
 }
