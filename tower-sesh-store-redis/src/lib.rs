@@ -315,7 +315,7 @@ where
 fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
     let timestamp = u64::try_from(ttl.unix_timestamp()).map_err(
         #[cold]
-        |_| Error::message(format!("unexpected negative timestamp: {}", ttl)),
+        |_| err_negative_unix_timestamp(ttl),
     )?;
 
     Ok(SetExpiry::EXAT(timestamp))
@@ -324,10 +324,7 @@ fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
 fn timestamp_from_ttl(ttl: Ttl) -> Result<i64> {
     let timestamp = ttl.unix_timestamp();
     if timestamp < 0 {
-        Err(Error::message(format!(
-            "unexpected negative timestamp: {}",
-            ttl
-        )))
+        Err(err_negative_unix_timestamp(ttl))
     } else {
         Ok(timestamp)
     }
@@ -357,6 +354,14 @@ fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
 #[cold]
 fn err_max_iterations_reached() -> Error {
     Error::message("max iterations reached when handling session key collisions")
+}
+
+#[cold]
+fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
+    Error::message(format!(
+        "calling `.unix_timestamp()` resulted in unexpected negative timestamp: {}",
+        ttl
+    ))
 }
 
 #[cfg(test)]
