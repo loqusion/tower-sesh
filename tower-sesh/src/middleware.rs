@@ -291,6 +291,7 @@ impl<ReqBody, ResBody, S, T, Store: SessionStore<T>, C: CookieSecurity> Service<
     for SessionManager<S, T, Store, C>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
+    S::Future: Send + 'static,
     T: 'static + Send + Sync,
 {
     type Response = S::Response;
@@ -304,20 +305,22 @@ where
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let jar = CookieJar::from_headers(req.headers());
         let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
-        session::lazy::insert(
+        let session_handle = session::lazy::insert(
             cookie,
             &self.layer.store,
             req.extensions_mut(),
             self.layer.config.session_config.clone(),
         );
 
-        // pass the request to the inner service...
+        let fut = self.inner.call(req);
 
-        // FIXME: Don't panic here, propagate the error instead.
-        let session: Option<Session<T>> =
-            session::lazy::take(req.extensions_mut()).expect("this panic should be removed");
+        async move {
+            let result = fut.await;
+            let session = session_handle.get();
 
-        async { todo!() }.boxed()
+            result
+        }
+        .boxed()
     }
 }
 

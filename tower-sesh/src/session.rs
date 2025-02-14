@@ -270,7 +270,8 @@ pub(crate) mod lazy {
         store: &Arc<impl SessionStore<T>>,
         extensions: &mut Extensions,
         session_config: SessionConfig,
-    ) where
+    ) -> LazySessionHandle<T>
+    where
         T: 'static + Send,
     {
         debug_assert!(
@@ -282,7 +283,10 @@ pub(crate) mod lazy {
             Some(cookie) => LazySession::new(cookie, Arc::clone(store), session_config),
             None => LazySession::empty(),
         };
+        let handle = lazy_session.handle();
         extensions.insert::<LazySession<T>>(lazy_session);
+
+        handle
     }
 
     pub(super) async fn get_or_init<T>(
@@ -307,7 +311,7 @@ pub(crate) mod lazy {
         }
     }
 
-    enum LazySession<T> {
+    pub enum LazySession<T> {
         Empty(Arc<OnceCell<Session<T>>>),
         Init {
             cookie: Cookie<'static>,
@@ -315,6 +319,11 @@ pub(crate) mod lazy {
             session: Arc<OnceCell<Option<Session<T>>>>,
             config: SessionConfig,
         },
+    }
+
+    pub(crate) enum LazySessionHandle<T> {
+        Empty(Arc<OnceCell<Session<T>>>),
+        Init(Arc<OnceCell<Option<Session<T>>>>),
     }
 
     impl<T> Clone for LazySession<T> {
@@ -374,7 +383,14 @@ pub(crate) mod lazy {
             }
         }
 
-        fn get(&self) -> Option<&Session<T>> {
+        fn handle(&self) -> LazySessionHandle<T> {
+            match self {
+                LazySession::Empty(session) => LazySessionHandle::Empty(Arc::clone(session)),
+                LazySession::Init { session, .. } => LazySessionHandle::Init(Arc::clone(session)),
+            }
+        }
+
+        pub(crate) fn get(&self) -> Option<&Session<T>> {
             match self {
                 LazySession::Empty(session) => session.get(),
                 LazySession::Init { session, .. } => session.get().and_then(Option::as_ref),
@@ -409,6 +425,15 @@ pub(crate) mod lazy {
                         None
                     }
                 }
+            }
+        }
+    }
+
+    impl<T> LazySessionHandle<T> {
+        pub(crate) fn get(&self) -> Option<&Session<T>> {
+            match self {
+                LazySessionHandle::Empty(session) => session.get(),
+                LazySessionHandle::Init(session) => session.get().and_then(Option::as_ref),
             }
         }
     }
