@@ -306,7 +306,7 @@ pub(crate) mod lazy {
         Init {
             cookie: Cookie<'static>,
             store: Arc<dyn SessionStore<T> + 'static>,
-            session: Arc<OnceCell<Option<Session<T>>>>,
+            session_cell: Arc<OnceCell<Option<Session<T>>>>,
             config: SessionConfig,
         },
     }
@@ -319,16 +319,16 @@ pub(crate) mod lazy {
     impl<T> Clone for LazySession<T> {
         fn clone(&self) -> Self {
             match self {
-                LazySession::Empty(session) => LazySession::Empty(Arc::clone(session)),
+                LazySession::Empty(session_cell) => LazySession::Empty(Arc::clone(session_cell)),
                 LazySession::Init {
                     cookie,
                     store,
-                    session,
+                    session_cell,
                     config,
                 } => LazySession::Init {
                     cookie: cookie.clone(),
                     store: Arc::clone(store),
-                    session: Arc::clone(session),
+                    session_cell: Arc::clone(session_cell),
                     config: config.clone(),
                 },
             }
@@ -347,7 +347,7 @@ pub(crate) mod lazy {
             LazySession::Init {
                 cookie,
                 store,
-                session: Arc::new(OnceCell::new()),
+                session_cell: Arc::new(OnceCell::new()),
                 config,
             }
         }
@@ -358,15 +358,15 @@ pub(crate) mod lazy {
 
         async fn get_or_init(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty(session) => {
-                    Some(session.get_or_init(async { Session::empty() }).await)
+                LazySession::Empty(session_cell) => {
+                    Some(session_cell.get_or_init(async { Session::empty() }).await)
                 }
                 LazySession::Init {
                     cookie,
                     store,
-                    session,
+                    session_cell,
                     config,
-                } => session
+                } => session_cell
                     .get_or_init(init_session(cookie, store.as_ref(), config))
                     .await
                     .as_ref(),
@@ -375,15 +375,21 @@ pub(crate) mod lazy {
 
         fn handle(&self) -> LazySessionHandle<T> {
             match self {
-                LazySession::Empty(session) => LazySessionHandle::Empty(Arc::clone(session)),
-                LazySession::Init { session, .. } => LazySessionHandle::Init(Arc::clone(session)),
+                LazySession::Empty(session_cell) => {
+                    LazySessionHandle::Empty(Arc::clone(session_cell))
+                }
+                LazySession::Init { session_cell, .. } => {
+                    LazySessionHandle::Init(Arc::clone(session_cell))
+                }
             }
         }
 
         pub(crate) fn get(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty(session) => session.get(),
-                LazySession::Init { session, .. } => session.get().and_then(Option::as_ref),
+                LazySession::Empty(session_cell) => session_cell.get(),
+                LazySession::Init { session_cell, .. } => {
+                    session_cell.get().and_then(Option::as_ref)
+                }
             }
         }
     }
@@ -422,8 +428,10 @@ pub(crate) mod lazy {
     impl<T> LazySessionHandle<T> {
         pub(crate) fn get(&self) -> Option<&Session<T>> {
             match self {
-                LazySessionHandle::Empty(session) => session.get(),
-                LazySessionHandle::Init(session) => session.get().and_then(Option::as_ref),
+                LazySessionHandle::Empty(session_cell) => session_cell.get(),
+                LazySessionHandle::Init(session_cell) => {
+                    session_cell.get().and_then(Option::as_ref)
+                }
             }
         }
     }
