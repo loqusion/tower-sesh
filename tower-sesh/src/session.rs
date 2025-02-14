@@ -265,6 +265,7 @@ pub(crate) mod lazy {
 
     use super::Session;
 
+    #[track_caller]
     pub(crate) fn insert<T>(
         cookie: Option<Cookie<'static>>,
         store: &Arc<impl SessionStore<T>>,
