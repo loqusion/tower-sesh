@@ -302,7 +302,9 @@ pub(crate) mod lazy {
     }
 
     pub enum LazySession<T> {
-        Empty(Arc<OnceCell<Session<T>>>),
+        Empty {
+            session_cell: Arc<OnceCell<Session<T>>>,
+        },
         Init {
             cookie: Cookie<'static>,
             store: Arc<dyn SessionStore<T> + 'static>,
@@ -319,7 +321,9 @@ pub(crate) mod lazy {
     impl<T> Clone for LazySession<T> {
         fn clone(&self) -> Self {
             match self {
-                LazySession::Empty(session_cell) => LazySession::Empty(Arc::clone(session_cell)),
+                LazySession::Empty { session_cell } => LazySession::Empty {
+                    session_cell: Arc::clone(session_cell),
+                },
                 LazySession::Init {
                     cookie,
                     store,
@@ -353,12 +357,14 @@ pub(crate) mod lazy {
         }
 
         fn empty() -> LazySession<T> {
-            LazySession::Empty(Arc::new(OnceCell::new()))
+            LazySession::Empty {
+                session_cell: Arc::new(OnceCell::new()),
+            }
         }
 
         async fn get_or_init(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty(session_cell) => {
+                LazySession::Empty { session_cell } => {
                     Some(session_cell.get_or_init(async { Session::empty() }).await)
                 }
                 LazySession::Init {
@@ -375,7 +381,7 @@ pub(crate) mod lazy {
 
         fn handle(&self) -> LazySessionHandle<T> {
             match self {
-                LazySession::Empty(session_cell) => {
+                LazySession::Empty { session_cell } => {
                     LazySessionHandle::Empty(Arc::clone(session_cell))
                 }
                 LazySession::Init { session_cell, .. } => {
@@ -386,7 +392,7 @@ pub(crate) mod lazy {
 
         pub(crate) fn get(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty(session_cell) => session_cell.get(),
+                LazySession::Empty { session_cell } => session_cell.get(),
                 LazySession::Init { session_cell, .. } => {
                     session_cell.get().and_then(Option::as_ref)
                 }
