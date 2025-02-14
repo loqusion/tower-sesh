@@ -301,16 +301,6 @@ pub(crate) mod lazy {
         }
     }
 
-    pub(crate) fn take<T>(extensions: &mut Extensions) -> Result<Option<Session<T>>, Error>
-    where
-        T: 'static + Send,
-    {
-        match extensions.remove::<LazySession<T>>() {
-            Some(lazy_session) => Ok(lazy_session.get().cloned()),
-            None => Err(Error),
-        }
-    }
-
     pub enum LazySession<T> {
         Empty(Arc<OnceCell<Session<T>>>),
         Init {
