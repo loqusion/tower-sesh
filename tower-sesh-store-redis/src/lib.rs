@@ -126,7 +126,7 @@ impl<T, C: GetConnection, R: TryCryptoRng> RedisStore<T, C, R> {
         self
     }
 
-    /// Change the RNG used to generate session keys.
+    /// Change the RNG used to generate random session keys.
     ///
     /// If an RNG isn't provided, [`ThreadRng`] is used by default.
     ///
