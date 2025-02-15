@@ -225,6 +225,10 @@ where
         let expiry = set_expiry_from_ttl(ttl)?;
         let serialized = serialize(data)?;
 
+        let options = SetOptions::default()
+            .conditional_set(ExistenceCheck::NX) // Only set the key if it does not exist
+            .with_expiration(expiry);
+
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
         const MAX_RETRIES: usize = 8;
@@ -233,13 +237,7 @@ where
             let key = self.redis_key(&session_key);
 
             let v: redis::Value = conn
-                .set_options(
-                    &key,
-                    &serialized,
-                    SetOptions::default()
-                        .conditional_set(ExistenceCheck::NX)
-                        .with_expiration(expiry),
-                )
+                .set_options(&key, &serialized, options)
                 .await
                 .map_err(Error::store)?;
 
@@ -283,12 +281,10 @@ where
         let expiry = set_expiry_from_ttl(ttl)?;
         let serialized = serialize(data)?;
 
+        let options = SetOptions::default().with_expiration(expiry);
+
         let _: () = conn
-            .set_options(
-                &key,
-                serialized,
-                SetOptions::default().with_expiration(expiry),
-            )
+            .set_options(&key, serialized, options)
             .await
             .map_err(Error::store)?;
 
@@ -317,23 +313,16 @@ where
 }
 
 fn set_expiry_from_ttl(ttl: Ttl) -> Result<SetExpiry> {
-    let timestamp = u64::try_from(ttl.unix_timestamp()).map_err(
-        #[cold]
-        |_| Error::message(format!("unexpected negative timestamp: {}", ttl)),
-    )?;
-
-    Ok(SetExpiry::EXAT(timestamp))
+    match u64::try_from(ttl.unix_timestamp()) {
+        Ok(timestamp) => Ok(SetExpiry::EXAT(timestamp)),
+        Err(_) => Err(err_negative_unix_timestamp(ttl)),
+    }
 }
 
 fn timestamp_from_ttl(ttl: Ttl) -> Result<i64> {
-    let timestamp = ttl.unix_timestamp();
-    if timestamp < 0 {
-        Err(Error::message(format!(
-            "unexpected negative timestamp: {}",
-            ttl
-        )))
-    } else {
-        Ok(timestamp)
+    match ttl.unix_timestamp() {
+        timestamp if timestamp >= 0 => Ok(timestamp),
+        _ => Err(err_negative_unix_timestamp(ttl)),
     }
 }
 
@@ -361,6 +350,14 @@ fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
 #[cold]
 fn err_max_iterations_reached() -> Error {
     Error::message("max iterations reached when handling session key collisions")
+}
+
+#[cold]
+fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
+    Error::message(format!(
+        "calling `.unix_timestamp()` resulted in unexpected negative timestamp: {}",
+        ttl
+    ))
 }
 
 #[cfg(test)]

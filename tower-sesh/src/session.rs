@@ -265,6 +265,7 @@ pub(crate) mod lazy {
 
     use super::Session;
 
+    #[track_caller]
     pub(crate) fn insert<T>(
         cookie: Option<Cookie<'static>>,
         store: &Arc<impl SessionStore<T>>,
@@ -302,8 +303,10 @@ pub(crate) mod lazy {
     }
 
     pub enum LazySession<T> {
-        Empty(Arc<OnceCell<Session<T>>>),
-        Init {
+        Empty {
+            session_cell: Arc<OnceCell<Session<T>>>,
+        },
+        Load {
             cookie: Cookie<'static>,
             store: Arc<dyn SessionStore<T> + 'static>,
             session_cell: Arc<OnceCell<Option<Session<T>>>>,
@@ -313,19 +316,21 @@ pub(crate) mod lazy {
 
     pub(crate) enum LazySessionHandle<T> {
         Empty(Arc<OnceCell<Session<T>>>),
-        Init(Arc<OnceCell<Option<Session<T>>>>),
+        Load(Arc<OnceCell<Option<Session<T>>>>),
     }
 
     impl<T> Clone for LazySession<T> {
         fn clone(&self) -> Self {
             match self {
-                LazySession::Empty(session_cell) => LazySession::Empty(Arc::clone(session_cell)),
-                LazySession::Init {
+                LazySession::Empty { session_cell } => LazySession::Empty {
+                    session_cell: Arc::clone(session_cell),
+                },
+                LazySession::Load {
                     cookie,
                     store,
                     session_cell,
                     config,
-                } => LazySession::Init {
+                } => LazySession::Load {
                     cookie: cookie.clone(),
                     store: Arc::clone(store),
                     session_cell: Arc::clone(session_cell),
@@ -344,7 +349,7 @@ pub(crate) mod lazy {
             store: Arc<impl SessionStore<T>>,
             config: SessionConfig,
         ) -> LazySession<T> {
-            LazySession::Init {
+            LazySession::Load {
                 cookie,
                 store,
                 session_cell: Arc::new(OnceCell::new()),
@@ -353,15 +358,17 @@ pub(crate) mod lazy {
         }
 
         fn empty() -> LazySession<T> {
-            LazySession::Empty(Arc::new(OnceCell::new()))
+            LazySession::Empty {
+                session_cell: Arc::new(OnceCell::new()),
+            }
         }
 
         async fn get_or_init(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty(session_cell) => {
+                LazySession::Empty { session_cell } => {
                     Some(session_cell.get_or_init(async { Session::empty() }).await)
                 }
-                LazySession::Init {
+                LazySession::Load {
                     cookie,
                     store,
                     session_cell,
@@ -375,19 +382,19 @@ pub(crate) mod lazy {
 
         fn handle(&self) -> LazySessionHandle<T> {
             match self {
-                LazySession::Empty(session_cell) => {
+                LazySession::Empty { session_cell } => {
                     LazySessionHandle::Empty(Arc::clone(session_cell))
                 }
-                LazySession::Init { session_cell, .. } => {
-                    LazySessionHandle::Init(Arc::clone(session_cell))
+                LazySession::Load { session_cell, .. } => {
+                    LazySessionHandle::Load(Arc::clone(session_cell))
                 }
             }
         }
 
         pub(crate) fn get(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty(session_cell) => session_cell.get(),
-                LazySession::Init { session_cell, .. } => {
+                LazySession::Empty { session_cell } => session_cell.get(),
+                LazySession::Load { session_cell, .. } => {
                     session_cell.get().and_then(Option::as_ref)
                 }
             }
@@ -429,7 +436,7 @@ pub(crate) mod lazy {
         pub(crate) fn get(&self) -> Option<&Session<T>> {
             match self {
                 LazySessionHandle::Empty(session_cell) => session_cell.get(),
-                LazySessionHandle::Init(session_cell) => {
+                LazySessionHandle::Load(session_cell) => {
                     session_cell.get().and_then(Option::as_ref)
                 }
             }

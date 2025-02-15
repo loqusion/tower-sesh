@@ -274,7 +274,10 @@ mod test {
             error_serde().display_chain(),
             @"session serialization error: EOF while parsing a string at line 1 column 17"
         );
-        insta::assert_snapshot!(error_msg(), @"max iterations reached when handling session key collisions");
+        insta::assert_snapshot!(
+            error_msg(),
+            @"max iterations reached when handling session key collisions"
+        );
     }
 
     #[test]
