@@ -199,10 +199,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
 macro_rules! ensure_redis_ttl {
     ($ttl:ident) => {
         if $ttl < 0 {
-            return Err(Error::message(format!(
-                "Redis returned an unexpected timestamp value: {}",
-                $ttl
-            )));
+            return Err(err_redis_timestamp($ttl));
         }
     };
 }
@@ -358,6 +355,14 @@ fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
     Error::message(format!(
         "calling `.unix_timestamp()` resulted in unexpected negative timestamp: {}",
         ttl
+    ))
+}
+
+#[cold]
+fn err_redis_timestamp(timestamp: i64) -> Error {
+    Error::message(format!(
+        "Redis returned an unexpected timestamp value: {}",
+        timestamp
     ))
 }
 
