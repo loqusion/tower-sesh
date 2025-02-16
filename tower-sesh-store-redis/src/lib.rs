@@ -159,7 +159,8 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     ///
     /// The RNG passed to this method is synchronized between threads with a
     /// mutex. This can cause performance degradation, especially in a
-    /// multi-threaded context.
+    /// multi-threaded context. Therefore, using this method is not recommended
+    /// unless you need determinism (for instance, in tests).
     pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C, Rng>
     where
         Rng: CryptoRng + Send + 'static,
