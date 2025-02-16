@@ -200,7 +200,7 @@ macro_rules! ensure_redis_ttl {
     ($ttl:ident) => {
         if $ttl < 0 {
             return Err(Error::message(format!(
-                "unexpected timestamp value: {}",
+                "Redis returned an unexpected timestamp value: {}",
                 $ttl
             )));
         }
