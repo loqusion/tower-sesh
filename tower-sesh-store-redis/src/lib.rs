@@ -97,12 +97,7 @@ impl<T> RedisStore<T> {
     /// ```
     pub async fn with_client(client: Client) -> RedisResult<RedisStore<T>> {
         let client = ConnectionManagerWithRetry::new(client).await?;
-        Ok(Self {
-            client,
-            config: RedisStoreConfig::default(),
-            rng: None,
-            _marker: PhantomData,
-        })
+        Ok(RedisStore::_with_client(client))
     }
 
     // Not public API. Only tests use this.
@@ -112,12 +107,19 @@ impl<T> RedisStore<T> {
         config: ConnectionManagerConfig,
     ) -> RedisResult<RedisStore<T>> {
         let client = ConnectionManagerWithRetry::new_with_config(client, config).await?;
-        Ok(Self {
+        Ok(RedisStore::_with_client(client))
+    }
+}
+
+impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
+    #[inline]
+    fn _with_client(client: C) -> RedisStore<T, C, R> {
+        Self {
             client,
             config: RedisStoreConfig::default(),
             rng: None,
             _marker: PhantomData,
-        })
+        }
     }
 }
 
