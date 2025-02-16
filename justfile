@@ -10,5 +10,8 @@ test:
 
     REDIS_URL="redis://localhost:6379" cargo nextest run --workspace --features test-util
 
+doctest *FLAGS:
+    cargo test --workspace --doc --all-features {{FLAGS}}
+
 doc *FLAGS:
     RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features {{FLAGS}}
