@@ -371,7 +371,7 @@ fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
 #[cfg(test)]
 mod test {
     use rand::rngs::{OsRng, ReseedingRng, StdRng};
-    use rand_chacha::{ChaCha12Core, ChaCha12Rng};
+    use rand_chacha::{rand_core::UnwrapErr, ChaCha12Core, ChaCha12Rng};
 
     use super::*;
 
@@ -381,6 +381,7 @@ mod test {
 
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, PhantomThreadRng>>();
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, StdRng>>();
+        require_traits::<RedisStore<(), ConnectionManagerWithRetry, UnwrapErr<OsRng>>>();
         require_traits::<
             RedisStore<(), ConnectionManagerWithRetry, ReseedingRng<ChaCha12Core, OsRng>>,
         >();
