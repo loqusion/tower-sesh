@@ -141,15 +141,14 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// # Examples
     ///
     /// ```no_run
-    /// use rand::rngs::{OsRng, ReseedingRng};
-    /// use rand_chacha::ChaCha12Core;
+    /// use rand::SeedableRng;
+    /// use rand_chacha::ChaCha12Rng;
     /// use tower_sesh_store_redis::RedisStore;
     ///
     /// # type SessionData = ();
     /// #
     /// # tokio_test::block_on(async {
-    /// const RESEED_THRESHOLD: u64 = 4096 * 16; // This will reseed for every ≤4096 session keys
-    /// let rng = ReseedingRng::<ChaCha12Core, _>::new(RESEED_THRESHOLD, OsRng)?;
+    /// let rng = ChaCha12Rng::seed_from_u64(1337); // seed_from_u64 is suitable for testing purposes
     /// let store = RedisStore::<SessionData>::open("redis://127.0.0.1/")
     ///     .await?
     ///     .rng(rng);
