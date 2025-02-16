@@ -10,7 +10,7 @@ use std::{borrow::Cow, marker::PhantomData};
 use async_trait::async_trait;
 use connection::{ConnectionManagerWithRetry, GetConnection};
 use parking_lot::Mutex;
-use rand::{CryptoRng, Rng};
+use rand::{rngs::ThreadRng, CryptoRng, Rng};
 use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
@@ -191,7 +191,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
         if let Some(rng) = &self.rng {
             rng.lock().random()
         } else {
-            rand::rng().random()
+            ThreadRng::default().random()
         }
     }
 }
