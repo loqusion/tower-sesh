@@ -163,6 +163,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// mutex. This can cause performance degradation, especially in a
     /// multi-threaded context. Therefore, using this method is not recommended
     /// unless you need determinism (for instance, in tests).
+    #[cfg(feature = "test-util")]
     pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C, Rng>
     where
         Rng: CryptoRng + Send + 'static,

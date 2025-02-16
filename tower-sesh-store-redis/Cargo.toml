@@ -16,6 +16,8 @@ rust-version.workspace = true
 [features]
 default = ["tokio-comp"]
 
+test-util = []
+
 async-std-comp = ["redis/async-std-comp"]
 tokio-comp = ["redis/tokio-comp"]
 
