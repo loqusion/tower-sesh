@@ -351,18 +351,18 @@ fn err_max_iterations_reached() -> Error {
 }
 
 #[cold]
-fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
-    Error::message(format!(
-        "calling `.unix_timestamp()` resulted in unexpected negative timestamp: {}",
-        ttl
-    ))
-}
-
-#[cold]
 fn err_redis_timestamp(timestamp: i64) -> Error {
     Error::message(format!(
         "Redis returned an unexpected timestamp value: {}",
         timestamp
+    ))
+}
+
+#[cold]
+fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
+    Error::message(format!(
+        "calling `.unix_timestamp()` resulted in unexpected negative timestamp: {}",
+        ttl
     ))
 }
 
