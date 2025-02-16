@@ -196,10 +196,10 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     }
 }
 
-macro_rules! ensure_redis_ttl {
-    ($ttl:ident) => {
-        if $ttl < 0 {
-            return Err(err_redis_timestamp($ttl));
+macro_rules! ensure_redis_timestamp {
+    ($timestamp:ident) => {
+        if $timestamp < 0 {
+            return Err(err_redis_timestamp($timestamp));
         }
     };
 }
@@ -266,7 +266,7 @@ where
         match value {
             None => Ok(None),
             Some(value) => {
-                ensure_redis_ttl!(timestamp);
+                ensure_redis_timestamp!(timestamp);
                 Some(deserialize(&value).and_then(|data| to_record(data, timestamp))).transpose()
             }
         }
