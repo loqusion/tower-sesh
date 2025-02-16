@@ -38,7 +38,12 @@ pub struct RedisStore<
 > {
     client: C,
     config: RedisStoreConfig,
+
+    #[cfg(feature = "test-util")]
     rng: Option<Mutex<R>>,
+    #[cfg(not(feature = "test-util"))]
+    _rng_marker: PhantomData<Option<Mutex<R>>>,
+
     _marker: PhantomData<fn() -> T>,
 }
 
@@ -112,12 +117,24 @@ impl<T> RedisStore<T> {
 }
 
 impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
+    #[cfg(feature = "test-util")]
     #[inline]
     fn _with_client(client: C) -> RedisStore<T, C, R> {
         Self {
             client,
             config: RedisStoreConfig::default(),
             rng: None,
+            _marker: PhantomData,
+        }
+    }
+
+    #[cfg(not(feature = "test-util"))]
+    #[inline]
+    fn _with_client(client: C) -> RedisStore<T, C, R> {
+        Self {
+            client,
+            config: RedisStoreConfig::default(),
+            _rng_marker: PhantomData,
             _marker: PhantomData,
         }
     }
@@ -191,12 +208,19 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
         self.client.connection().await.map_err(Error::store)
     }
 
+    #[cfg(feature = "test-util")]
     fn random_key(&self) -> SessionKey {
         if let Some(rng) = &self.rng {
             rng.lock().random()
         } else {
             ThreadRng::default().random()
         }
+    }
+
+    #[cfg(not(feature = "test-util"))]
+    #[inline]
+    fn random_key(&self) -> SessionKey {
+        ThreadRng::default().random()
     }
 }
 
