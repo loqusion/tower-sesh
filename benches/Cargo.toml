@@ -1,0 +1,15 @@
+[package]
+name = "benches"
+version = "0.0.0"
+publish = false
+license.workspace = true
+edition.workspace = true
+
+[dependencies]
+divan = "0.1.17"
+tokio = { version = "=1.43.0", features = ["full"] }
+
+[[bench]]
+name = "fib"
+path = "fib.rs"
+harness = false
