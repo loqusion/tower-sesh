@@ -47,7 +47,7 @@ jobs:
       - name: Check feature powerset
         run: |
           cargo hack check --rust-version --workspace --all-targets --ignore-private --exclude tower-sesh-store-redis --feature-powerset --optional-deps
-          cargo hack check --rust-version --all-targets --package tower-sesh-store-redis
+          cargo hack check --rust-version --all-targets --package tower-sesh-store-redis --features test-util
 
   minimal-versions:
     name: cargo minimal-versions
@@ -60,7 +60,8 @@ jobs:
       - name: Check minimal versions
         run: |
           # TODO: Add --detach-path-deps when pre-release is over
-          cargo minimal-versions check --workspace --ignore-private
+          cargo minimal-versions check --workspace --ignore-private --exclude tower-sesh-store-redis --all-features
+          cargo minimal-versions check --package tower-sesh-store-redis --features test-util
 
   ### test jobs
 
@@ -94,6 +95,6 @@ jobs:
       - name: install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Run tests
-        run: cargo nextest run --profile ci --workspace
+        run: cargo nextest run --profile ci --workspace --features test-util
       - name: Run doctests
-        run: cargo test --doc --workspace
+        run: cargo test --doc --workspace --all-features
