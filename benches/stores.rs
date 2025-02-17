@@ -32,6 +32,15 @@ fn ttl_sample() -> Ttl {
     Ttl::now_utc() + Duration::from_secs(10)
 }
 
+#[divan::bench(threads = THREADS)]
+fn control(bencher: divan::Bencher) {
+    let rt = build_rt();
+
+    bencher.bench(|| {
+        rt.block_on(async {});
+    });
+}
+
 #[divan::bench_group(threads = THREADS)]
 mod create {
     use super::*;
