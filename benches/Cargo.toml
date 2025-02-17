@@ -8,8 +8,10 @@ edition.workspace = true
 [dependencies]
 divan = "0.1.17"
 tokio = { version = "=1.43.0", features = ["full"] }
+tower-sesh = { path = "../tower-sesh" }
+tower-sesh-core = { path = "../tower-sesh-core" }
 
 [[bench]]
-name = "fib"
-path = "fib.rs"
+name = "stores"
+path = "stores.rs"
 harness = false
