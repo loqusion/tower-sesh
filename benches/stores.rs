@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use divan::black_box;
+use serde::{Deserialize, Serialize};
 use tower_sesh::store::MemoryStore;
 use tower_sesh_core::{
     store::{SessionStoreImpl, Ttl},
@@ -15,7 +16,7 @@ fn main() {
     divan::main();
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct Simple {
     id: String,
 }
