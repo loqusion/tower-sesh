@@ -20,7 +20,7 @@ use crate::{
     util::CookieJarExt,
 };
 
-/// A layer that provides [`Session`] as a request extension.
+/// A layer that provides [`Session`] as an extractor.
 ///
 /// # Examples
 ///
@@ -52,7 +52,7 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C: CookieSecurity = PrivateCo
     _marker: PhantomData<fn() -> T>,
 }
 
-/// A middleware that provides [`Session`] as a request extension.
+/// A middleware that provides [`Session`] as an extractor.
 ///
 /// [`Session`]: crate::session::Session
 #[derive(Debug)]
