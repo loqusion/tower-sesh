@@ -12,12 +12,16 @@ pub use tower_sesh_core::SessionStore;
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Clone)]
-pub struct MemoryStore<T>(Arc<Mutex<HashMap<SessionKey, Record<T>>>>);
+pub struct MemoryStore<T> {
+    map: Arc<Mutex<HashMap<SessionKey, Record<T>>>>,
+}
 
 impl<T> Default for MemoryStore<T> {
     fn default() -> Self {
         let store = HashMap::new();
-        MemoryStore(Arc::new(Mutex::new(store)))
+        MemoryStore {
+            map: Arc::new(Mutex::new(store)),
+        }
     }
 }
 
@@ -41,25 +45,25 @@ where
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
-        let store_guard = self.0.lock();
+        let store_guard = self.map.lock();
         Ok(store_guard.get(session_key).cloned())
     }
 
     async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
         let record = Record::new(data.clone(), ttl);
-        self.0.lock().insert(session_key.clone(), record);
+        self.map.lock().insert(session_key.clone(), record);
         Ok(())
     }
 
     async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
-        if let Some(record) = self.0.lock().get_mut(session_key) {
+        if let Some(record) = self.map.lock().get_mut(session_key) {
             record.ttl = ttl;
         }
         Ok(())
     }
 
     async fn delete(&self, session_key: &SessionKey) -> Result<()> {
-        self.0.lock().remove(session_key);
+        self.map.lock().remove(session_key);
         Ok(())
     }
 }
