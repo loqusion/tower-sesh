@@ -1,4 +1,4 @@
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, iter};
 
 use cookie::{Cookie, CookieJar};
 use http::{header, HeaderMap};
@@ -28,7 +28,7 @@ impl fmt::Display for DisplayChain<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.inner)?;
 
-        for error in anyhow::Chain::new(self.inner).skip(1) {
+        for error in iter::successors(Some(self.inner), |err| (*err).source()).skip(1) {
             write!(f, ": {}", error)?;
         }
 
