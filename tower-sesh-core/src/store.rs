@@ -112,30 +112,29 @@ pub enum ErrorKind {
 
 // TODO: Compare benchmarks when #[cold] is added to constructors
 impl Error {
+    #[inline]
+    fn new(kind: ErrorKind) -> Error {
+        Error { kind }
+    }
+
     /// Creates a new error from an error emitted by the underlying storage
     /// mechanism.
     #[must_use]
     pub fn store(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Error {
-        Error {
-            kind: ErrorKind::Store(err.into()),
-        }
+        Error::new(ErrorKind::Store(err.into()))
     }
 
     /// Creates a new error from an error emitted when serializing/deserializing
     /// data.
     #[must_use]
     pub fn serde(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Error {
-        Error {
-            kind: ErrorKind::Serde(err.into()),
-        }
+        Error::new(ErrorKind::Serde(err.into()))
     }
 
     /// Creates a new error from a string containing a custom error message.
     #[must_use]
     pub fn message(msg: impl Into<Box<str>>) -> Error {
-        Error {
-            kind: ErrorKind::Message(msg.into()),
-        }
+        Error::new(ErrorKind::Message(msg.into()))
     }
 
     /// Returns the corresponding `ErrorKind` for this error.
@@ -149,7 +148,7 @@ impl fmt::Debug for Error {
         let mut builder = f.debug_struct("store::Error");
 
         use ErrorKind::*;
-        match &self.kind {
+        match self.kind() {
             Message(msg) => {
                 builder.field("message", msg);
             }
@@ -170,7 +169,7 @@ impl fmt::Debug for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ErrorKind::*;
-        match &self.kind {
+        match self.kind() {
             Message(msg) => f.write_str(msg),
             Store(_) => f.write_str("session store error"),
             Serde(_) => f.write_str("session serialization error"),
@@ -181,7 +180,7 @@ impl fmt::Display for Error {
 impl StdError for Error {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         use ErrorKind::*;
-        match &self.kind {
+        match self.kind() {
             Message(_) => None,
             Store(err) => Some(err.as_ref()),
             Serde(err) => Some(err.as_ref()),
