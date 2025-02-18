@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Mutex, time::Duration};
 
 use divan::black_box;
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,11 @@ use tower_sesh_core::{
 use build_single_rt as build_rt;
 
 const THREADS: &[usize] = &[0, 1, 2, 4, 8, 16];
+
+const NUM_KEYS_ERROR_MESSAGE: &str = "\
+    `NUM_KEYS` is not large enough to cover all iterations\n\
+    lower the iteration count with `sample_count` or `sample_size`, or increase `NUM_KEYS`\
+";
 
 fn main() {
     divan::main();
@@ -66,8 +71,6 @@ mod create {
 
 #[divan::bench_group(threads = THREADS)]
 mod load {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
     use super::*;
 
     const NUM_KEYS: usize = 1000;
@@ -76,33 +79,97 @@ mod load {
     fn memory_store(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = MemoryStore::<Simple>::new();
-        let data = Simple::sample();
-        let ttl = ttl_sample();
 
-        let keys = (1..=NUM_KEYS.try_into().unwrap())
-            .map(SessionKey::try_from_u128)
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
-        rt.block_on(async {
-            for key in &keys {
-                store.update(key, &data, ttl).await.unwrap();
-            }
-        });
-        let index = AtomicUsize::new(0);
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
 
         bencher
-            .with_inputs(|| {
-                keys.get(index.fetch_add(1, Ordering::SeqCst))
-                    .cloned()
-                    .expect(
-                        "`NUM_KEYS` is not large enough to cover all iterations\n\
-                        lower the iteration count with `sample_count` or `sample_size`, or increase `NUM_KEYS`",
-                    )
-            })
+            .with_inputs(|| keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE))
             .bench_values(|key| {
                 rt.block_on(async {
                     let rec = store.load(&key).await.unwrap();
                     black_box(rec);
+                });
+            });
+    }
+}
+
+#[divan::bench_group(threads = THREADS)]
+mod update {
+    use super::*;
+
+    const NUM_KEYS: usize = 1000;
+
+    #[divan::bench(name = "MemoryStore")]
+    fn memory_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = MemoryStore::<Simple>::new();
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| {
+                let key = keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE);
+                let data = Simple::sample();
+                let ttl = ttl_sample();
+                (key, data, ttl)
+            })
+            .bench_values(|(key, data, ttl)| {
+                rt.block_on(async {
+                    store.update(&key, &data, ttl).await.unwrap();
+                });
+            });
+    }
+}
+
+#[divan::bench_group(threads = THREADS)]
+mod update_ttl {
+    use super::*;
+
+    const NUM_KEYS: usize = 2000;
+
+    #[divan::bench(name = "MemoryStore")]
+    fn memory_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = MemoryStore::<Simple>::new();
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| {
+                let key = keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE);
+                let ttl = ttl_sample();
+                (key, ttl)
+            })
+            .bench_values(|(key, ttl)| {
+                rt.block_on(async {
+                    store.update_ttl(&key, ttl).await.unwrap();
+                });
+            });
+    }
+}
+
+#[divan::bench_group(threads = THREADS)]
+mod delete {
+    use super::*;
+
+    const NUM_KEYS: usize = 2000;
+
+    #[divan::bench(name = "MemoryStore")]
+    fn memory_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = MemoryStore::<Simple>::new();
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE))
+            .bench_values(|key| {
+                rt.block_on(async {
+                    store.delete(&key).await.unwrap();
                 });
             });
     }
@@ -122,4 +189,45 @@ fn build_multi_rt() -> tokio::runtime::Runtime {
         .enable_all()
         .build()
         .expect("Failed building the Runtime")
+}
+
+async fn populate_store<T, F1, F2>(
+    store: &impl SessionStoreImpl<T>,
+    data_fn: F1,
+    ttl_fn: F2,
+    n: usize,
+) -> Vec<SessionKey>
+where
+    F1: Fn() -> T,
+    F2: Fn() -> Ttl,
+{
+    let keys = (1..=n.try_into().unwrap())
+        .map(SessionKey::try_from_u128)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    for key in &keys {
+        store.update(key, &data_fn(), ttl_fn()).await.unwrap();
+    }
+
+    keys
+}
+
+struct MutexIter<I> {
+    iter: Mutex<I>,
+}
+
+impl<I, T> MutexIter<I>
+where
+    I: Iterator<Item = T>,
+{
+    fn new(iter: I) -> MutexIter<I> {
+        let iter = Mutex::new(iter);
+        MutexIter { iter }
+    }
+
+    #[track_caller]
+    fn next(&self) -> Option<T> {
+        self.iter.lock().unwrap().next()
+    }
 }
