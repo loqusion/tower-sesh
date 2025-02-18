@@ -15,10 +15,12 @@ use tower::{Layer, Service};
 use tower_sesh_core::SessionStore;
 
 use crate::{
-    config::{CookieSecurity, PlainCookie, PrivateCookie, SameSite, SignedCookie},
+    config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
     session::{self, Session},
     util::CookieJarExt,
 };
+
+pub use crate::config::SameSite;
 
 /// A layer that provides [`Session`] as an extractor.
 ///

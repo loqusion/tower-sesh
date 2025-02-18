@@ -21,10 +21,13 @@ pub use value::Value;
 #[macro_use]
 mod macros;
 
-pub mod config;
 pub mod middleware;
 pub mod session;
 pub mod store;
 pub mod value;
+
+// Not public API. Items in this module do not follow semantic versioning.
+#[doc(hidden)]
+pub mod config;
 
 mod util;
