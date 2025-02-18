@@ -1,3 +1,5 @@
+#![allow(clippy::disallowed_types)]
+
 use std::{sync::Mutex, time::Duration};
 
 use divan::black_box;
