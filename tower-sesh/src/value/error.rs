@@ -2,8 +2,11 @@
 
 use std::{error::Error as StdError, fmt};
 
+/// An error returned by [`Value`] serialization, deserialization, and
+/// conversion methods.
+///
+/// [`Value`]: crate::Value
 pub struct Error {
-    // TODO: Compare benchmarks when `err` is boxed.
     err: ErrorImpl,
 }
 
