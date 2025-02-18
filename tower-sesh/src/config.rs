@@ -4,8 +4,7 @@ use std::fmt;
 
 use cookie::{Cookie, CookieJar, Key};
 
-// Adapted from https://github.com/rwf2/cookie-rs.
-/// The `SameSite` cookie attribute.
+/// The [`SameSite`] cookie attribute.
 ///
 /// A cookie with a `SameSite` attribute is imposed restrictions on when it is
 /// sent to the origin server in a cross-site request:
@@ -18,6 +17,7 @@ use cookie::{Cookie, CookieJar, Key};
 /// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
 /// definition are subject to change.
 ///
+/// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
 /// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
 // NOTE: `Copy` should not be implemented in case web standards change in the future.
 #[derive(Clone, Debug, PartialEq, Eq)]
