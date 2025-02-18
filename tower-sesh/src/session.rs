@@ -34,14 +34,14 @@ pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 // 2. After the previous invariant is met, and until the `SessionGuard` is
 //    dropped, the lock must never be released and `data` must never be replaced
 //    with `None`.
-pub struct SessionGuard<'a, T>(MutexGuard<'a, Inner<T>>);
+pub struct SessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 
 /// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
 /// data `Option<T>` can be accessed through this guard via its [`Deref`] and
 /// [`DerefMut`] implementations.
 ///
 /// The lock is automatically released whenever the guard is dropped.
-pub struct OptionSessionGuard<'a, T>(MutexGuard<'a, Inner<T>>);
+pub struct OptionSessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 
 struct Inner<T> {
     session_key: Option<SessionKey>,
@@ -199,7 +199,7 @@ where
     }
 }
 
-impl<'a, T> SessionGuard<'a, T> {
+impl<'a, T: 'a> SessionGuard<'a, T> {
     /// # Safety
     ///
     /// The caller of this method must ensure that `guard.data` is a
@@ -211,7 +211,7 @@ impl<'a, T> SessionGuard<'a, T> {
     }
 }
 
-impl<T> Deref for SessionGuard<'_, T> {
+impl<'a, T: 'a> Deref for SessionGuard<'a, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -221,7 +221,7 @@ impl<T> Deref for SessionGuard<'_, T> {
     }
 }
 
-impl<T> DerefMut for SessionGuard<'_, T> {
+impl<'a, T: 'a> DerefMut for SessionGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.changed();
 
@@ -231,13 +231,13 @@ impl<T> DerefMut for SessionGuard<'_, T> {
     }
 }
 
-impl<'a, T> OptionSessionGuard<'a, T> {
+impl<'a, T: 'a> OptionSessionGuard<'a, T> {
     fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         OptionSessionGuard(guard)
     }
 }
 
-impl<T> Deref for OptionSessionGuard<'_, T> {
+impl<'a, T: 'a> Deref for OptionSessionGuard<'a, T> {
     type Target = Option<T>;
 
     fn deref(&self) -> &Self::Target {
@@ -245,7 +245,7 @@ impl<T> Deref for OptionSessionGuard<'_, T> {
     }
 }
 
-impl<T> DerefMut for OptionSessionGuard<'_, T> {
+impl<'a, T: 'a> DerefMut for OptionSessionGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.changed();
 
