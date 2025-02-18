@@ -160,7 +160,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// descriptive nor offer unneccessary details about the purpose and meaning
     /// of the cookie.
     ///
-    /// Default: `"id"`
+    /// Default is `"id"`.
     ///
     /// [name]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value
     /// [recommended by OWASP]:
@@ -172,6 +172,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [`Domain`] attribute in the `Set-Cookie` response header.
     ///
+    /// Default is for `Domain` to be omitted.
+    ///
     /// [`Domain`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
         self.config.domain = Some(domain.into());
@@ -181,6 +183,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// Set whether to add the [`HttpOnly`] attribute in the `Set-Cookie`
     /// response header.
     ///
+    /// Default is `true`.
+    ///
     /// [`HttpOnly`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly
     pub fn http_only(mut self, enable: bool) -> Self {
         self.config.http_only = enable;
@@ -188,6 +192,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     }
 
     /// Set the [`Path`] attribute in the `Set-Cookie` response header.
+    ///
+    /// Default is `"/"`.
     ///
     /// [`Path`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
@@ -197,6 +203,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [`SameSite`] attribute in the `Set-Cookie` response header.
     ///
+    /// Default is `SameSite::Strict`.
+    ///
     /// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
     pub fn same_site(mut self, same_site: SameSite) -> Self {
         self.config.same_site = same_site;
@@ -205,6 +213,8 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set whether to add the [`Secure`] attribute in the `Set-Cookie`
     /// response header.
+    ///
+    /// Default is `true`.
     ///
     /// [`Secure`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure
     pub fn secure(mut self, enable: bool) -> Self {
