@@ -4,7 +4,8 @@ use std::fmt;
 
 use cookie::{Cookie, CookieJar, Key};
 
-/// The [`SameSite`] cookie attribute.
+/// The [`SameSite`] cookie attribute, which controls whether or not a cookie is
+/// sent with cross-site requests.
 ///
 /// A cookie with a `SameSite` attribute is imposed restrictions on when it is
 /// sent to the origin server in a cross-site request:
