@@ -5,12 +5,17 @@ publish = false
 license.workspace = true
 edition.workspace = true
 
+[features]
+full = ["store-redis"]
+store-redis = ["dep:tower-sesh-store-redis"]
+
 [dependencies]
 divan = "=0.1.17"
 serde = { version = "=1.0.217", features = ["derive"] }
 tokio = { version = "=1.43.0", features = ["full"] }
 tower-sesh = { path = "../tower-sesh" }
 tower-sesh-core = { path = "../tower-sesh-core" }
+tower-sesh-store-redis = { path = "../tower-sesh-store-redis", optional = true }
 
 [[bench]]
 name = "stores"

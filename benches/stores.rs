@@ -7,10 +7,19 @@ use tower_sesh_core::{
     store::{SessionStoreImpl, Ttl},
     SessionKey,
 };
+#[cfg(feature = "store-redis")]
+use tower_sesh_store_redis::RedisStore;
 
 use build_single_rt as build_rt;
 
 const THREADS: &[usize] = &[0, 1, 2, 4, 8, 16];
+
+#[cfg(feature = "store-redis")]
+static REDIS_URL: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    std::env::var("REDIS_URL").unwrap_or_else(|err| {
+        panic!("`REDIS_URL` environment variable must be set to a valid Redis URL: {err}")
+    })
+});
 
 const NUM_KEYS_ERROR_MESSAGE: &str = "\
     `NUM_KEYS` is not large enough to cover all iterations\n\
@@ -67,6 +76,24 @@ mod create {
             });
         });
     }
+
+    #[cfg(feature = "store-redis")]
+    #[divan::bench(name = "RedisStore")]
+    fn redis_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = rt.block_on(build_redis_store());
+        let data = Simple::sample();
+        let ttl = ttl_sample();
+
+        bencher.bench(|| {
+            rt.block_on(async {
+                store
+                    .create(black_box(&data), black_box(ttl))
+                    .await
+                    .unwrap();
+            });
+        });
+    }
 }
 
 #[divan::bench_group(threads = THREADS)]
@@ -92,6 +119,25 @@ mod load {
                 });
             });
     }
+
+    #[cfg(feature = "store-redis")]
+    #[divan::bench(name = "RedisStore")]
+    fn redis_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = rt.block_on(build_redis_store());
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE))
+            .bench_values(|key| {
+                rt.block_on(async {
+                    let rec = store.load(&key).await.unwrap();
+                    black_box(rec);
+                });
+            });
+    }
 }
 
 #[divan::bench_group(threads = THREADS)]
@@ -104,6 +150,29 @@ mod update {
     fn memory_store(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = MemoryStore::<Simple>::new();
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| {
+                let key = keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE);
+                let data = Simple::sample();
+                let ttl = ttl_sample();
+                (key, data, ttl)
+            })
+            .bench_values(|(key, data, ttl)| {
+                rt.block_on(async {
+                    store.update(&key, &data, ttl).await.unwrap();
+                });
+            });
+    }
+
+    #[cfg(feature = "store-redis")]
+    #[divan::bench(name = "RedisStore")]
+    fn redis_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = rt.block_on(build_redis_store());
 
         let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
         let keys_iter = MutexIter::new(keys.into_iter());
@@ -149,6 +218,28 @@ mod update_ttl {
                 });
             });
     }
+
+    #[cfg(feature = "store-redis")]
+    #[divan::bench(name = "RedisStore")]
+    fn redis_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = rt.block_on(build_redis_store());
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| {
+                let key = keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE);
+                let ttl = ttl_sample();
+                (key, ttl)
+            })
+            .bench_values(|(key, ttl)| {
+                rt.block_on(async {
+                    store.update_ttl(&key, ttl).await.unwrap();
+                });
+            });
+    }
 }
 
 #[divan::bench_group(threads = THREADS)]
@@ -161,6 +252,24 @@ mod delete {
     fn memory_store(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = MemoryStore::<Simple>::new();
+
+        let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
+        let keys_iter = MutexIter::new(keys.into_iter());
+
+        bencher
+            .with_inputs(|| keys_iter.next().expect(NUM_KEYS_ERROR_MESSAGE))
+            .bench_values(|key| {
+                rt.block_on(async {
+                    store.delete(&key).await.unwrap();
+                });
+            });
+    }
+
+    #[cfg(feature = "store-redis")]
+    #[divan::bench(name = "RedisStore")]
+    fn redis_store(bencher: divan::Bencher) {
+        let rt = build_rt();
+        let store = rt.block_on(build_redis_store());
 
         let keys = rt.block_on(populate_store(&store, Simple::sample, ttl_sample, NUM_KEYS));
         let keys_iter = MutexIter::new(keys.into_iter());
@@ -189,6 +298,11 @@ fn build_multi_rt() -> tokio::runtime::Runtime {
         .enable_all()
         .build()
         .expect("Failed building the Runtime")
+}
+
+#[cfg(feature = "store-redis")]
+async fn build_redis_store<T>() -> RedisStore<T> {
+    RedisStore::open((*REDIS_URL).clone()).await.unwrap()
 }
 
 async fn populate_store<T, F1, F2>(
