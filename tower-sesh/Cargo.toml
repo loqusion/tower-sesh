@@ -17,7 +17,6 @@ rust-version.workspace = true
 default = ["axum", "tracing"]
 
 [dependencies]
-anyhow = "1.0.94"
 async-once-cell = "0.5.4"
 async-trait = "0.1.83"
 cookie = { version = "0.18.1", features = [
