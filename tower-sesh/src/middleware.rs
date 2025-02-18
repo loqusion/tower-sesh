@@ -172,9 +172,14 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [`Domain`] attribute in the `Set-Cookie` response header.
     ///
+    /// It is [recommended by OWASP] for `Domain` to be omitted so that the
+    /// cookie is restricted to the origin server.
+    ///
     /// Default is for `Domain` to be omitted.
     ///
     /// [`Domain`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value
+    /// [recommended by OWASP]:
+    ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#domain-and-path-attributes
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
         self.config.domain = Some(domain.into());
         self
@@ -193,9 +198,14 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [`Path`] attribute in the `Set-Cookie` response header.
     ///
+    /// It is [recommended by OWASP] for `Path` to be as restrictive as
+    /// possible.
+    ///
     /// Default is for `Path` to be omitted.
     ///
     /// [`Path`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
+    /// [recommended by OWASP]:
+    ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#domain-and-path-attributes
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
         self.config.path = Some(path.into());
         self
