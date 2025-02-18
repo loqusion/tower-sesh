@@ -295,7 +295,9 @@ where
             None => Ok(None),
             Some(value) => {
                 ensure_redis_timestamp!(timestamp);
-                Some(deserialize(&value).and_then(|data| to_record(data, timestamp))).transpose()
+                deserialize(&value)
+                    .and_then(|data| to_record(data, timestamp))
+                    .map(Some)
             }
         }
     }
