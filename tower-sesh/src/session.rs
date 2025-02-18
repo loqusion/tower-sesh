@@ -25,6 +25,11 @@ pub struct Session<T>(Arc<Mutex<Inner<T>>>);
 /// [`DerefMut`] implementations.
 ///
 /// The lock is automatically released whenever the guard is dropped.
+///
+/// This structure is created by methods defined on [`Session`], such as
+/// [`insert`].
+///
+/// [`insert`]: Session::insert
 //
 // # Invariants
 //
@@ -41,6 +46,10 @@ pub struct SessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 /// [`DerefMut`] implementations.
 ///
 /// The lock is automatically released whenever the guard is dropped.
+///
+/// This structure is created by the [`get`] method on [`Session`].
+///
+/// [`get`]: Session::get
 pub struct OptionSessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 
 struct Inner<T> {
