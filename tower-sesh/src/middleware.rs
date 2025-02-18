@@ -66,7 +66,7 @@ pub(crate) struct Config {
     pub(crate) cookie_name: Cow<'static, str>,
     pub(crate) domain: Option<Cow<'static, str>>,
     pub(crate) http_only: bool,
-    pub(crate) path: Cow<'static, str>,
+    pub(crate) path: Option<Cow<'static, str>>,
     pub(crate) same_site: SameSite,
     pub(crate) secure: bool,
     pub(crate) session_config: SessionConfig,
@@ -89,7 +89,7 @@ impl Default for Config {
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
             domain: None,
             http_only: true,
-            path: Cow::Borrowed("/"),
+            path: None,
             same_site: SameSite::Strict,
             secure: true,
             session_config: SessionConfig::default(),
@@ -193,11 +193,11 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Set the [`Path`] attribute in the `Set-Cookie` response header.
     ///
-    /// Default is `"/"`.
+    /// Default is for `Path` to be omitted.
     ///
     /// [`Path`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
-        self.config.path = path.into();
+        self.config.path = Some(path.into());
         self
     }
 
