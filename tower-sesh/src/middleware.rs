@@ -47,7 +47,7 @@ pub use crate::config::SameSite;
 /// let session_layer = SessionLayer::new(store, key);
 /// ```
 #[derive(Debug)]
-pub struct SessionLayer<T, Store: SessionStore<T>, C: CookieSecurity = PrivateCookie> {
+pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
     store: Arc<Store>,
     config: Config,
     cookie_controller: C,
@@ -58,7 +58,7 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C: CookieSecurity = PrivateCo
 ///
 /// [`Session`]: crate::session::Session
 #[derive(Debug)]
-pub struct SessionManager<S, T, Store: SessionStore<T>, C: CookieSecurity> {
+pub struct SessionManager<S, T, Store: SessionStore<T>, C> {
     inner: S,
     layer: SessionLayer<T, Store, C>,
 }
