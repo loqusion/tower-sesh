@@ -84,10 +84,12 @@ pub struct Record<T> {
 }
 
 impl<T> Record<T> {
+    #[inline]
     pub fn new(data: T, ttl: Ttl) -> Record<T> {
         Record { data, ttl }
     }
 
+    #[inline]
     pub fn unix_timestamp(&self) -> i64 {
         self.ttl.unix_timestamp()
     }
@@ -95,7 +97,6 @@ impl<T> Record<T> {
 
 /// An error returned by [`SessionStore`] methods.
 pub struct Error {
-    // TODO: Compare benchmarks when `kind` is boxed
     kind: ErrorKind,
 }
 
@@ -110,7 +111,6 @@ pub enum ErrorKind {
     Message(Box<str>),
 }
 
-// TODO: Compare benchmarks when #[cold] is added to constructors
 impl Error {
     #[inline]
     fn new(kind: ErrorKind) -> Error {
@@ -119,6 +119,7 @@ impl Error {
 
     /// Creates a new error from an error emitted by the underlying storage
     /// mechanism.
+    #[cold]
     #[must_use]
     pub fn store(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Error {
         Error::new(ErrorKind::Store(err.into()))
@@ -126,18 +127,21 @@ impl Error {
 
     /// Creates a new error from an error emitted when serializing/deserializing
     /// data.
+    #[cold]
     #[must_use]
     pub fn serde(err: impl Into<Box<dyn StdError + Send + Sync + 'static>>) -> Error {
         Error::new(ErrorKind::Serde(err.into()))
     }
 
     /// Creates a new error from a string containing a custom error message.
+    #[cold]
     #[must_use]
     pub fn message(msg: impl Into<Box<str>>) -> Error {
         Error::new(ErrorKind::Message(msg.into()))
     }
 
     /// Returns the corresponding `ErrorKind` for this error.
+    #[inline]
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
