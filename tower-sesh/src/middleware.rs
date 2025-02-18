@@ -213,13 +213,12 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     }
 
     /// Changes behavior of the [`Session`] extractor when an error occurs
-    /// while deserializing session data.
+    /// while deserializing session data:
     ///
-    /// If `false`, a deserialization error will cause the extractor to fail.
-    ///
-    /// If `true`, a deserialization error will be treated as if there is no
-    /// existing session. In that case, an empty `Session` object is provided,
-    /// and writing to it will overwrite the existing session.
+    /// - If `false`, a deserialization error will cause the extractor to fail.
+    /// - If `true`, a deserialization error will be treated as if there is no
+    ///   existing session. In that case, an empty `Session` object is provided,
+    ///   and writing to it will overwrite the existing session.
     ///
     /// Default is `true`.
     ///
