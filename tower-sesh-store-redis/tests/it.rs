@@ -36,7 +36,7 @@ async fn store<T>() -> RedisStore<T> {
         .set_number_of_retries(1);
 
     let client = redis::Client::open(url).expect("failed to connect to redis");
-    RedisStore::with_connection_manager_config(client, config)
+    RedisStore::with_config(client, config)
         .await
         .expect("failed to connect to redis")
 }

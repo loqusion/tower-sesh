@@ -22,11 +22,11 @@ impl ConnectionManagerWithRetry {
     #[inline]
     pub(crate) async fn new(client: Client) -> RedisResult<Self> {
         let config = ConnectionManagerConfig::default();
-        Self::new_with_config(client, config).await
+        Self::with_config(client, config).await
     }
 
     #[inline]
-    pub(crate) async fn new_with_config(
+    pub(crate) async fn with_config(
         client: Client,
         config: ConnectionManagerConfig,
     ) -> RedisResult<Self> {

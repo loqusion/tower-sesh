@@ -108,11 +108,11 @@ impl<T> RedisStore<T> {
 
     // Not public API. Only tests use this.
     #[doc(hidden)]
-    pub async fn with_connection_manager_config(
+    pub async fn with_config(
         client: Client,
         config: ConnectionManagerConfig,
     ) -> RedisResult<RedisStore<T>> {
-        let client = ConnectionManagerWithRetry::new_with_config(client, config).await?;
+        let client = ConnectionManagerWithRetry::with_config(client, config).await?;
         Ok(RedisStore::_with_client(client))
     }
 }
