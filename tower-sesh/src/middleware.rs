@@ -83,6 +83,7 @@ impl Default for Config {
     /// Defaults are based on [OWASP recommendations].
     ///
     /// [OWASP recommendations]: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies
+    #[inline]
     fn default() -> Self {
         Config {
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
@@ -97,6 +98,7 @@ impl Default for Config {
 }
 
 impl Default for SessionConfig {
+    #[inline]
     fn default() -> Self {
         SessionConfig {
             ignore_invalid_session: true,
