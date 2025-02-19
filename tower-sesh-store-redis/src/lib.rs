@@ -37,7 +37,7 @@ pub struct RedisStore<
     R: CryptoRng = PhantomThreadRng,
 > {
     client: C,
-    config: RedisStoreConfig,
+    config: Config,
 
     #[cfg(feature = "test-util")]
     rng: Option<Mutex<R>>,
@@ -47,11 +47,11 @@ pub struct RedisStore<
     _marker: PhantomData<fn() -> T>,
 }
 
-struct RedisStoreConfig {
+struct Config {
     key_prefix: Cow<'static, str>,
 }
 
-impl Default for RedisStoreConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             key_prefix: Cow::Borrowed(DEFAULT_KEY_PREFIX),
@@ -122,7 +122,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     fn _with_client(client: C) -> RedisStore<T, C, R> {
         Self {
             client,
-            config: RedisStoreConfig::default(),
+            config: Config::default(),
             rng: None,
             _marker: PhantomData,
         }
@@ -133,7 +133,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     fn _with_client(client: C) -> RedisStore<T, C, R> {
         Self {
             client,
-            config: RedisStoreConfig::default(),
+            config: Config::default(),
             _rng_marker: PhantomData,
             _marker: PhantomData,
         }
