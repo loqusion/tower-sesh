@@ -154,7 +154,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// the Base64-encoded session key to the prefix, e.g.
     /// `session:ym5hy39HMVwYUJpPW6x_sQ`.
     ///
-    /// Default: `"session:"`
+    /// Default is `"session:"`.
     ///
     /// [key]: https://redis.io/docs/latest/develop/use/keyspace/
     pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C, R> {
