@@ -21,7 +21,8 @@ pub struct ConnectionManagerWithRetry(ConnectionManager);
 impl ConnectionManagerWithRetry {
     #[inline]
     pub(crate) async fn new(client: Client) -> RedisResult<Self> {
-        Self::new_with_config(client, ConnectionManagerConfig::default()).await
+        let config = ConnectionManagerConfig::default();
+        Self::new_with_config(client, config).await
     }
 
     #[inline]
