@@ -49,6 +49,9 @@ impl From<ConnectionManagerWithRetry> for ConnectionManager {
     }
 }
 
+// FIXME: `ConnectionManagerWithRetry`'s retry strategy is too naive. We should
+// only retry the request after a delay, possibly based on
+// `ConnectionManagerConfig`.
 impl ConnectionLike for ConnectionManagerWithRetry {
     fn req_packed_command<'a>(&'a mut self, cmd: &'a Cmd) -> RedisFuture<'a, Value> {
         (async move {
