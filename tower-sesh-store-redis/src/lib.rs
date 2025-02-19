@@ -27,8 +27,6 @@ use tower_sesh_core::{
 pub mod connection;
 pub mod rng;
 
-const DEFAULT_KEY_PREFIX: &str = "session:";
-
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub struct RedisStore<
@@ -50,6 +48,8 @@ pub struct RedisStore<
 struct Config {
     key_prefix: Cow<'static, str>,
 }
+
+const DEFAULT_KEY_PREFIX: &str = "session:";
 
 impl Default for Config {
     #[inline]
