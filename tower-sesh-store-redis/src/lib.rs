@@ -107,8 +107,27 @@ impl<T> RedisStore<T> {
             .map(RedisStore::_with_client)
     }
 
-    // Not public API. Only tests use this.
-    #[doc(hidden)]
+    /// Create a new redis store with the provided client and
+    /// [`ConnectionManagerConfig`], for configuring the [`ConnectionManager`]'s
+    /// reconnection mechanism or request timing.
+    ///
+    /// [`ConnectionManagerConfig`]: redis::aio::ConnectionManagerConfig
+    /// [`ConnectionManager`]: redis::aio::ConnectionManager
+    ///
+    /// ```no_run
+    /// use redis::aio::ConnectionManagerConfig;
+    /// use tower_sesh_store_redis::RedisStore;
+    ///
+    /// # type SessionData = ();
+    /// #
+    /// # tokio_test::block_on(async {
+    /// let client = redis::Client::open("redis://127.0.0.1/")?;
+    /// let config = ConnectionManagerConfig::default()
+    ///     .set_number_of_retries(4);
+    /// let store = RedisStore::<SessionData>::with_config(client, config).await?;
+    /// # Ok::<(), redis::RedisError>(())
+    /// # }).unwrap();
+    /// ```
     pub async fn with_config(
         client: Client,
         config: ConnectionManagerConfig,
