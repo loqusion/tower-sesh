@@ -61,9 +61,10 @@ impl Default for Config {
 }
 
 impl<T> RedisStore<T> {
-    /// Connect to a redis server and return a store.
+    /// Connects to a redis server and returns a store with default
+    /// configuration values.
     ///
-    /// A URL of the following format should be used:
+    /// `info` should be a string containing a URL in the following format:
     ///
     /// ```not_rust
     /// {redis|rediss}://[<username>][:<password>@]<hostname>[:port][/<db>]
@@ -81,38 +82,22 @@ impl<T> RedisStore<T> {
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
     /// ```
-    pub async fn open<I: IntoConnectionInfo>(params: I) -> RedisResult<RedisStore<T>> {
-        let client = Client::open(params)?;
-        Self::with_client(client).await
-    }
-
-    /// Create a new redis store with the provided client.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use tower_sesh_store_redis::RedisStore;
-    ///
-    /// # type SessionData = ();
-    /// #
-    /// # tokio_test::block_on(async {
-    /// let client = redis::Client::open("redis://127.0.0.1/")?;
-    /// let store = RedisStore::<SessionData>::with_client(client).await?;
-    /// # Ok::<(), redis::RedisError>(())
-    /// # }).unwrap();
-    /// ```
-    pub async fn with_client(client: Client) -> RedisResult<RedisStore<T>> {
+    pub async fn open<I: IntoConnectionInfo>(info: I) -> RedisResult<RedisStore<T>> {
+        let client = Client::open(info)?;
         ConnectionManagerWithRetry::new(client)
             .await
             .map(RedisStore::_with_client)
     }
 
-    /// Create a new redis store with the provided client and
-    /// [`ConnectionManagerConfig`], for configuring the [`ConnectionManager`]'s
-    /// reconnection mechanism or request timing.
+    /// Connects to a redis server and returns a store with the given
+    /// configuration.
     ///
-    /// [`ConnectionManagerConfig`]: redis::aio::ConnectionManagerConfig
-    /// [`ConnectionManager`]: redis::aio::ConnectionManager
+    /// This allows you to configure the [connection manager]'s reconnect
+    /// mechanism and request timing.
+    ///
+    /// [connection manager]: redis::aio::ConnectionManager
+    ///
+    /// # Examples
     ///
     /// ```no_run
     /// use redis::aio::ConnectionManagerConfig;
@@ -121,17 +106,17 @@ impl<T> RedisStore<T> {
     /// # type SessionData = ();
     /// #
     /// # tokio_test::block_on(async {
-    /// let client = redis::Client::open("redis://127.0.0.1/")?;
     /// let config = ConnectionManagerConfig::default()
     ///     .set_number_of_retries(4);
-    /// let store = RedisStore::<SessionData>::with_config(client, config).await?;
+    /// let store = RedisStore::<SessionData>::with_config("redis://127.0.0.1/", config).await?;
     /// # Ok::<(), redis::RedisError>(())
     /// # }).unwrap();
     /// ```
-    pub async fn with_config(
-        client: Client,
+    pub async fn with_config<I: IntoConnectionInfo>(
+        info: I,
         config: ConnectionManagerConfig,
     ) -> RedisResult<RedisStore<T>> {
+        let client = Client::open(info)?;
         ConnectionManagerWithRetry::with_config(client, config)
             .await
             .map(RedisStore::_with_client)

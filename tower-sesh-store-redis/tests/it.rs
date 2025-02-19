@@ -35,8 +35,7 @@ async fn store<T>() -> RedisStore<T> {
         .set_connection_timeout(Duration::from_secs(5))
         .set_number_of_retries(1);
 
-    let client = redis::Client::open(url).expect("failed to connect to redis");
-    RedisStore::with_config(client, config)
+    RedisStore::with_config(url, config)
         .await
         .expect("failed to connect to redis")
 }
