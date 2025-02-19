@@ -1,22 +1,19 @@
 use std::{
     borrow::Cow,
-    future::Future,
     marker::PhantomData,
-    pin::Pin,
     sync::Arc,
-    task::{ready, Context, Poll},
+    task::{Context, Poll},
 };
 
 use cookie::{Cookie, CookieJar};
 use futures::{future::BoxFuture, FutureExt};
 use http::{Request, Response};
-use pin_project_lite::pin_project;
 use tower::{Layer, Service};
 use tower_sesh_core::SessionStore;
 
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
-    session::{self, Session},
+    session::{self},
     util::CookieJarExt,
 };
 
@@ -342,44 +339,5 @@ where
             result
         }
         .boxed()
-    }
-}
-
-pin_project! {
-    /// Response future for [`SessionManager`].
-    pub struct ResponseFuture<F, T, C: CookieSecurity> {
-        state: State<T, C>,
-        #[pin]
-        future: F,
-    }
-}
-
-enum State<T, C> {
-    Session {
-        session: Session<T>,
-        cookie_controller: C,
-    },
-    Fallback,
-}
-
-impl<F, B, E, T, C: CookieSecurity> Future for ResponseFuture<F, T, C>
-where
-    F: Future<Output = Result<Response<B>, E>>,
-{
-    type Output = Result<Response<B>, E>;
-
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let this = self.project();
-        let mut res = ready!(this.future.poll(cx)?);
-
-        if let State::Session {
-            session,
-            cookie_controller,
-        } = this.state
-        {
-            todo!("sync changes in session state to store and set the `Set-Cookie` header");
-        }
-
-        Poll::Ready(Ok(res))
     }
 }
