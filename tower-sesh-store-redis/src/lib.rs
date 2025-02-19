@@ -102,8 +102,9 @@ impl<T> RedisStore<T> {
     /// # }).unwrap();
     /// ```
     pub async fn with_client(client: Client) -> RedisResult<RedisStore<T>> {
-        let client = ConnectionManagerWithRetry::new(client).await?;
-        Ok(RedisStore::_with_client(client))
+        ConnectionManagerWithRetry::new(client)
+            .await
+            .map(RedisStore::_with_client)
     }
 
     // Not public API. Only tests use this.
@@ -112,8 +113,9 @@ impl<T> RedisStore<T> {
         client: Client,
         config: ConnectionManagerConfig,
     ) -> RedisResult<RedisStore<T>> {
-        let client = ConnectionManagerWithRetry::with_config(client, config).await?;
-        Ok(RedisStore::_with_client(client))
+        ConnectionManagerWithRetry::with_config(client, config)
+            .await
+            .map(RedisStore::_with_client)
     }
 }
 
