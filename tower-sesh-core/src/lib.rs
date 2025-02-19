@@ -6,7 +6,7 @@
 //! Semantic Versioning. If you are building a custom session store, you should
 //! pin an exact version of `tower-sesh-core` to avoid breakages:
 //!
-//! ```not_rust
+//! ```toml
 //! tower-sesh-core = { version = "=X.Y.Z" }
 //! ```
 //!
