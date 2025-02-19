@@ -52,6 +52,7 @@ struct Config {
 }
 
 impl Default for Config {
+    #[inline]
     fn default() -> Self {
         Self {
             key_prefix: Cow::Borrowed(DEFAULT_KEY_PREFIX),

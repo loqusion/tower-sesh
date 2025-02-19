@@ -19,10 +19,12 @@ use redis::{
 pub struct ConnectionManagerWithRetry(ConnectionManager);
 
 impl ConnectionManagerWithRetry {
+    #[inline]
     pub(crate) async fn new(client: Client) -> RedisResult<Self> {
         Self::new_with_config(client, ConnectionManagerConfig::default()).await
     }
 
+    #[inline]
     pub(crate) async fn new_with_config(
         client: Client,
         config: ConnectionManagerConfig,
@@ -34,12 +36,14 @@ impl ConnectionManagerWithRetry {
 }
 
 impl From<ConnectionManager> for ConnectionManagerWithRetry {
+    #[inline]
     fn from(value: ConnectionManager) -> Self {
         Self(value)
     }
 }
 
 impl From<ConnectionManagerWithRetry> for ConnectionManager {
+    #[inline]
     fn from(value: ConnectionManagerWithRetry) -> Self {
         value.0
     }
@@ -97,6 +101,7 @@ pub trait GetConnection: Send + Sync + 'static + private::Sealed {
 impl GetConnection for ConnectionManagerWithRetry {
     type Connection = ConnectionManagerWithRetry;
 
+    #[inline]
     async fn connection(&self) -> Result<Self::Connection, GetConnectionError> {
         Ok(self.clone())
     }
