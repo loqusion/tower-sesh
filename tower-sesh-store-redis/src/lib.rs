@@ -163,11 +163,15 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
 }
 
 impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
-    /// Set the prefix used in Redis keys used to store sessions.
+    /// Set the Redis key prefix used to store sessions.
     ///
-    /// Keys are formatted like: `<prefix><session_key>`.
+    /// When a session is stored, the Redis [key] is constructed by appending
+    /// the Base64-encoded session key to the prefix, e.g.
+    /// `session:ym5hy39HMVwYUJpPW6x_sQ`.
     ///
     /// Default: `"session:"`
+    ///
+    /// [key]: https://redis.io/docs/latest/develop/use/keyspace/
     pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C, R> {
         self.config.key_prefix = prefix.into();
         self
@@ -178,6 +182,13 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// If an RNG isn't provided, [`ThreadRng`] is used by default.
     ///
     /// [`ThreadRng`]: rand::rngs::ThreadRng
+    ///
+    /// # Note about performance
+    ///
+    /// The RNG passed to this method is synchronized between threads with a
+    /// mutex. This can cause performance degradation, especially in a
+    /// multi-threaded context. Therefore, using this method is not recommended
+    /// unless you need determinism (for instance, in tests).
     ///
     /// # Examples
     ///
@@ -196,13 +207,6 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// # Ok::<_, anyhow::Error>(())
     /// # }).unwrap();
     /// ```
-    ///
-    /// # Note about performance
-    ///
-    /// The RNG passed to this method is synchronized between threads with a
-    /// mutex. This can cause performance degradation, especially in a
-    /// multi-threaded context. Therefore, using this method is not recommended
-    /// unless you need determinism (for instance, in tests).
     #[cfg(feature = "test-util")]
     pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C, Rng>
     where
