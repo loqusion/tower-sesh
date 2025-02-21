@@ -399,15 +399,6 @@ pub(crate) mod lazy {
                 }
             }
         }
-
-        pub(crate) fn get(&self) -> Option<&Session<T>> {
-            match self {
-                LazySession::Empty { session_cell } => session_cell.get(),
-                LazySession::Load { session_cell, .. } => {
-                    session_cell.get().and_then(Option::as_ref)
-                }
-            }
-        }
     }
 
     async fn init_session<T>(
