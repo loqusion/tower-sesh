@@ -24,8 +24,14 @@ use cookie::{Cookie, CookieJar, Key};
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum SameSite {
+    /// The cookie is never sent in cross-site requests.
     Strict,
+
+    /// The cookie is sent in cross-site top-level navigations.
     Lax,
+
+    /// The cookie is sent in all cross-site requests if the `Secure` flag is
+    /// also set; otherwise, the cookie is ignored.
     None,
 }
 

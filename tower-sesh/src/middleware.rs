@@ -26,25 +26,6 @@ pub use crate::config::SameSite;
 /// # Examples
 ///
 /// TODO: Provide an example
-///
-/// # Test
-///
-/// TODO: Replace with example
-///
-/// ```no_run
-/// use std::sync::Arc;
-/// use tower_sesh::{store::MemoryStore, SessionLayer};
-///
-/// #[derive(Clone)]
-/// struct SessionData {
-///     foo: String,
-///     bar: u64,
-/// }
-///
-/// let key = &[0; 64];
-/// let store = Arc::new(MemoryStore::<SessionData>::new());
-/// let session_layer = SessionLayer::new(store, key);
-/// ```
 #[derive(Debug)]
 pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
     store: Arc<Store>,
@@ -109,9 +90,36 @@ impl Default for SessionConfig {
 }
 
 impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
-    /// Create a new `SessionLayer`.
+    /// Creates a new `SessionLayer` with default configuration values.
     ///
-    /// TODO: More documentation
+    /// By default, cookie values are encrypted with the provided 64-byte `key`.
+    /// See the [`private`] method documentation for more details.
+    ///
+    /// To sign cookies with the provided key instead, use [`signed`]. To use
+    /// plain cookies that are neither signed nor encrypted (not recommended),
+    /// use [`plain`].
+    ///
+    /// [`private`]: SessionLayer::private
+    /// [`signed`]: SessionLayer::signed
+    /// [`plain`]: SessionLayer::plain
+    ///
+    /// # Panics
+    ///
+    /// Panics if `key` is less than 64 bytes in length.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    ///
+    /// # fn key() -> Vec<u8> { vec![0; 64] }
+    /// # type SessionData = ();
+    /// #
+    /// let key = key(); // TODO: Where do you get a key?
+    /// let store = Arc::new(MemoryStore::<SessionData>::new());
+    /// let layer = SessionLayer::new(store, &key);
+    /// ```
     #[track_caller]
     pub fn new(store: Arc<Store>, key: &[u8]) -> SessionLayer<T, Store> {
         let key = match cookie::Key::try_from(key) {
@@ -129,9 +137,23 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
 
 // TODO: Add customization for session expiry
 impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
-    /// Authenticate cookies.
+    /// Authenticates cookies.
     ///
     /// TODO: More documentation
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    ///
+    /// # fn key() -> Vec<u8> { vec![0; 64] }
+    /// # type SessionData = ();
+    /// #
+    /// let key = key(); // TODO: Where do you get a key?
+    /// let store = Arc::new(MemoryStore::<SessionData>::new());
+    /// let layer = SessionLayer::new(store, &key).signed();
+    /// ```
     #[track_caller]
     pub fn signed(self) -> SessionLayer<T, Store, SignedCookie> {
         let key = self.cookie_controller.into_key();
@@ -143,9 +165,23 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         }
     }
 
-    /// Encrypt cookies.
+    /// Encrypts cookies.
     ///
     /// TODO: More documentation
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    ///
+    /// # fn key() -> Vec<u8> { vec![0; 64] }
+    /// # type SessionData = ();
+    /// #
+    /// let key = key(); // TODO: Where do you get a key?
+    /// let store = Arc::new(MemoryStore::<SessionData>::new());
+    /// let layer = SessionLayer::new(store, &key).private();
+    /// ```
     #[track_caller]
     pub fn private(self) -> SessionLayer<T, Store, PrivateCookie> {
         let key = self.cookie_controller.into_key();
@@ -157,7 +193,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         }
     }
 
-    /// Set the [name] of the cookie used to store a session id.
+    /// Sets the [name] of the cookie used to store a session id.
     ///
     /// It is [recommended by OWASP] for `cookie_name` to be terse and
     /// undescriptive to avoid [fingerprinting].
@@ -168,12 +204,24 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [recommended by OWASP]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-id-name-fingerprinting
     /// [fingerprinting]: https://wiki.owasp.org/index.php/Category:OWASP_Cookies_Database
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::SessionLayer;
+    /// # use std::sync::Arc;
+    /// # use tower_sesh::store::MemoryStore;
+    ///
+    /// # let key = vec![0; 64];
+    /// # let store = Arc::new(MemoryStore::<()>::new());
+    /// let layer = SessionLayer::new(store, &key).cookie_name("id");
+    /// ```
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         self.config.cookie_name = name.into();
         self
     }
 
-    /// Set the [`Domain`] attribute in the `Set-Cookie` response header.
+    /// Sets the [`Domain`] attribute in the `Set-Cookie` response header.
     ///
     /// It is [recommended by OWASP] for `Domain` to be omitted so that the
     /// cookie is restricted to the origin server.
@@ -183,23 +231,40 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [`Domain`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value
     /// [recommended by OWASP]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#domain-and-path-attributes
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::SessionLayer;
+    /// # use std::sync::Arc;
+    /// # use tower_sesh::store::MemoryStore;
+    ///
+    /// # let key = vec![0; 64];
+    /// # let store = Arc::new(MemoryStore::<()>::new());
+    /// let layer = SessionLayer::new(store, &key).domain("doc.rust-lang.org");
+    /// ```
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
         self.config.domain = Some(domain.into());
         self
     }
 
-    /// Set whether to add the [`HttpOnly`] attribute in the `Set-Cookie`
+    /// Sets whether to add the [`HttpOnly`] attribute in the `Set-Cookie`
     /// response header.
+    ///
+    /// It is [recommended by OWASP] for `HttpOnly` to be added to prevent
+    /// session key stealing through XSS attacks.
     ///
     /// Default is `true`.
     ///
     /// [`HttpOnly`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly
+    /// [recommended by OWASP]:
+    ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#httponly-attribute
     pub fn http_only(mut self, enable: bool) -> Self {
         self.config.http_only = enable;
         self
     }
 
-    /// Set the [`Path`] attribute in the `Set-Cookie` response header.
+    /// Sets the [`Path`] attribute in the `Set-Cookie` response header.
     ///
     /// It is [recommended by OWASP] for `Path` to be as restrictive as
     /// possible.
@@ -209,27 +274,56 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [`Path`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
     /// [recommended by OWASP]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#domain-and-path-attributes
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::SessionLayer;
+    /// # use std::sync::Arc;
+    /// # use tower_sesh::store::MemoryStore;
+    ///
+    /// # let key = vec![0; 64];
+    /// # let store = Arc::new(MemoryStore::<()>::new());
+    /// let layer = SessionLayer::new(store, &key).path("/std");
+    /// ```
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
         self.config.path = Some(path.into());
         self
     }
 
-    /// Set the [`SameSite`] attribute in the `Set-Cookie` response header.
+    /// Sets the [`SameSite`] attribute in the `Set-Cookie` response header.
     ///
-    /// Default is `SameSite::Strict`.
+    /// Default is [`SameSite::Strict`].
     ///
     /// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use tower_sesh::{middleware::SameSite, SessionLayer};
+    /// # use std::sync::Arc;
+    /// # use tower_sesh::store::MemoryStore;
+    ///
+    /// # let key = vec![0; 64];
+    /// # let store = Arc::new(MemoryStore::<()>::new());
+    /// let layer = SessionLayer::new(store, &key).same_site(SameSite::Strict);
+    /// ```
     pub fn same_site(mut self, same_site: SameSite) -> Self {
         self.config.same_site = same_site;
         self
     }
 
-    /// Set whether to add the [`Secure`] attribute in the `Set-Cookie`
+    /// Sets whether to add the [`Secure`] attribute in the `Set-Cookie`
     /// response header.
+    ///
+    /// It is [recommended by OWASP] for `Secure` to be added to prevent the
+    /// disclosure of the session key through man-in-the-middle attacks.
     ///
     /// Default is `true`.
     ///
     /// [`Secure`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure
+    /// [recommended by OWASP]:
+    ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#secure-attribute
     pub fn secure(mut self, enable: bool) -> Self {
         self.config.secure = enable;
         self
@@ -257,7 +351,22 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 }
 
 impl<T, Store: SessionStore<T>> SessionLayer<T, Store, PlainCookie> {
-    /// Create a new `SessionLayer` that doesn't sign or encrypt cookies.
+    /// Creates a new `SessionLayer` that doesn't sign or encrypt cookies.
+    ///
+    /// **WARNING**: Using `plain` is not recommended, as it opens the door to
+    /// vulnerabilities such as session fixation and brute-force attacks.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    ///
+    /// # type SessionData = ();
+    /// #
+    /// let store = Arc::new(MemoryStore::<SessionData>::new());
+    /// let layer = SessionLayer::plain(store);
+    /// ```
     pub fn plain(store: Arc<Store>) -> SessionLayer<T, Store, PlainCookie> {
         SessionLayer {
             store,
