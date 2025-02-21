@@ -326,9 +326,9 @@ where
         let jar = CookieJar::from_headers(req.headers());
         let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
         let session_handle = session::lazy::insert(
+            req.extensions_mut(),
             cookie,
             &self.layer.store,
-            req.extensions_mut(),
             self.layer.config.session_config.clone(),
         );
 

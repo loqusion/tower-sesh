@@ -276,9 +276,9 @@ pub(crate) mod lazy {
 
     #[track_caller]
     pub(crate) fn insert<T>(
+        extensions: &mut Extensions,
         cookie: Option<Cookie<'static>>,
         store: &Arc<impl SessionStore<T>>,
-        extensions: &mut Extensions,
         session_config: SessionConfig,
     ) -> LazySessionHandle<T>
     where
