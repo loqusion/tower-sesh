@@ -311,7 +311,7 @@ pub(crate) mod lazy {
         }
     }
 
-    pub enum LazySession<T> {
+    enum LazySession<T> {
         Empty {
             session_cell: Arc<OnceCell<Session<T>>>,
         },
