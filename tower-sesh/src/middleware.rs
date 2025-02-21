@@ -344,6 +344,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// [`Session`]: crate::Session
     /// [Session Migration]: crate::Session#session-migration
+    // TODO: Change this to an enum
     pub fn ignore_invalid_session(mut self, enable: bool) -> Self {
         self.config.session_config.ignore_invalid_session = enable;
         self
