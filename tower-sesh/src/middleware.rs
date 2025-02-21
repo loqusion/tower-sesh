@@ -21,6 +21,8 @@ pub use crate::config::SameSite;
 
 /// A layer that provides [`Session`] as an extractor.
 ///
+/// [`Session`]: crate::Session
+///
 /// # Examples
 ///
 /// TODO: Provide an example
@@ -246,6 +248,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// TODO: Link to [Session migration], which should talk about strategies
     /// for avoiding session invalidation.
     ///
+    /// [`Session`]: crate::Session
     /// [Session Migration]: crate::Session#session-migration
     pub fn ignore_invalid_session(mut self, enable: bool) -> Self {
         self.config.session_config.ignore_invalid_session = enable;
