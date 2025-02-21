@@ -195,13 +195,13 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Sets the [name] of the cookie used to store a session id.
     ///
-    /// It is [recommended by OWASP] for `cookie_name` to be terse and
-    /// undescriptive to avoid [fingerprinting].
+    /// [OWASP recommends] that `cookie_name` be terse and undescriptive to
+    /// avoid [fingerprinting].
     ///
     /// Default is `"id"`.
     ///
     /// [name]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#cookie-namecookie-value
-    /// [recommended by OWASP]:
+    /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-id-name-fingerprinting
     /// [fingerprinting]: https://wiki.owasp.org/index.php/Category:OWASP_Cookies_Database
     ///
@@ -223,13 +223,13 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Sets the [`Domain`] attribute in the `Set-Cookie` response header.
     ///
-    /// It is [recommended by OWASP] for `Domain` to be omitted so that the
-    /// cookie is restricted to the origin server.
+    /// [OWASP recommends] that `Domain` be omitted so that the cookie is
+    /// restricted to the origin server.
     ///
     /// Default is for `Domain` to be omitted.
     ///
     /// [`Domain`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#domaindomain-value
-    /// [recommended by OWASP]:
+    /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#domain-and-path-attributes
     ///
     /// # Examples
@@ -251,13 +251,13 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// Sets whether to add the [`HttpOnly`] attribute in the `Set-Cookie`
     /// response header.
     ///
-    /// It is [recommended by OWASP] for `HttpOnly` to be added to prevent
-    /// session key stealing through XSS attacks.
+    /// [OWASP recommends] adding `HttpOnly` to prevent session key stealing
+    /// through XSS attacks.
     ///
     /// Default is `true`.
     ///
     /// [`HttpOnly`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#httponly
-    /// [recommended by OWASP]:
+    /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#httponly-attribute
     pub fn http_only(mut self, enable: bool) -> Self {
         self.config.http_only = enable;
@@ -266,13 +266,12 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Sets the [`Path`] attribute in the `Set-Cookie` response header.
     ///
-    /// It is [recommended by OWASP] for `Path` to be as restrictive as
-    /// possible.
+    /// [OWASP recommends] that `Path` be as restrictive as possible.
     ///
     /// Default is for `Path` to be omitted.
     ///
     /// [`Path`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#pathpath-value
-    /// [recommended by OWASP]:
+    /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#domain-and-path-attributes
     ///
     /// # Examples
@@ -316,13 +315,13 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// Sets whether to add the [`Secure`] attribute in the `Set-Cookie`
     /// response header.
     ///
-    /// It is [recommended by OWASP] for `Secure` to be added to prevent the
-    /// disclosure of the session key through man-in-the-middle attacks.
+    /// [OWASP recommends] adding `Secure` to prevent the disclosure of the
+    /// session key through man-in-the-middle attacks.
     ///
     /// Default is `true`.
     ///
     /// [`Secure`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#secure
-    /// [recommended by OWASP]:
+    /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#secure-attribute
     pub fn secure(mut self, enable: bool) -> Self {
         self.config.secure = enable;
