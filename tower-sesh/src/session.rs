@@ -104,7 +104,7 @@ impl<T> Session<T> {
         Session(Arc::new(Mutex::new(inner)))
     }
 
-    fn ignored(session_key: SessionKey) -> Session<T> {
+    fn corrupted(session_key: SessionKey) -> Session<T> {
         let inner = Inner {
             session_key: Some(session_key),
             data: None,
@@ -313,7 +313,10 @@ pub(crate) mod lazy {
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 
-    use crate::{middleware::SessionConfig, util::ErrorExt};
+    use crate::{
+        middleware::{CorruptSessionPolicy, SessionConfig},
+        util::ErrorExt,
+    };
 
     use super::Session;
 
@@ -462,8 +465,13 @@ pub(crate) mod lazy {
             Ok(None) => Some(Session::empty()),
             Err(err) => {
                 match err.kind() {
-                    ErrorKind::Serde(_) if config.ignore_invalid_session => {
-                        Some(Session::ignored(session_key))
+                    ErrorKind::Serde(_)
+                        if matches!(
+                            config.corrupt_session_policy,
+                            CorruptSessionPolicy::Discard
+                        ) =>
+                    {
+                        Some(Session::corrupted(session_key))
                     }
                     _ => {
                         // TODO: Better error reporting
