@@ -411,7 +411,7 @@ fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
 /// # Panics
 ///
 /// If the `test-util` feature is enabled and [`rng()`] was called, `clone()`
-/// will panic if it cannot acquire the mutex lock.
+/// and `clone_from()` will panic if the mutex lock could not be acquired.
 ///
 /// [`rng()`]: RedisStore::rng
 impl<T, C: GetConnection, R: CryptoRng> Clone for RedisStore<T, C, R>
