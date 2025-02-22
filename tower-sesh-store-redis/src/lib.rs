@@ -45,6 +45,7 @@ pub struct RedisStore<
     _marker: PhantomData<fn() -> T>,
 }
 
+#[derive(Clone)]
 struct Config {
     key_prefix: Cow<'static, str>,
 }
@@ -407,9 +408,48 @@ fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
     ))
 }
 
+/// # Panics
+///
+/// If the `test-util` feature is enabled and [`rng()`] was called, `clone()`
+/// will panic if it cannot acquire the mutex lock.
+///
+/// [`rng()`]: RedisStore::rng
+impl<T, C: GetConnection, R: CryptoRng> Clone for RedisStore<T, C, R>
+where
+    C: Clone,
+    R: Clone,
+{
+    #[cfg(not(feature = "test-util"))]
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            config: self.config.clone(),
+            _rng_marker: PhantomData,
+            _marker: PhantomData,
+        }
+    }
+
+    #[cfg(feature = "test-util")]
+    #[track_caller]
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone(),
+            config: self.config.clone(),
+            rng: match self.rng.as_ref().map(Mutex::try_lock) {
+                Some(Some(lock)) => Some(Mutex::new(lock.clone())),
+                Some(None) => panic!("failed to acquire mutex lock"),
+                None => None,
+            },
+            _marker: PhantomData,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use rand::rngs::{OsRng, ReseedingRng, StdRng};
+    #[cfg(feature = "test-util")]
+    use rand::SeedableRng;
     use rand_chacha::{rand_core::UnwrapErr, ChaCha12Core, ChaCha12Rng};
 
     use super::*;
@@ -425,5 +465,49 @@ mod test {
             RedisStore<(), ConnectionManagerWithRetry, ReseedingRng<ChaCha12Core, OsRng>>,
         >();
         require_traits::<RedisStore<(), ConnectionManagerWithRetry, ChaCha12Rng>>();
+    }
+
+    async fn redis_store<T>() -> RedisStore<T, ConnectionManagerWithRetry, PhantomThreadRng> {
+        let config = ConnectionManagerConfig::default().set_number_of_retries(1);
+        RedisStore::with_config("redis://127.0.0.1/", config)
+            .await
+            .expect("failed to construct `RedisStore`")
+    }
+
+    #[tokio::test]
+    async fn clone() {
+        let store = redis_store::<()>().await;
+        let _ = store.clone();
+    }
+
+    #[cfg(feature = "test-util")]
+    #[tokio::test]
+    async fn clone_with_rng() {
+        let rng = ChaCha12Rng::seed_from_u64(0);
+        let store = redis_store::<()>().await.rng(rng);
+        let _ = store.clone();
+    }
+
+    #[cfg(feature = "test-util")]
+    #[tokio::test]
+    #[should_panic = "failed to acquire mutex lock"]
+    async fn clone_with_rng_panic() {
+        let rng = ChaCha12Rng::seed_from_u64(0);
+        let store = redis_store::<()>().await.rng(rng);
+
+        let _lock = store.rng.as_ref().unwrap().lock();
+        let _ = store.clone();
+    }
+
+    #[cfg(feature = "test-util")]
+    #[tokio::test]
+    #[should_panic = "failed to acquire mutex lock"]
+    async fn clone_from_with_rng_panic() {
+        let rng = ChaCha12Rng::seed_from_u64(0);
+        let mut store = redis_store::<()>().await.rng(rng.clone());
+        let other_store = redis_store::<()>().await.rng(rng);
+
+        let _lock = other_store.rng.as_ref().unwrap().lock();
+        store.clone_from(&other_store);
     }
 }
