@@ -1,11 +1,12 @@
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
+    time::Duration,
 };
 
 use async_trait::async_trait;
 use parking_lot::{Mutex, MutexGuard};
-use tower_sesh_core::{store::Ttl, Record, SessionKey};
+use tower_sesh_core::{store::Ttl, Record, SessionKey, SessionStore};
 
 /// Extractor to read and mutate session data.
 ///
@@ -65,6 +66,7 @@ struct Inner<T> {
 /// Renewed -> Changed | Purged
 /// Changed -> Purged
 /// Purged
+#[derive(Clone, Copy)]
 enum Status {
     Unchanged,
     Renewed,
@@ -165,6 +167,47 @@ impl<T> Session<T> {
         T: Default,
     {
         self.get_or_insert_with(T::default)
+    }
+
+    pub(crate) async fn sync(
+        &self,
+        store: &impl SessionStore<T>,
+    ) -> Result<(), tower_sesh_core::store::Error> {
+        let (data, session_key, _expires_at, _status) = {
+            // We have to `take` `data` out of the `Option` here, since we can't
+            // hold the mutex lock across an await point without making the
+            // returned future un-`Send`able, and we can't clone or
+            // `std::mem::take` `data` without requiring `T: Clone` or
+            // `T: Default`.
+            // It's fine to `take` here since any nested services should be done
+            // with `Session` at this point.
+            let mut lock = self.0.lock();
+            (
+                lock.data.take(),
+                lock.session_key.take(),
+                lock.expires_at.take(),
+                lock.status,
+            )
+        };
+
+        // FIXME: Action should be based on `status`.
+        // FIXME: Determine proper `ttl`.
+        match (&data, &session_key) {
+            (Some(data), Some(session_key)) => {
+                let ttl = Ttl::now_utc() + Duration::from_secs(10 * 60 * 60);
+                store.update(session_key, data, ttl).await?;
+            }
+            (Some(data), None) => {
+                let ttl = Ttl::now_utc() + Duration::from_secs(10 * 60 * 60);
+                store.create(data, ttl).await?;
+            }
+            (None, Some(key)) => {
+                store.delete(key).await?;
+            }
+            (None, None) => {}
+        }
+
+        Ok(())
     }
 }
 

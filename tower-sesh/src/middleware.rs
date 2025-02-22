@@ -14,7 +14,7 @@ use tower_sesh_core::SessionStore;
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
     session::{self},
-    util::CookieJarExt,
+    util::{CookieJarExt, ErrorExt},
 };
 
 pub use crate::config::SameSite;
@@ -423,8 +423,10 @@ impl<ReqBody, ResBody, S, T, Store: SessionStore<T>, C: CookieSecurity> Service<
     for SessionManager<S, T, Store, C>
 where
     S: Service<Request<ReqBody>, Response = Response<ResBody>>,
+    S::Error: Send,
     S::Future: Send + 'static,
-    T: 'static + Send + Sync,
+    ResBody: Send,
+    T: Send + Sync + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -445,10 +447,18 @@ where
         );
 
         let fut = self.inner.call(req);
+        let store = Arc::clone(&self.layer.store);
 
         async move {
             let result = fut.await;
-            let session = session_handle.get();
+
+            if let Some(session) = session_handle.get() {
+                let sync_result = session.sync(store.as_ref()).await;
+                if let Err(err) = sync_result {
+                    // TODO: Better error reporting
+                    error!(message = %err.display_chain());
+                }
+            }
 
             result
         }
