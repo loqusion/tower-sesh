@@ -87,7 +87,7 @@ impl<T> RedisStore<T> {
         let client = Client::open(info)?;
         ConnectionManagerWithRetry::new(client)
             .await
-            .map(RedisStore::_with_client)
+            .map(RedisStore::with_client)
     }
 
     /// Connects to a redis server and returns a store with the given
@@ -120,14 +120,14 @@ impl<T> RedisStore<T> {
         let client = Client::open(info)?;
         ConnectionManagerWithRetry::with_config(client, config)
             .await
-            .map(RedisStore::_with_client)
+            .map(RedisStore::with_client)
     }
 }
 
 impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     #[cfg(feature = "test-util")]
     #[inline]
-    fn _with_client(client: C) -> RedisStore<T, C, R> {
+    fn with_client(client: C) -> RedisStore<T, C, R> {
         Self {
             client,
             config: Config::default(),
@@ -138,7 +138,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
 
     #[cfg(not(feature = "test-util"))]
     #[inline]
-    fn _with_client(client: C) -> RedisStore<T, C, R> {
+    fn with_client(client: C) -> RedisStore<T, C, R> {
         Self {
             client,
             config: Config::default(),
