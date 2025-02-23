@@ -48,7 +48,12 @@ where
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
-        Ok(self.map.get(session_key).as_deref().cloned())
+        Ok(self
+            .map
+            .get(session_key)
+            .as_deref()
+            .cloned()
+            .filter(|record| record.ttl >= Ttl::now_utc()))
     }
 
     async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
