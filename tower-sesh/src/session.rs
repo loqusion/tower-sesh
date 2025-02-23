@@ -6,7 +6,7 @@ use std::{
 
 use async_trait::async_trait;
 use parking_lot::{Mutex, MutexGuard};
-use tower_sesh_core::{now, store::Ttl, Record, SessionKey, SessionStore};
+use tower_sesh_core::{time::now, Record, SessionKey, SessionStore, Ttl};
 
 /// Extractor to read and mutate session data.
 ///

@@ -20,8 +20,9 @@ use redis::{
 use rng::PhantomThreadRng;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
-    store::{Error, SessionStoreImpl, Ttl},
-    Record, SessionKey, SessionStore, DEFAULT_SESSION_EXPIRY_SECONDS,
+    store::{Error, SessionStoreImpl},
+    time::DEFAULT_SESSION_EXPIRY_SECONDS,
+    Record, SessionKey, SessionStore, Ttl,
 };
 
 pub mod connection;
