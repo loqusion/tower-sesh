@@ -4,9 +4,9 @@ use async_trait::async_trait;
 #[cfg(feature = "memory-store")]
 use dashmap::DashMap;
 use tower_sesh_core::{
-    now,
-    store::{Error, SessionStoreImpl, Ttl},
-    Record, SessionKey, SessionStore,
+    store::{Error, SessionStoreImpl},
+    time::now,
+    Record, SessionKey, SessionStore, Ttl,
 };
 
 type Result<T, E = Error> = std::result::Result<T, E>;

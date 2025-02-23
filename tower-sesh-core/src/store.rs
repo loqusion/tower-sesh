@@ -8,7 +8,7 @@
 //! ```
 //! use async_trait::async_trait;
 //! use tower_sesh_core::{store::SessionStoreImpl, SessionStore};
-//! # use tower_sesh_core::{store::{Error, Record, Ttl}, SessionKey};
+//! # use tower_sesh_core::{store::{Error, Record}, SessionKey, Ttl};
 //!
 //! struct StoreImpl<T> {
 //!     /* ... */
@@ -35,9 +35,8 @@
 use std::{error::Error as StdError, fmt};
 
 use async_trait::async_trait;
-use time::OffsetDateTime;
 
-use crate::SessionKey;
+use crate::{time::Ttl, SessionKey};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -68,12 +67,6 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }
-
-/// An instant in time, represented as a date and time with a timezone offset.
-///
-/// Used to represent a session's expiration time, after which a
-/// [`SessionStore`] implementation should delete the session.
-pub type Ttl = OffsetDateTime;
 
 /// A struct containing a session's data and expiration time.
 #[derive(Clone, Debug)]

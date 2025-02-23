@@ -107,7 +107,7 @@ where
     async fn create(
         &self,
         _data: &T,
-        _ttl: tower_sesh_core::store::Ttl,
+        _ttl: tower_sesh_core::Ttl,
     ) -> Result<tower_sesh_core::SessionKey, tower_sesh_core::store::Error> {
         unimplemented!()
     }
@@ -121,14 +121,14 @@ where
         &self,
         _session_key: &tower_sesh_core::SessionKey,
         _data: &T,
-        _ttl: tower_sesh_core::store::Ttl,
+        _ttl: tower_sesh_core::Ttl,
     ) -> Result<(), tower_sesh_core::store::Error> {
         unimplemented!()
     }
     async fn update_ttl(
         &self,
         _session_key: &tower_sesh_core::SessionKey,
-        _ttl: tower_sesh_core::store::Ttl,
+        _ttl: tower_sesh_core::Ttl,
     ) -> Result<(), tower_sesh_core::store::Error> {
         unimplemented!()
     }

@@ -5,11 +5,7 @@ use std::{sync::Mutex, time::Duration};
 use divan::black_box;
 use serde::{Deserialize, Serialize};
 use tower_sesh::store::MemoryStore;
-use tower_sesh_core::{
-    now,
-    store::{SessionStoreImpl, Ttl},
-    SessionKey,
-};
+use tower_sesh_core::{store::SessionStoreImpl, time::now, SessionKey, Ttl};
 #[cfg(feature = "store-redis")]
 use tower_sesh_store_redis::RedisStore;
 
