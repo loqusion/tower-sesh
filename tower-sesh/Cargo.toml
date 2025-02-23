@@ -24,6 +24,7 @@ cookie = { version = "0.18.1", features = [
     "private",
     "percent-encode",
 ] }
+dashmap = "6.0.0"
 futures = "0.3.31"
 http = "1"
 itoa = "1.0.14"
