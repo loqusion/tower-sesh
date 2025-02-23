@@ -55,28 +55,7 @@ pub(crate) struct Config {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct SessionConfig {
-    pub(crate) corrupt_session_policy: CorruptSessionPolicy,
-}
-
-/// An enum to configure behavior of the [`Session`] extractor when an error
-/// occurs while deserializing session data.
-///
-/// Used by [`SessionLayer::corrupt_session_policy`].
-///
-/// [`Session`]: crate::Session
-#[derive(Clone, Debug)]
-#[non_exhaustive]
-pub enum CorruptSessionPolicy {
-    /// A deserialization error will be treated as if there is no existing
-    /// session. In that case, an empty `Session` object is provided, and
-    /// writing to it will cause the existing corrupted session data to be
-    /// discarded.
-    Discard,
-
-    /// A deserialization will cause the `Session` extractor to fail.
-    Reject,
-}
+pub(crate) struct SessionConfig {}
 
 // Chosen to avoid session ID name fingerprinting.
 const DEFAULT_COOKIE_NAME: &str = "id";
@@ -102,9 +81,7 @@ impl Default for Config {
 impl Default for SessionConfig {
     #[inline]
     fn default() -> Self {
-        SessionConfig {
-            corrupt_session_policy: CorruptSessionPolicy::Discard,
-        }
+        SessionConfig {}
     }
 }
 
@@ -344,41 +321,6 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#secure-attribute
     pub fn secure(mut self, enable: bool) -> Self {
         self.config.secure = enable;
-        self
-    }
-
-    /// Changes behavior of the [`Session`] extractor when an error occurs
-    /// while deserializing session data.
-    ///
-    /// - `CorruptSessionPolicy::Discard`: A deserialization error will be
-    ///   treated as if there is no existing session. In that case, an empty
-    ///   `Session` object is provided, and writing to it will cause the
-    ///   existing corrupted session data to be discarded.
-    /// - `CorruptSessionPolicy::Reject`: A deserialization error will cause
-    ///   the extractor to fail.
-    ///
-    /// Default is `CorruptSessionPolicy::Discard`.
-    ///
-    /// TODO: Link to [Session migration], which should talk about strategies
-    /// for avoiding session invalidation.
-    ///
-    /// [`Session`]: crate::Session
-    /// [Session migration]: crate::Session#session-migration
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use tower_sesh::{middleware::CorruptSessionPolicy, SessionLayer};
-    /// # use std::sync::Arc;
-    /// # use tower_sesh::store::MemoryStore;
-    ///
-    /// # let key = vec![0; 64];
-    /// # let store = Arc::new(MemoryStore::<()>::new());
-    /// let layer = SessionLayer::new(store, &key)
-    ///     .corrupt_session_policy(CorruptSessionPolicy::Discard);
-    /// ```
-    pub fn corrupt_session_policy(mut self, policy: CorruptSessionPolicy) -> Self {
-        self.config.session_config.corrupt_session_policy = policy;
         self
     }
 }

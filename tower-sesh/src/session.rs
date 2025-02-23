@@ -313,10 +313,7 @@ pub(crate) mod lazy {
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 
-    use crate::{
-        middleware::{CorruptSessionPolicy, SessionConfig},
-        util::ErrorExt,
-    };
+    use crate::{middleware::SessionConfig, util::ErrorExt};
 
     use super::Session;
 
@@ -450,7 +447,7 @@ pub(crate) mod lazy {
     async fn init_session<T>(
         cookie: &Cookie<'static>,
         store: &dyn SessionStore<T>,
-        config: &SessionConfig,
+        _config: &SessionConfig,
     ) -> Option<Session<T>>
     where
         T: 'static,
@@ -465,14 +462,7 @@ pub(crate) mod lazy {
             Ok(None) => Some(Session::empty()),
             Err(err) => {
                 match err.kind() {
-                    ErrorKind::Serde(_)
-                        if matches!(
-                            config.corrupt_session_policy,
-                            CorruptSessionPolicy::Discard
-                        ) =>
-                    {
-                        Some(Session::corrupted(session_key))
-                    }
+                    ErrorKind::Serde(_) => Some(Session::corrupted(session_key)),
                     _ => {
                         // TODO: Better error reporting
                         error!(message = %err.display_chain());
