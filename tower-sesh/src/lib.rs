@@ -11,6 +11,27 @@
 //!
 //! [GitHub repository]: https://github.com/loqusion/tower-sesh
 
+// TODO: Include this in `tower-sesh` docs
+pub mod _draft {
+    //! Top-level documentation draft.
+    //!
+    //! ## Comparison of session stores
+    //!
+    //! |                 | Persistent | Horizontally scalable |
+    //! |-----------------|------------|-----------------------|
+    //! | [`MemoryStore`] | no         | no                    |
+    //! | [`RedisStore`]  | yes\*      | yes                   |
+    //! | [`SqlxStore`]   | yes        | yes†                  |
+    //!
+    //! \* Only if [Redis persistence] is enabled.<br>
+    //! † Depends on the specific database: SQLite is not horizontally scalable.
+    //!
+    //! [`MemoryStore`]: crate::store::MemoryStore
+    //! [`RedisStore`]: https://docs.rs/tower-sesh-store-redis/latest/tower-sesh-store-redis/
+    //! [`SqlxStore`]: https://docs.rs/tower-sesh-store-sqlx/latest/tower-sesh-store-sqlx/
+    //! [Redis persistence]: https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+}
+
 #[doc(inline)]
 pub use middleware::SessionLayer;
 #[doc(inline)]
