@@ -12,7 +12,6 @@ use tower_sesh_core::{
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[cfg(feature = "memory-store")]
-#[derive(Clone)]
 pub struct MemoryStore<T> {
     map: DashMap<SessionKey, Record<T>>,
 }
