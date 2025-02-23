@@ -243,9 +243,12 @@ where
             // Panic because this indicates a bug in the program rather than an
             // expected failure.
             Err(_) => panic!(
-                "Missing request extension. `SessionLayer` must be called \
-                before the `Session` extractor is run. Also, check that the \
-                generic type for `Session<T>` is correct."
+                "Extractor `{}` failed because of a missing request extension. \n\
+                `SessionLayer` must be called before the `Session` extractor, \
+                and the store implementing `SessionStore<T>`'s type parameter \
+                `T` must be `{}`.",
+                std::any::type_name::<Self>(),
+                std::any::type_name::<T>()
             ),
         }
     }
