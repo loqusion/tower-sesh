@@ -6,6 +6,7 @@ use std::{
 
 use redis::aio::ConnectionManagerConfig;
 use tower_sesh_core::{
+    now,
     store::{SessionStoreImpl, Ttl},
     SessionKey,
 };
@@ -65,7 +66,7 @@ async fn update_creates_missing_entry() -> anyhow::Result<()> {
         .update(
             &session_key,
             &"hello world".to_owned(),
-            Ttl::now_utc() + Duration::from_secs(10),
+            now() + Duration::from_secs(10),
         )
         .await?;
 

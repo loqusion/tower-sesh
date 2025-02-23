@@ -4,6 +4,7 @@ use async_trait::async_trait;
 #[cfg(feature = "memory-store")]
 use dashmap::DashMap;
 use tower_sesh_core::{
+    now,
     store::{Error, SessionStoreImpl, Ttl},
     Record, SessionKey, SessionStore,
 };
@@ -53,7 +54,7 @@ where
             .get(session_key)
             .as_deref()
             .cloned()
-            .filter(|record| record.ttl >= Ttl::now_utc()))
+            .filter(|record| record.ttl >= now()))
     }
 
     async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {

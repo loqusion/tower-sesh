@@ -6,6 +6,7 @@ use divan::black_box;
 use serde::{Deserialize, Serialize};
 use tower_sesh::store::MemoryStore;
 use tower_sesh_core::{
+    now,
     store::{SessionStoreImpl, Ttl},
     SessionKey,
 };
@@ -46,7 +47,7 @@ impl Simple {
 }
 
 fn ttl_sample() -> Ttl {
-    Ttl::now_utc() + Duration::from_secs(10)
+    now() + Duration::from_secs(10)
 }
 
 #[divan::bench(threads = THREADS)]

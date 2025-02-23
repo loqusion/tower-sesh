@@ -6,7 +6,7 @@ use std::{
 
 use async_trait::async_trait;
 use parking_lot::{Mutex, MutexGuard};
-use tower_sesh_core::{store::Ttl, Record, SessionKey, SessionStore};
+use tower_sesh_core::{now, store::Ttl, Record, SessionKey, SessionStore};
 
 /// Extractor to read and mutate session data.
 ///
@@ -194,11 +194,11 @@ impl<T> Session<T> {
         // FIXME: Determine proper `ttl`.
         match (&data, &session_key) {
             (Some(data), Some(session_key)) => {
-                let ttl = Ttl::now_utc() + Duration::from_secs(10 * 60 * 60);
+                let ttl = now() + Duration::from_secs(10 * 60 * 60);
                 store.update(session_key, data, ttl).await?;
             }
             (Some(data), None) => {
-                let ttl = Ttl::now_utc() + Duration::from_secs(10 * 60 * 60);
+                let ttl = now() + Duration::from_secs(10 * 60 * 60);
                 store.create(data, ttl).await?;
             }
             (None, Some(key)) => {
