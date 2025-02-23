@@ -332,7 +332,7 @@ pub(crate) mod lazy {
     {
         debug_assert!(
             extensions.get::<LazySession<T>>().is_none(),
-            "`session::lazy::insert` was called more than once!"
+            "`tower_sesh::session::lazy::insert` was called more than once!"
         );
 
         let lazy_session = match cookie {
