@@ -4,7 +4,7 @@
 
 #![allow(clippy::diverging_sub_expression)]
 
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, marker::PhantomData, rc::Rc};
 
 // Send: Yes, Sync: Yes
 #[derive(Clone)]
@@ -94,17 +94,63 @@ macro_rules! assert_value {
     };
 }
 
+#[allow(dead_code)]
+struct MockStore<T> {
+    _marker: PhantomData<fn() -> T>,
+}
+impl<T> tower_sesh_core::SessionStore<T> for MockStore<T> where T: Send + Sync + 'static {}
+#[async_trait::async_trait]
+impl<T> tower_sesh_core::store::SessionStoreImpl<T> for MockStore<T>
+where
+    T: Send + Sync + 'static,
+{
+    async fn create(
+        &self,
+        _data: &T,
+        _ttl: tower_sesh_core::store::Ttl,
+    ) -> Result<tower_sesh_core::SessionKey, tower_sesh_core::store::Error> {
+        unimplemented!()
+    }
+    async fn load(
+        &self,
+        _session_key: &tower_sesh_core::SessionKey,
+    ) -> Result<Option<tower_sesh_core::Record<T>>, tower_sesh_core::store::Error> {
+        unimplemented!()
+    }
+    async fn update(
+        &self,
+        _session_key: &tower_sesh_core::SessionKey,
+        _data: &T,
+        _ttl: tower_sesh_core::store::Ttl,
+    ) -> Result<(), tower_sesh_core::store::Error> {
+        unimplemented!()
+    }
+    async fn update_ttl(
+        &self,
+        _session_key: &tower_sesh_core::SessionKey,
+        _ttl: tower_sesh_core::store::Ttl,
+    ) -> Result<(), tower_sesh_core::store::Error> {
+        unimplemented!()
+    }
+    async fn delete(
+        &self,
+        _session_key: &tower_sesh_core::SessionKey,
+    ) -> Result<(), tower_sesh_core::store::Error> {
+        unimplemented!()
+    }
+}
+
 assert_value!(tower_sesh::Session<YY>: Send & Sync & Unpin);
 assert_value!(tower_sesh::Session<YN>: Send & Sync & Unpin);
 assert_value!(tower_sesh::Session<NN>: !Send & !Sync & Unpin);
-assert_value!(tower_sesh::SessionLayer<YY, tower_sesh::store::MemoryStore<YY>>: Send & Sync & Unpin);
+assert_value!(tower_sesh::SessionLayer<YY, MockStore<YY>>: Send & Sync & Unpin);
 assert_value!(tower_sesh::Value: Send & Sync & Unpin);
-assert_value!(tower_sesh::middleware::SessionManager<(), YY, tower_sesh::store::MemoryStore<YY>, tower_sesh::config::PrivateCookie>: Send & Sync & Unpin);
+assert_value!(tower_sesh::middleware::SessionManager<(), YY, MockStore<YY>, tower_sesh::config::PrivateCookie>: Send & Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<YY>: !Send & Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<YN>: !Send & !Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<NN>: !Send & !Sync & Unpin);
 #[cfg(feature = "axum")]
 assert_value!(tower_sesh::session::SessionRejection: Send & Sync & Unpin);
-assert_value!(tower_sesh::store::CachingStore<YY, tower_sesh::store::MemoryStore<YY>, tower_sesh::store::MemoryStore<YY>>: Send & Sync & Unpin);
+assert_value!(tower_sesh::store::CachingStore<YY, MockStore<YY>, MockStore<YY>>: Send & Sync & Unpin);
 assert_value!(tower_sesh::value::Map<String, tower_sesh::Value>: Send & Sync & Unpin);
 assert_value!(tower_sesh::value::Number: Send & Sync & Unpin);

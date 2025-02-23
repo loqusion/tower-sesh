@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use async_trait::async_trait;
+#[cfg(feature = "memory-store")]
 use dashmap::DashMap;
 use tower_sesh_core::{
     store::{Error, SessionStoreImpl, Ttl},
@@ -9,11 +10,13 @@ use tower_sesh_core::{
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
+#[cfg(feature = "memory-store")]
 #[derive(Clone)]
 pub struct MemoryStore<T> {
     map: DashMap<SessionKey, Record<T>>,
 }
 
+#[cfg(feature = "memory-store")]
 impl<T> Default for MemoryStore<T> {
     fn default() -> Self {
         MemoryStore {
@@ -22,14 +25,17 @@ impl<T> Default for MemoryStore<T> {
     }
 }
 
+#[cfg(feature = "memory-store")]
 impl<T> MemoryStore<T> {
     pub fn new() -> Self {
         Self::default()
     }
 }
 
+#[cfg(feature = "memory-store")]
 impl<T> SessionStore<T> for MemoryStore<T> where T: 'static + Send + Sync + Clone {}
 
+#[cfg(feature = "memory-store")]
 #[async_trait]
 impl<T> SessionStoreImpl<T> for MemoryStore<T>
 where
