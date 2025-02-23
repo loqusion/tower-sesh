@@ -7,7 +7,7 @@
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
 compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
 
-use std::{borrow::Cow, marker::PhantomData};
+use std::{borrow::Cow, fmt, marker::PhantomData};
 
 use async_trait::async_trait;
 use connection::{ConnectionManagerWithRetry, GetConnection};
@@ -45,7 +45,7 @@ pub struct RedisStore<
     _marker: PhantomData<fn() -> T>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Config {
     key_prefix: Cow<'static, str>,
 }
@@ -204,6 +204,29 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
             rng: Some(Mutex::new(rng)),
             _marker: PhantomData,
         }
+    }
+}
+
+impl<T, C: GetConnection, R: CryptoRng> fmt::Debug for RedisStore<T, C, R>
+where
+    C: fmt::Debug,
+    R: fmt::Debug,
+{
+    #[cfg(not(feature = "test-util"))]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedisStore")
+            .field("client", &self.client)
+            .field("config", &self.config)
+            .finish()
+    }
+
+    #[cfg(feature = "test-util")]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedisStore")
+            .field("client", &self.client)
+            .field("config", &self.config)
+            .field("rng", &self.rng)
+            .finish()
     }
 }
 

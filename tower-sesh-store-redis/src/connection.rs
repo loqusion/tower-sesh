@@ -36,6 +36,12 @@ impl ConnectionManagerWithRetry {
     }
 }
 
+impl fmt::Debug for ConnectionManagerWithRetry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("ConnectionManagerWithRetry")
+    }
+}
+
 impl From<ConnectionManager> for ConnectionManagerWithRetry {
     #[inline]
     fn from(value: ConnectionManager) -> Self {

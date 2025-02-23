@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{fmt, marker::PhantomData};
 
 use async_trait::async_trait;
 #[cfg(feature = "memory-store")]
@@ -29,6 +29,13 @@ impl<T> Default for MemoryStore<T> {
 impl<T> MemoryStore<T> {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+#[cfg(feature = "memory-store")]
+impl<T> fmt::Debug for MemoryStore<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("MemoryStore { .. }")
     }
 }
 
@@ -88,6 +95,19 @@ impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> CachingStore<T, Cache, S
             store,
             _marker: PhantomData,
         }
+    }
+}
+
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> fmt::Debug for CachingStore<T, Cache, Store>
+where
+    Cache: fmt::Debug,
+    Store: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CachingStore")
+            .field("cache", &self.cache)
+            .field("store", &self.store)
+            .finish()
     }
 }
 
