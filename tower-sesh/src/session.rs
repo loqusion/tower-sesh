@@ -176,9 +176,8 @@ impl<T> Session<T> {
         let (data, session_key, _expires_at, _status) = {
             // We have to `take` `data` out of the `Option` here, since we can't
             // hold the mutex lock across an await point without making the
-            // returned future un-`Send`able, and we can't clone or
-            // `std::mem::take` `data` without requiring `T: Clone` or
-            // `T: Default`.
+            // returned future `!Send`, and we can't clone or `std::mem::take`
+            // `data` without requiring `T: Clone` or `T: Default`.
             // It's fine to `take` here since any nested services should be done
             // with `Session` at this point.
             let mut lock = self.0.lock();
