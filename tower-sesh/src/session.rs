@@ -313,6 +313,7 @@ pub(crate) mod lazy {
 
     use async_once_cell::OnceCell;
     use cookie::Cookie;
+    use futures::future;
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 
@@ -420,9 +421,11 @@ pub(crate) mod lazy {
 
         async fn get_or_init(&self) -> Option<&Session<T>> {
             match self {
-                LazySession::Empty { session_cell } => {
-                    Some(session_cell.get_or_init(async { Session::empty() }).await)
-                }
+                LazySession::Empty { session_cell } => Some(
+                    session_cell
+                        .get_or_init(future::ready(Session::empty()))
+                        .await,
+                ),
                 LazySession::Load {
                     cookie,
                     store,
