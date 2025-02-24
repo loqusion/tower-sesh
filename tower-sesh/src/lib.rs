@@ -27,8 +27,8 @@ pub mod _draft {
     //! † Depends on the specific database: SQLite is not horizontally scalable.
     //!
     //! [`MemoryStore`]: crate::store::MemoryStore
-    //! [`RedisStore`]: https://docs.rs/tower-sesh-store-redis/latest/tower-sesh-store-redis/
-    //! [`SqlxStore`]: https://docs.rs/tower-sesh-store-sqlx/latest/tower-sesh-store-sqlx/
+    //! [`RedisStore`]: https://docs.rs/tower-sesh-store-redis
+    //! [`SqlxStore`]: https://docs.rs/tower-sesh-store-sqlx
     //! [Redis persistence]: https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
 }
 
