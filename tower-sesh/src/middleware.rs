@@ -430,8 +430,7 @@ where
             if let Some(session) = session_handle.get() {
                 let sync_result = session.sync(store.as_ref()).await;
                 if let Err(err) = sync_result {
-                    // TODO: Better error reporting
-                    error!(message = %err.display_chain());
+                    error!(err = %err.display_chain(), "error when syncing session to store");
                 }
             }
 
