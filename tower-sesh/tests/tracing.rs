@@ -1,7 +1,8 @@
-use std::{fmt, marker::PhantomData, sync::Arc};
+use std::{fmt, marker::PhantomData, sync::Arc, time::Duration};
 
 use axum::{async_trait, body::Body, response::IntoResponse, routing, Router};
 use http::Request;
+use tokio::sync::mpsc;
 use tower::ServiceExt;
 use tower_sesh::{session::SessionRejection, store::MemoryStore, Session, SessionLayer};
 use tower_sesh_core::{
@@ -137,6 +138,53 @@ async fn session_load_error() {
             .body(Body::empty())
             .unwrap();
         app.oneshot(req).await.unwrap();
+    }
+
+    handle.assert_finished();
+}
+
+#[tokio::test]
+async fn use_session_after_taken() {
+    use axum::extract::State;
+
+    let (subscriber, handle) = subscriber::mock()
+        .with_filter(|meta| meta.target() == "tower_sesh::session")
+        .event(expect::event().at_level(Level::ERROR).with_fields(
+            expect::field("message").with_value(&debug_value(
+                "called `Session` method after it was synchronized to store",
+            )),
+        ))
+        .run_with_handle();
+
+    let (tx, mut rx) = mpsc::channel(1);
+
+    #[derive(Clone)]
+    struct AppState {
+        pub tx: mpsc::Sender<tokio::task::JoinHandle<()>>,
+    }
+
+    async fn handler(State(AppState { tx }): State<AppState>, session: Session<()>) {
+        let join_handle = tokio::spawn(async move {
+            // Sleep so that sync has a chance to run
+            tokio::time::sleep(Duration::from_millis(1)).await;
+            let _ = session.get();
+        });
+        let _ = tx.send(join_handle).await;
+    }
+
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(SessionLayer::plain(Arc::new(MemoryStore::<()>::new())))
+        .with_state(AppState { tx });
+
+    {
+        let _guard = tracing::subscriber::set_default(subscriber);
+        let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+        app.oneshot(req).await.unwrap();
+
+        let join_handle = rx.try_recv().unwrap();
+        // If `tokio-mock` assertions fail, this will panic
+        join_handle.await.unwrap();
     }
 
     handle.assert_finished();
