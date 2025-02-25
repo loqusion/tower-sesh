@@ -107,6 +107,40 @@ async fn extractor_rejection() {
     handle.assert_finished();
 }
 
+#[tokio::test]
+async fn session_load_error() {
+    let (subscriber, handle) =
+        subscriber::mock()
+            .with_filter(|meta| meta.target().starts_with("tower_sesh::session"))
+            .event(expect::event().at_level(Level::ERROR).with_fields(
+                expect::field("err").with_value(&debug_value(ErrStore::<()>::MESSAGE)),
+            ))
+            .run_with_handle();
+
+    async fn handler(_session: Session<()>) {
+        unimplemented!()
+    }
+
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(SessionLayer::plain(Arc::new(ErrStore::<()>::new())).cookie_name("id"));
+
+    {
+        let _guard = tracing::subscriber::set_default(subscriber);
+        let req = Request::builder()
+            .uri("/")
+            .header(
+                "Cookie",
+                format!("id={}", SessionKey::try_from(1).unwrap().encode()),
+            )
+            .body(Body::empty())
+            .unwrap();
+        app.oneshot(req).await.unwrap();
+    }
+
+    handle.assert_finished();
+}
+
 fn debug_value(message: impl Into<String>) -> tracing::field::DebugValue<Box<dyn fmt::Debug>> {
     struct Message {
         message: String,
