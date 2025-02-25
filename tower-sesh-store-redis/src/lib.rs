@@ -25,6 +25,8 @@ use tower_sesh_core::{
     Record, SessionKey, SessionStore, Ttl,
 };
 
+pub use redis;
+
 pub mod connection;
 pub mod rng;
 
