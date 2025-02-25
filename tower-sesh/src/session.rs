@@ -114,15 +114,6 @@ impl<T> Inner<T> {
     }
 }
 
-macro_rules! report_use_after_taken {
-    ($lock:expr) => {
-        #[cfg(feature = "tracing")]
-        if $lock.is_taken() {
-            error!("called `Session` method after it was synchronized to store");
-        }
-    };
-}
-
 impl<T> Session<T> {
     #[inline]
     fn from_inner(inner: Inner<T>) -> Session<T> {
@@ -254,7 +245,12 @@ impl<T> Session<T> {
     #[inline]
     fn lock(&self) -> MutexGuard<'_, Inner<T>> {
         let lock = self.inner.lock();
-        report_use_after_taken!(lock);
+
+        #[cfg(feature = "tracing")]
+        if lock.is_taken() {
+            error!("called `Session` method after it was synchronized to store");
+        }
+
         lock
     }
 }
