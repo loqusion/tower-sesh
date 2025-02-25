@@ -1,6 +1,7 @@
 use std::{fmt, marker::PhantomData, sync::Arc, time::Duration};
 
-use axum::{async_trait, body::Body, response::IntoResponse, routing, Router};
+use async_trait::async_trait;
+use axum::{body::Body, response::IntoResponse, routing, Router};
 use http::Request;
 use tokio::sync::mpsc;
 use tower::ServiceExt;
