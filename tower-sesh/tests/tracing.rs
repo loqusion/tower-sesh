@@ -214,6 +214,9 @@ async fn sandbox() {
 
     let req = Request::builder().uri("/").body(Body::empty()).unwrap();
     app.oneshot(req).await.unwrap();
+
+    // uncomment to view tracing messages
+    // panic!();
 }
 
 #[allow(dead_code)]
