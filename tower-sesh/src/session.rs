@@ -68,7 +68,7 @@ struct Inner<T> {
 /// Renewed -> Changed | Purged
 /// Changed -> Purged
 /// Purged
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum Status {
     /// `Session` is unchanged, so no sync action is required.
     Unchanged,
