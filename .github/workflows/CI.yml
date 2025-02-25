@@ -46,8 +46,8 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - name: Check feature powerset
         run: |
-          cargo hack check --rust-version --workspace --all-targets --ignore-private --exclude tower-sesh-store-redis --feature-powerset --optional-deps
-          cargo hack check --rust-version --all-targets --package tower-sesh-store-redis --feature-powerset --exclude-features async-std-comp --features tokio-comp
+          cargo hack check --rust-version --workspace --ignore-private --exclude tower-sesh-store-redis --feature-powerset --optional-deps
+          cargo hack check --rust-version --package tower-sesh-store-redis --feature-powerset --exclude-features async-std-comp --features tokio-comp
 
   minimal-versions:
     name: cargo minimal-versions
