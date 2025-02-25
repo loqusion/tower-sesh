@@ -99,12 +99,18 @@ impl<T> Inner<T> {
     fn is_taken(&self) -> bool {
         matches!(self.status, Taken)
     }
-}
 
-impl Status {
     #[inline]
-    fn take(&mut self) -> Status {
-        std::mem::replace(self, Taken)
+    fn take(&mut self) -> Self {
+        std::mem::replace(
+            self,
+            Self {
+                session_key: None,
+                data: None,
+                expires_at: None,
+                status: Taken,
+            },
+        )
     }
 }
 
@@ -214,21 +220,16 @@ impl<T> Session<T> {
         &self,
         store: &impl SessionStore<T>,
     ) -> Result<(), tower_sesh_core::store::Error> {
-        let (data, session_key, _expires_at, _status) = {
-            // We have to `take` `data` out of the `Option` here, since we can't
-            // hold the mutex lock across an await point without making the
-            // returned future `!Send`, and we can't clone or `std::mem::take`
-            // `data` without requiring `T: Clone` or `T: Default`.
-            // It's fine to `take` here since any nested services should be done
-            // with `Session` at this point.
-            let mut lock = self.inner.lock();
-            (
-                lock.data.take(),
-                lock.session_key.take(),
-                lock.expires_at.take(),
-                lock.status.take(),
-            )
-        };
+        // We have to `take` here, since borrowing requires holding the mutex
+        // lock across an await point, which would make the future returned by
+        // this function `!Send`.
+        // Using the `Session` after this point would be a bug, in any case.
+        let Inner {
+            data,
+            session_key,
+            expires_at: _expires_at,
+            status: _status,
+        } = self.inner.lock().take();
 
         // FIXME: Action should be based on `status`.
         // FIXME: Determine proper `ttl`.
