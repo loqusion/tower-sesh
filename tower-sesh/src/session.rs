@@ -504,16 +504,13 @@ pub(crate) mod lazy {
         match store.load(&session_key).await {
             Ok(Some(record)) => Some(Session::new(session_key, record)),
             Ok(None) => Some(Session::empty()),
-            Err(err) => {
-                match err.kind() {
-                    ErrorKind::Serde(_) => Some(Session::corrupted(session_key)),
-                    _ => {
-                        // TODO: Better error reporting
-                        error!(message = %err.display_chain());
-                        None
-                    }
+            Err(err) => match err.kind() {
+                ErrorKind::Serde(_) => Some(Session::corrupted(session_key)),
+                _ => {
+                    error!(err = %err.display_chain(), "error loading session");
+                    None
                 }
-            }
+            },
         }
     }
 
