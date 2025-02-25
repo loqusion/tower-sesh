@@ -1,6 +1,10 @@
 //! `SessionKey` and related items.
 
-use std::{error::Error as StdError, fmt, num::NonZeroU128};
+use std::{
+    error::Error as StdError,
+    fmt,
+    num::{NonZeroU128, TryFromIntError},
+};
 
 use base64::Engine;
 use rand::distr::{Distribution, StandardUniform};
@@ -79,10 +83,27 @@ impl Distribution<SessionKey> for StandardUniform {
     }
 }
 
+impl From<NonZeroU128> for SessionKey {
+    #[inline]
+    fn from(value: NonZeroU128) -> Self {
+        SessionKey(value)
+    }
+}
+
+impl TryFrom<u128> for SessionKey {
+    type Error = TryFromIntError;
+
+    #[inline]
+    fn try_from(value: u128) -> Result<Self, Self::Error> {
+        NonZeroU128::try_from(value).map(SessionKey::from)
+    }
+}
+
 impl SessionKey {
     // Not public API. Only tests use this.
     #[doc(hidden)]
     #[inline]
+    #[deprecated = "use `SessionKey::from` instead"]
     pub fn from_non_zero_u128(value: NonZeroU128) -> SessionKey {
         SessionKey(value)
     }
@@ -90,6 +111,8 @@ impl SessionKey {
     // Not public API. Only tests use this.
     #[doc(hidden)]
     #[inline]
+    #[deprecated = "use `SessionKey::try_from` instead"]
+    #[allow(deprecated)]
     pub fn try_from_u128(value: u128) -> Result<SessionKey, std::num::TryFromIntError> {
         value.try_into().map(SessionKey::from_non_zero_u128)
     }
@@ -143,7 +166,7 @@ mod test {
 
     impl Arbitrary for SessionKey {
         fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-            SessionKey::from_non_zero_u128(NonZeroU128::arbitrary(g))
+            SessionKey::from(NonZeroU128::arbitrary(g))
         }
     }
 
