@@ -219,7 +219,6 @@ async fn sandbox() {
     // panic!();
 }
 
-#[allow(dead_code)]
 fn subscriber_init() {
     use std::sync::Once;
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
