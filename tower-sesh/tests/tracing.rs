@@ -19,6 +19,7 @@ async fn no_parent_span_in_handler() {
         .with_ancestry(expect::is_contextual_root());
 
     let (subscriber, handle) = subscriber::mock()
+        .with_filter(|meta| meta.file() == Some(file!()))
         .new_span(handler_new_span)
         .enter(&handler_span)
         .event(expect::event())
