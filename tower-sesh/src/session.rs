@@ -19,7 +19,9 @@ use tower_sesh_core::{time::now, Record, SessionKey, SessionStore, Ttl};
 /// To see the logs, enable the `tracing` feature for `tower-sesh` (enabled by
 /// default) and the `tower_sesh::rejection=trace` tracing target, for example
 /// with `RUST_LOG=info,tower_sesh::rejection=trace cargo run`.
-pub struct Session<T>(Arc<Mutex<Inner<T>>>);
+pub struct Session<T> {
+    inner: Arc<Mutex<Inner<T>>>,
+}
 
 /// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
 /// data `T` can be accessed through this guard via its [`Deref`] and
@@ -116,6 +118,13 @@ macro_rules! report_use_after_taken {
 }
 
 impl<T> Session<T> {
+    #[inline]
+    fn from_inner(inner: Inner<T>) -> Session<T> {
+        Session {
+            inner: Arc::new(Mutex::new(inner)),
+        }
+    }
+
     fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
         let inner = Inner {
             session_key: Some(session_key),
@@ -123,7 +132,7 @@ impl<T> Session<T> {
             expires_at: Some(record.ttl),
             status: Unchanged,
         };
-        Session(Arc::new(Mutex::new(inner)))
+        Session::from_inner(inner)
     }
 
     fn empty() -> Session<T> {
@@ -133,7 +142,7 @@ impl<T> Session<T> {
             expires_at: None,
             status: Unchanged,
         };
-        Session(Arc::new(Mutex::new(inner)))
+        Session::from_inner(inner)
     }
 
     fn corrupted(session_key: SessionKey) -> Session<T> {
@@ -143,7 +152,7 @@ impl<T> Session<T> {
             expires_at: None,
             status: Unchanged,
         };
-        Session(Arc::new(Mutex::new(inner)))
+        Session::from_inner(inner)
     }
 
     #[must_use]
@@ -212,7 +221,7 @@ impl<T> Session<T> {
             // `data` without requiring `T: Clone` or `T: Default`.
             // It's fine to `take` here since any nested services should be done
             // with `Session` at this point.
-            let mut lock = self.0.lock();
+            let mut lock = self.inner.lock();
             (
                 lock.data.take(),
                 lock.session_key.take(),
@@ -243,15 +252,18 @@ impl<T> Session<T> {
 
     #[inline]
     fn lock(&self) -> MutexGuard<'_, Inner<T>> {
-        let lock = self.0.lock();
+        let lock = self.inner.lock();
         report_use_after_taken!(lock);
         lock
     }
 }
 
 impl<T> Clone for Session<T> {
+    #[inline]
     fn clone(&self) -> Self {
-        Session(Arc::clone(&self.0))
+        Session {
+            inner: Arc::clone(&self.inner),
+        }
     }
 }
 
