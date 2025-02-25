@@ -68,9 +68,16 @@ struct Inner<T> {
 /// Purged
 #[derive(Clone, Copy)]
 enum Status {
+    /// `Session` is unchanged, so no sync action is required.
     Unchanged,
+
+    /// `Session` expiry should be renewed.
     Renewed,
+
+    /// `Session` data and expiry should be synced.
     Changed,
+
+    /// `Session` should be removed from the session store.
     Purged,
 }
 use Status::*;
