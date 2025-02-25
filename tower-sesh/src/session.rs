@@ -79,6 +79,9 @@ enum Status {
 
     /// `Session` should be removed from the session store.
     Purged,
+
+    /// `Session` was taken, so any further use is invalid.
+    Taken,
 }
 use Status::*;
 
@@ -88,6 +91,28 @@ impl<T> Inner<T> {
             self.status = Changed;
         }
     }
+
+    #[cfg(feature = "tracing")]
+    #[inline]
+    fn is_taken(&self) -> bool {
+        matches!(self.status, Taken)
+    }
+}
+
+impl Status {
+    #[inline]
+    fn take(&mut self) -> Status {
+        std::mem::replace(self, Taken)
+    }
+}
+
+macro_rules! report_use_after_taken {
+    ($lock:expr) => {
+        #[cfg(feature = "tracing")]
+        if $lock.is_taken() {
+            error!("called `Session` method after it was synchronized to store");
+        }
+    };
 }
 
 impl<T> Session<T> {
@@ -123,13 +148,13 @@ impl<T> Session<T> {
 
     #[must_use]
     pub fn get(&self) -> OptionSessionGuard<'_, T> {
-        let lock = self.0.lock();
+        let lock = self.lock();
 
         OptionSessionGuard::new(lock)
     }
 
     pub fn insert(&self, value: T) -> SessionGuard<'_, T> {
-        let mut lock = self.0.lock();
+        let mut lock = self.lock();
 
         lock.data = Some(value);
         lock.changed();
@@ -140,7 +165,7 @@ impl<T> Session<T> {
     }
 
     pub fn get_or_insert(&self, value: T) -> SessionGuard<'_, T> {
-        let mut lock = self.0.lock();
+        let mut lock = self.lock();
 
         if lock.data.is_none() {
             lock.data = Some(value);
@@ -156,7 +181,7 @@ impl<T> Session<T> {
     where
         F: FnOnce() -> T,
     {
-        let mut lock = self.0.lock();
+        let mut lock = self.lock();
 
         if lock.data.is_none() {
             lock.data = Some(f());
@@ -192,7 +217,7 @@ impl<T> Session<T> {
                 lock.data.take(),
                 lock.session_key.take(),
                 lock.expires_at.take(),
-                lock.status,
+                lock.status.take(),
             )
         };
 
@@ -214,6 +239,13 @@ impl<T> Session<T> {
         }
 
         Ok(())
+    }
+
+    #[inline]
+    fn lock(&self) -> MutexGuard<'_, Inner<T>> {
+        let lock = self.0.lock();
+        report_use_after_taken!(lock);
+        lock
     }
 }
 
