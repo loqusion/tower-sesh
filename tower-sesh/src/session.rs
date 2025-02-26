@@ -306,6 +306,7 @@ impl<'a, T: 'a> SessionGuard<'a, T> {
     ///
     /// The caller of this method must ensure that `guard.data` is a
     /// `Some` variant.
+    #[inline]
     #[track_caller]
     unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         debug_assert!(guard.data.is_some());
@@ -334,6 +335,7 @@ impl<'a, T: 'a> DerefMut for SessionGuard<'a, T> {
 }
 
 impl<'a, T: 'a> OptionSessionGuard<'a, T> {
+    #[inline]
     fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         OptionSessionGuard(guard)
     }
