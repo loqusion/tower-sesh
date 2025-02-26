@@ -14,10 +14,10 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-async-trait = "0.1.83"
+async-trait = { workspace = true }
 base64 = "0.22.1"
 rand = { workspace = true, features = ["thread_rng"] }
-time = { version = "0.3.37", features = ["local-offset"] }
+time = { version = "0.3", features = ["local-offset"] }
 
 [dev-dependencies]
 insta = "1.42.1"

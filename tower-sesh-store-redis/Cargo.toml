@@ -22,8 +22,8 @@ async-std-comp = ["redis/async-std-comp"]
 tokio-comp = ["redis/tokio-comp"]
 
 [dependencies]
-async-trait = "0.1.83"
-futures = "0.3.31"
+async-trait = { workspace = true }
+futures = { workspace = true }
 parking_lot = "0.12.3"
 rand = { workspace = true }
 redis = { version = "0.27.6", features = ["aio", "connection-manager"] }
