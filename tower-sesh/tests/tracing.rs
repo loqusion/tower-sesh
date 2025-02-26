@@ -1,17 +1,21 @@
-use std::{fmt, marker::PhantomData, sync::Arc, time::Duration};
+use std::{fmt, sync::Arc, time::Duration};
 
-use async_trait::async_trait;
 use axum::{body::Body, response::IntoResponse, routing, Router};
 use http::Request;
 use tokio::sync::mpsc;
 use tower::ServiceExt;
 use tower_sesh::{session::SessionRejection, store::MemoryStore, Session, SessionLayer};
 use tower_sesh_core::{
-    store::{self, SessionStoreImpl},
-    Record, SessionKey, SessionStore, Ttl,
+    store::{self},
+    SessionKey,
 };
 use tracing::Level;
 use tracing_mock::{expect, subscriber};
+
+mod common;
+use common::ErrStore;
+
+const ERROR_MESSAGE: &str = "`ErrStore` always returns an error";
 
 #[tokio::test]
 async fn no_parent_span_in_handler() {
@@ -48,13 +52,13 @@ async fn no_parent_span_in_handler() {
 
 #[tokio::test]
 async fn session_sync_error() {
-    let (subscriber, handle) =
-        subscriber::mock()
-            .with_filter(|meta| meta.target() == "tower_sesh::middleware")
-            .event(expect::event().with_fields(
-                expect::field("err").with_value(&debug_value(ErrStore::<()>::MESSAGE)),
-            ))
-            .run_with_handle();
+    let (subscriber, handle) = subscriber::mock()
+        .with_filter(|meta| meta.target() == "tower_sesh::middleware")
+        .event(
+            expect::event()
+                .with_fields(expect::field("err").with_value(&debug_value(ERROR_MESSAGE))),
+        )
+        .run_with_handle();
 
     async fn handler(session: Session<()>) -> impl IntoResponse {
         session.insert(());
@@ -62,7 +66,7 @@ async fn session_sync_error() {
 
     let app = Router::new()
         .route("/", routing::get(handler))
-        .layer(SessionLayer::plain(Arc::new(ErrStore::<()>::new())));
+        .layer(SessionLayer::plain(err_store::<()>()));
 
     {
         let _guard = tracing::subscriber::set_default(subscriber);
@@ -92,7 +96,7 @@ async fn extractor_rejection() {
 
     let app = Router::new()
         .route("/", routing::get(handler))
-        .layer(SessionLayer::plain(Arc::new(ErrStore::<()>::new())).cookie_name("id"));
+        .layer(SessionLayer::plain(err_store::<()>()).cookie_name("id"));
 
     {
         let _guard = tracing::subscriber::set_default(subscriber);
@@ -112,13 +116,14 @@ async fn extractor_rejection() {
 
 #[tokio::test]
 async fn session_load_error() {
-    let (subscriber, handle) =
-        subscriber::mock()
-            .with_filter(|meta| meta.target().starts_with("tower_sesh::session"))
-            .event(expect::event().at_level(Level::ERROR).with_fields(
-                expect::field("err").with_value(&debug_value(ErrStore::<()>::MESSAGE)),
-            ))
-            .run_with_handle();
+    let (subscriber, handle) = subscriber::mock()
+        .with_filter(|meta| meta.target().starts_with("tower_sesh::session"))
+        .event(
+            expect::event()
+                .at_level(Level::ERROR)
+                .with_fields(expect::field("err").with_value(&debug_value(ERROR_MESSAGE))),
+        )
+        .run_with_handle();
 
     async fn handler(_session: Session<()>) {
         unimplemented!()
@@ -126,7 +131,7 @@ async fn session_load_error() {
 
     let app = Router::new()
         .route("/", routing::get(handler))
-        .layer(SessionLayer::plain(Arc::new(ErrStore::<()>::new())).cookie_name("id"));
+        .layer(SessionLayer::plain(err_store::<()>()).cookie_name("id"));
 
     {
         let _guard = tracing::subscriber::set_default(subscriber);
@@ -207,46 +212,8 @@ fn debug_value(message: impl Into<String>) -> tracing::field::DebugValue<Box<dyn
     }))
 }
 
-struct ErrStore<T = ()>(PhantomData<fn() -> T>);
-
-impl<T> ErrStore<T> {
-    const MESSAGE: &str = "`ErrStore` always returns an error";
-
-    fn new() -> Self {
-        ErrStore(PhantomData)
-    }
-}
-
-impl<T> SessionStore<T> for ErrStore<T> where T: Send + Sync + 'static {}
-#[async_trait]
-impl<T> SessionStoreImpl<T> for ErrStore<T>
-where
-    T: Send + Sync + 'static,
-{
-    async fn create(&self, _data: &T, _ttl: Ttl) -> Result<SessionKey, store::Error> {
-        Err(store::Error::message(Self::MESSAGE))
-    }
-
-    async fn load(&self, _session_key: &SessionKey) -> Result<Option<Record<T>>, store::Error> {
-        Err(store::Error::message(Self::MESSAGE))
-    }
-
-    async fn update(
-        &self,
-        _session_key: &SessionKey,
-        _data: &T,
-        _ttl: Ttl,
-    ) -> Result<(), store::Error> {
-        Err(store::Error::message(Self::MESSAGE))
-    }
-
-    async fn update_ttl(&self, _session_key: &SessionKey, _ttl: Ttl) -> Result<(), store::Error> {
-        Err(store::Error::message(Self::MESSAGE))
-    }
-
-    async fn delete(&self, _session_key: &SessionKey) -> Result<(), store::Error> {
-        Err(store::Error::message(Self::MESSAGE))
-    }
+fn err_store<T: Send + Sync + 'static>() -> Arc<ErrStore<T>> {
+    Arc::new(ErrStore::new(|| store::Error::message(ERROR_MESSAGE)))
 }
 
 #[tokio::test]
