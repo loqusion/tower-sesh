@@ -1,7 +1,7 @@
 use std::{fmt, sync::Arc, time::Duration};
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
-use http::Request;
+use http::{header, Request};
 use tokio::sync::mpsc;
 use tower::ServiceExt;
 use tower_sesh::{session::SessionRejection, store::MemoryStore, Session, SessionLayer};
@@ -103,7 +103,7 @@ async fn extractor_rejection() {
         let req = Request::builder()
             .uri("/")
             .header(
-                "Cookie",
+                header::COOKIE,
                 format!("id={}", SessionKey::try_from(1).unwrap().encode()),
             )
             .body(Body::empty())
@@ -138,7 +138,7 @@ async fn session_load_error() {
         let req = Request::builder()
             .uri("/")
             .header(
-                "Cookie",
+                header::COOKIE,
                 format!("id={}", SessionKey::try_from(1).unwrap().encode()),
             )
             .body(Body::empty())
