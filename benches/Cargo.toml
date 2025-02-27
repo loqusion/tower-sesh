@@ -21,6 +21,11 @@ tower-sesh-core = { path = "../tower-sesh-core" }
 tower-sesh-store-redis = { path = "../tower-sesh-store-redis", optional = true }
 
 [[bench]]
+name = "middleware"
+path = "middleware.rs"
+harness = false
+
+[[bench]]
 name = "stores"
 path = "stores.rs"
 harness = false
