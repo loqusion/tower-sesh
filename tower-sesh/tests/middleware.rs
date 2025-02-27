@@ -17,3 +17,9 @@ async fn multiple_session_layers() {
     let req = Request::builder().uri("/").body(Body::empty()).unwrap();
     let _res = app.oneshot(req).await.unwrap();
 }
+
+#[test]
+#[should_panic = "invalid `cookie_name` value"]
+fn invalid_cookie_name() {
+    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).cookie_name("\n");
+}
