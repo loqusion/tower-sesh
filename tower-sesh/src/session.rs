@@ -467,6 +467,7 @@ pub(crate) mod lazy {
     where
         T: 'static,
     {
+        #[inline]
         fn new(
             cookie: Cookie<'static>,
             store: Arc<impl SessionStore<T>>,
@@ -480,6 +481,7 @@ pub(crate) mod lazy {
             }
         }
 
+        #[inline]
         fn empty() -> LazySession<T> {
             LazySession::Empty {
                 session_cell: Arc::new(OnceCell::new()),
