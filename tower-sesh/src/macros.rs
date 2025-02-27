@@ -1,4 +1,4 @@
 #[macro_use]
-mod axum;
+pub(crate) mod axum;
 #[macro_use]
 mod tracing;

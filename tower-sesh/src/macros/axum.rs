@@ -1,7 +1,5 @@
 #![allow(unused_macros)]
 
-#[doc(hidden)]
-#[macro_export]
 macro_rules! __log_rejection {
     (
         rejection_type = $ty:ident,
@@ -21,6 +19,7 @@ macro_rules! __log_rejection {
         }
     };
 }
+pub(crate) use __log_rejection;
 
 macro_rules! define_rejection {
     (
@@ -38,7 +37,7 @@ macro_rules! define_rejection {
         #[cfg(feature = "axum")]
         impl ::axum::response::IntoResponse for $name {
             fn into_response(self) -> ::axum::response::Response {
-                $crate::__log_rejection!(
+                $crate::macros::axum::__log_rejection!(
                     rejection_type = $name,
                     body_text = $body,
                     status = ::http::StatusCode::$status,
@@ -104,7 +103,7 @@ macro_rules! define_rejection {
         #[cfg(feature = "axum")]
         impl ::axum::response::IntoResponse for $name {
             fn into_response(self) -> ::axum::response::Response {
-                $crate::__log_rejection!(
+                $crate::macros::axum::__log_rejection!(
                     rejection_type = $name,
                     body_text = self.body_text(),
                     status = ::http::StatusCode::$status,
