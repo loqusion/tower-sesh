@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
-use axum::async_trait;
+use async_trait::async_trait;
 use tower_sesh_core::{
     store::{self, SessionStoreImpl},
     Record, SessionKey, SessionStore, Ttl,
 };
 
-pub struct ErrStore<T = ()> {
+/// A `SessionStore` that only returns errors.
+pub struct ErrStore<T> {
     error_fn: Box<dyn Fn() -> store::Error + Send + Sync + 'static>,
     _marker: PhantomData<fn() -> T>,
 }
