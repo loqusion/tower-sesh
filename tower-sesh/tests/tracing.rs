@@ -151,8 +151,6 @@ async fn session_load_error() {
 
 #[tokio::test]
 async fn use_session_after_taken() {
-    use axum::extract::State;
-
     let (subscriber, handle) = subscriber::mock()
         .with_filter(|meta| meta.target() == "tower_sesh::session")
         .event(expect::event().at_level(Level::ERROR).with_fields(
@@ -164,24 +162,18 @@ async fn use_session_after_taken() {
 
     let (tx, mut rx) = mpsc::channel(1);
 
-    #[derive(Clone)]
-    struct AppState {
-        pub tx: mpsc::Sender<tokio::task::JoinHandle<()>>,
-    }
-
-    async fn handler(State(AppState { tx }): State<AppState>, session: Session<()>) {
+    let handler = |session: Session<()>| async move {
         let join_handle = tokio::spawn(async move {
             // Sleep so that sync has a chance to run
             tokio::time::sleep(Duration::from_millis(1)).await;
             let _ = session.get();
         });
         let _ = tx.send(join_handle).await;
-    }
+    };
 
     let app = Router::new()
         .route("/", routing::get(handler))
-        .layer(SessionLayer::plain(Arc::new(MemoryStore::<()>::new())))
-        .with_state(AppState { tx });
+        .layer(SessionLayer::plain(Arc::new(MemoryStore::<()>::new())));
 
     {
         let _guard = tracing::subscriber::set_default(subscriber);
