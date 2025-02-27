@@ -7,13 +7,13 @@ use std::{
 
 use cookie::{Cookie, CookieJar};
 use futures::{future::BoxFuture, FutureExt};
-use http::{HeaderValue, Request, Response};
+use http::{header, HeaderMap, HeaderValue, Request, Response};
 use tower::{Layer, Service};
-use tower_sesh_core::SessionStore;
+use tower_sesh_core::{SessionKey, SessionStore};
 
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
-    session::{self},
+    session::{self, SyncAction},
     util::{CookieJarExt, ErrorExt},
 };
 
@@ -407,6 +407,32 @@ impl<S, T, Store: SessionStore<T>, C: CookieSecurity> SessionManager<S, T, Store
     }
 }
 
+impl Config {
+    // TODO: Add the `Expires` attribute.
+    fn cookie(self, session_key: SessionKey) -> Cookie<'static> {
+        let mut cookie = Cookie::build((self.cookie_name, session_key.encode()))
+            .http_only(self.http_only)
+            .same_site(self.same_site)
+            .secure(self.secure);
+
+        if let Some(domain) = self.domain {
+            cookie = cookie.domain(domain);
+        }
+        if let Some(path) = self.path {
+            cookie = cookie.path(path);
+        }
+
+        cookie.build()
+    }
+
+    #[inline]
+    fn cookie_removal(self) -> Cookie<'static> {
+        let mut cookie = Cookie::new(self.cookie_name, "");
+        cookie.make_removal();
+        cookie
+    }
+}
+
 impl<ReqBody, ResBody, S, T, Store: SessionStore<T>, C: CookieSecurity> Service<Request<ReqBody>>
     for SessionManager<S, T, Store, C>
 where
@@ -415,6 +441,7 @@ where
     S::Future: Send + 'static,
     ResBody: Send,
     T: Send + Sync + 'static,
+    C: Send + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -436,20 +463,48 @@ where
 
         let fut = self.inner.call(req);
         let store = Arc::clone(&self.layer.store);
+        let config = self.layer.config.clone();
+        let cookie_controller = self.layer.cookie_controller.clone();
 
         // TODO: Return a `ResponseFuture`
         async move {
-            let response = fut.await?;
+            let mut response = fut.await?;
 
             if let Some(session) = session_handle.get() {
                 let sync_result = session.sync(store.as_ref()).await;
-                if let Err(err) = sync_result {
-                    error!(err = %err.display_chain(), "error when syncing session to store");
+                match sync_result {
+                    Ok(SyncAction::Set(session_key)) => {
+                        let mut jar = CookieJar::new();
+                        cookie_controller.add(&mut jar, config.cookie(session_key));
+
+                        let cookie = jar.delta().next().expect("there should be a cookie");
+                        append_set_cookie(response.headers_mut(), cookie);
+                    }
+                    Ok(SyncAction::Remove) => {
+                        let cookie_removal = config.cookie_removal();
+                        append_set_cookie(response.headers_mut(), &cookie_removal);
+                    }
+                    Ok(SyncAction::None) => {}
+                    Err(err) => {
+                        error!(err = %err.display_chain(), "error when syncing session to store");
+                    }
                 }
             }
 
             Ok(response)
         }
         .boxed()
+    }
+}
+
+#[inline]
+fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) {
+    match HeaderValue::from_str(&cookie.encoded().to_string()) {
+        Ok(header_value) => {
+            headers.append(header::SET_COOKIE, header_value);
+        }
+        Err(err) => {
+            error!(err = %err.display_chain(), cookie = %cookie.encoded(), "this is likely a bug");
+        }
     }
 }
