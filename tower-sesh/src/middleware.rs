@@ -452,7 +452,7 @@ where
     }
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
-        let jar = CookieJar::from_headers(req.headers());
+        let jar = CookieJar::from_headers_single(req.headers(), &self.layer.config.cookie_name);
         let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
         let session_handle = session::lazy::insert(
             req.extensions_mut(),

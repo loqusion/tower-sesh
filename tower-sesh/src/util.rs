@@ -37,15 +37,20 @@ impl fmt::Display for DisplayChain<'_> {
 }
 
 pub(crate) trait CookieJarExt {
-    fn from_headers(headers: &HeaderMap) -> Self;
+    fn from_headers_single(headers: &HeaderMap, name: &str) -> Self;
 }
 
 impl CookieJarExt for CookieJar {
-    fn from_headers(headers: &HeaderMap) -> Self {
+    fn from_headers_single(headers: &HeaderMap, name: &str) -> Self {
         let mut jar = CookieJar::new();
+
         for cookie in cookies_from_request(headers) {
-            jar.add_original(cookie);
+            if cookie.name() == name {
+                jar.add_original(cookie);
+                return jar;
+            }
         }
+
         jar
     }
 }
