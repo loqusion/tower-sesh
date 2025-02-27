@@ -26,9 +26,13 @@ mod ser;
 
 pub mod map;
 
+#[doc(inline)]
 pub use self::error::Error;
+#[doc(inline)]
 pub use self::index::Index;
+#[doc(inline)]
 pub use self::map::Map;
+#[doc(inline)]
 pub use self::number::Number;
 
 /// A loosely typed value that can be stored in a session.
