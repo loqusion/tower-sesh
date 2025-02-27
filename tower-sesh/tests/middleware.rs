@@ -58,6 +58,7 @@ async fn preserves_existing_set_cookie() {
     }
 
     assert!(names.contains("hello"));
+    assert!(names.contains("id"));
 }
 
 #[tokio::test]
