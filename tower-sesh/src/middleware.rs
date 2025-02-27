@@ -7,7 +7,7 @@ use std::{
 
 use cookie::{Cookie, CookieJar};
 use futures::{future::BoxFuture, FutureExt};
-use http::{Request, Response};
+use http::{HeaderValue, Request, Response};
 use tower::{Layer, Service};
 use tower_sesh_core::SessionStore;
 
@@ -203,6 +203,10 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#session-id-name-fingerprinting
     /// [fingerprinting]: https://wiki.owasp.org/index.php/Category:OWASP_Cookies_Database
     ///
+    /// # Panics
+    ///
+    /// Panics if `name` contains an invalid character.
+    ///
     /// # Examples
     ///
     /// ```
@@ -214,8 +218,15 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// # let store = Arc::new(MemoryStore::<()>::new());
     /// let layer = SessionLayer::new(store, &key).cookie_name("id");
     /// ```
+    #[track_caller]
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
-        self.config.cookie_name = name.into();
+        let name = name.into();
+
+        if let Err(err) = HeaderValue::from_str(&format!("{}=value", name)) {
+            panic!("invalid `cookie_name` value: {}", err.display_chain());
+        }
+
+        self.config.cookie_name = name;
         self
     }
 
