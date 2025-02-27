@@ -24,7 +24,8 @@ futures = { version = "0.3", default-features = false, features = ["std"] }
 rand = { version = "0.9", default-features = false, features = ["std"] }
 serde = { version = "1", default-features = false, features = ["std"] }
 
-[workspace.lints]
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(localdocs)'] }
 
 [profile.dev.package]
 insta.opt-level = 3

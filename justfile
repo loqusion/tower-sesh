@@ -26,4 +26,4 @@ bench *FLAGS:
     REDIS_URL="redis://localhost:6379" cargo bench -q --features full {{FLAGS}}
 
 doc *FLAGS:
-    RUSTDOCFLAGS="--cfg docsrs" cargo +nightly doc --all-features {{FLAGS}}
+    RUSTDOCFLAGS="--cfg docsrs --cfg localdocs" cargo +nightly doc --all-features {{FLAGS}}
