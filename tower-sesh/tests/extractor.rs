@@ -55,6 +55,6 @@ async fn ignores_deserialization_error() {
     assert!(did_handler.load(Ordering::SeqCst));
 }
 
-fn serde_err_store<T: Send + Sync + 'static>() -> Arc<ErrStore<T>> {
+fn serde_err_store<T>() -> Arc<ErrStore<T>> {
     Arc::new(ErrStore::new(|| store::Error::serde(ERROR_MESSAGE)))
 }

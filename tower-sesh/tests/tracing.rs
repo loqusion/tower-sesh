@@ -204,7 +204,7 @@ fn debug_value(message: impl Into<String>) -> tracing::field::DebugValue<Box<dyn
     }))
 }
 
-fn err_store<T: Send + Sync + 'static>() -> Arc<ErrStore<T>> {
+fn err_store<T>() -> Arc<ErrStore<T>> {
     Arc::new(ErrStore::new(|| store::Error::message(ERROR_MESSAGE)))
 }
 
