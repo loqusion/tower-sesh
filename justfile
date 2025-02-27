@@ -8,7 +8,7 @@ test *FLAGS:
     }
     trap finish EXIT
 
-    REDIS_URL="redis://localhost:6379" cargo nextest run --workspace --features test-util {{FLAGS}}
+    REDIS_URL="redis://localhost:6379" cargo nextest run --workspace --features test-util,value {{FLAGS}}
 
 doctest *FLAGS:
     cargo test --workspace --doc --all-features {{FLAGS}}

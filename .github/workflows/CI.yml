@@ -95,6 +95,6 @@ jobs:
       - name: install cargo-nextest
         uses: taiki-e/install-action@nextest
       - name: Run tests
-        run: cargo nextest run --profile ci --workspace --features test-util
+        run: cargo nextest run --profile ci --workspace --features test-util,value
       - name: Run doctests
         run: cargo test --doc --workspace --all-features

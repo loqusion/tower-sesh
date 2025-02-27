@@ -37,6 +37,7 @@ pub mod _draft {
 pub use middleware::SessionLayer;
 #[doc(inline)]
 pub use session::Session;
+#[cfg(feature = "value")]
 #[doc(inline)]
 pub use value::Value;
 
@@ -46,6 +47,7 @@ mod macros;
 pub mod middleware;
 pub mod session;
 pub mod store;
+#[cfg(feature = "value")]
 pub mod value;
 
 // Not public API. Items in this module do not follow semantic versioning.
