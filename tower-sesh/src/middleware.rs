@@ -466,7 +466,6 @@ where
         let config = self.layer.config.clone();
         let cookie_controller = self.layer.cookie_controller.clone();
 
-        // TODO: Return a `ResponseFuture`
         async move {
             let mut response = fut.await?;
 
