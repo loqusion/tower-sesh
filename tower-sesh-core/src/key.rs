@@ -99,6 +99,13 @@ impl TryFrom<u128> for SessionKey {
     }
 }
 
+impl From<SessionKey> for NonZeroU128 {
+    #[inline]
+    fn from(value: SessionKey) -> Self {
+        value.0
+    }
+}
+
 impl SessionKey {
     // Not public API. Only tests use this.
     #[doc(hidden)]
