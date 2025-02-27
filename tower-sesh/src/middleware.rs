@@ -26,6 +26,8 @@ pub use crate::config::SameSite;
 /// # Examples
 ///
 /// TODO: Provide an example
+// NOTE: If an inner service returns an error, the session will not be synced to
+// the store.
 #[derive(Debug)]
 pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
     store: Arc<Store>,
