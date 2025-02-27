@@ -424,6 +424,7 @@ where
         let fut = self.inner.call(req);
         let store = Arc::clone(&self.layer.store);
 
+        // TODO: Return a `ResponseFuture`
         async move {
             let result = fut.await;
 
