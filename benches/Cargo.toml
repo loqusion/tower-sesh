@@ -10,9 +10,12 @@ full = ["store-redis"]
 store-redis = ["dep:tower-sesh-store-redis"]
 
 [dependencies]
+axum = { version = "=0.7.9", default-features = false }
 divan = "=0.1.17"
+http = "=1.2.0"
 serde = { version = "=1.0.217", features = ["derive"] }
 tokio = { version = "=1.43.0", features = ["full"] }
+tower = "=0.5.2"
 tower-sesh = { path = "../tower-sesh", features = ["memory-store"] }
 tower-sesh-core = { path = "../tower-sesh-core" }
 tower-sesh-store-redis = { path = "../tower-sesh-store-redis", optional = true }
