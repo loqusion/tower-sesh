@@ -16,7 +16,7 @@ repository = "https://github.com/loqusion/tower-sesh"
 categories = ["asynchronous", "web-programming"]
 keywords = ["axum", "session", "tower"]
 edition = "2021"
-rust-version = "1.79.0"
+rust-version = "1.81.0"
 
 [workspace.dependencies]
 async-trait = "0.1"
