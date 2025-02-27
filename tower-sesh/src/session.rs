@@ -285,7 +285,7 @@ where
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
         match lazy::get_or_init(&mut parts.extensions).await {
-            Ok(Some(session)) => Ok(session),
+            Ok(Some(session)) => Ok(session.clone()),
             Ok(None) => Err(SessionRejection),
             // Panic because this indicates a bug in the program rather than an
             // expected failure.
@@ -397,12 +397,12 @@ pub(crate) mod lazy {
 
     pub(super) async fn get_or_init<T>(
         extensions: &mut Extensions,
-    ) -> Result<Option<Session<T>>, Error>
+    ) -> Result<Option<&Session<T>>, Error>
     where
         T: 'static + Send,
     {
         match extensions.get::<LazySession<T>>() {
-            Some(lazy_session) => Ok(lazy_session.get_or_init().await.cloned()),
+            Some(lazy_session) => Ok(lazy_session.get_or_init().await),
             None => Err(Error),
         }
     }
