@@ -426,7 +426,7 @@ where
 
         // TODO: Return a `ResponseFuture`
         async move {
-            let result = fut.await;
+            let response = fut.await?;
 
             if let Some(session) = session_handle.get() {
                 let sync_result = session.sync(store.as_ref()).await;
@@ -435,7 +435,7 @@ where
                 }
             }
 
-            result
+            Ok(response)
         }
         .boxed()
     }
