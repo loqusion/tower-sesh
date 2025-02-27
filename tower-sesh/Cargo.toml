@@ -22,11 +22,7 @@ value = ["dep:itoa", "dep:ryu", "dep:serde"]
 [dependencies]
 async-once-cell = "0.5.4"
 async-trait = { workspace = true }
-cookie = { version = "0.18.1", features = [
-    "signed",
-    "private",
-    "percent-encode",
-] }
+cookie = { version = "0.18.1", features = ["signed", "private", "percent-encode"] }
 futures = { workspace = true, features = ["async-await"] }
 http = "1"
 parking_lot = { version = "0.12.3" }
@@ -40,9 +36,7 @@ dashmap = { version = "6.0.0", optional = true }
 itoa = { version = "1.0.14", optional = true }
 ryu = { version = "1.0.18", optional = true }
 serde = { workspace = true, optional = true }
-tracing = { version = "0.1", optional = true, default-features = false, features = [
-    "std",
-] }
+tracing = { version = "0.1", optional = true, default-features = false, features = ["std"] }
 
 [dev-dependencies]
 axum = { version = "0.7.9", default-features = false }
