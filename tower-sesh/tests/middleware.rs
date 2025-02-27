@@ -92,7 +92,6 @@ async fn extracts_cookie_from_many_in_header() {
             .collect::<Result<Vec<_>, _>>()
             .unwrap()
             .into_iter();
-        dbg!(&key.encode());
         let req = Request::builder()
             .uri("/")
             .header(header::COOKIE, header_values.next().unwrap())
