@@ -207,10 +207,15 @@ impl<T> Session<T> {
         self.get_or_insert_with(T::default)
     }
 
+    /// Sync this session to the passed session store, if it needs syncing.
+    ///
+    /// If no store errors occur, a [`SyncAction`] is returned.
+    ///
+    /// If a store error occurs, it is propagated.
     pub(crate) async fn sync(
         &self,
         store: &impl SessionStore<T>,
-    ) -> Result<(), tower_sesh_core::store::Error> {
+    ) -> Result<SyncAction, tower_sesh_core::store::Error> {
         // We have to `take` here, since borrowing requires holding the mutex
         // lock across an await point, which would make the future returned by
         // this function `!Send`.
@@ -224,22 +229,23 @@ impl<T> Session<T> {
 
         // FIXME: Action should be based on `status`.
         // FIXME: Determine proper `ttl`.
-        match (&data, &session_key) {
+        match (data, session_key) {
             (Some(data), Some(session_key)) => {
                 let ttl = now() + Duration::from_secs(10 * 60 * 60);
-                store.update(session_key, data, ttl).await?;
+                store.update(&session_key, &data, ttl).await?;
+                Ok(SyncAction::Set(session_key))
             }
             (Some(data), None) => {
                 let ttl = now() + Duration::from_secs(10 * 60 * 60);
-                store.create(data, ttl).await?;
+                let session_key = store.create(&data, ttl).await?;
+                Ok(SyncAction::Set(session_key))
             }
             (None, Some(key)) => {
-                store.delete(key).await?;
+                store.delete(&key).await?;
+                Ok(SyncAction::Remove)
             }
-            (None, None) => {}
+            (None, None) => Ok(SyncAction::None),
         }
-
-        Ok(())
     }
 
     #[inline]
@@ -253,6 +259,18 @@ impl<T> Session<T> {
 
         lock
     }
+}
+
+/// Which action was performed by `Session::sync`.
+pub(crate) enum SyncAction {
+    /// The session was created, updated, or renewed with the session key.
+    Set(SessionKey),
+
+    /// The session was removed.
+    Remove,
+
+    /// The session was unmodified. No action was performed.
+    None,
 }
 
 impl<T> Clone for Session<T> {
