@@ -250,7 +250,7 @@ impl<T> Session<T> {
                 Ok(SyncAction::None)
             }
             (Taken, _, _) => {
-                unimplemented!("`Session::sync` called in `Taken` state. This is a bug.")
+                unreachable!("`Session::sync` called in `Taken` state. This is a bug.")
             }
         }
     }
