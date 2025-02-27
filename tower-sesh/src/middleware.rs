@@ -51,7 +51,7 @@ pub(crate) struct Config {
     pub(crate) domain: Option<Cow<'static, str>>,
     pub(crate) http_only: bool,
     pub(crate) path: Option<Cow<'static, str>>,
-    pub(crate) same_site: SameSite,
+    pub(crate) same_site: cookie::SameSite,
     pub(crate) secure: bool,
     pub(crate) session_config: SessionConfig,
 }
@@ -73,7 +73,7 @@ impl Default for Config {
             domain: None,
             http_only: true,
             path: None,
-            same_site: SameSite::Strict,
+            same_site: cookie::SameSite::Strict,
             secure: true,
             session_config: SessionConfig::default(),
         }
@@ -306,7 +306,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, &key).same_site(SameSite::Strict);
     /// ```
     pub fn same_site(mut self, same_site: SameSite) -> Self {
-        self.config.same_site = same_site;
+        self.config.same_site = same_site.into_cookie_same_site();
         self
     }
 
