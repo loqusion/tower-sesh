@@ -1,10 +1,11 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
 use cookie::Cookie;
 use http::{header, HeaderValue, Request};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
+use tower_sesh_core::{store::SessionStoreImpl, time::now, SessionKey};
 
 #[tokio::test]
 #[should_panic = "called more than once!"]
@@ -57,4 +58,48 @@ async fn preserves_existing_set_cookie() {
     }
 
     assert!(names.contains("hello"));
+}
+
+#[tokio::test]
+async fn extracts_cookie_from_many_in_header() {
+    async fn handler(session: Session<()>) -> impl IntoResponse {
+        assert!(session.get().is_some());
+    }
+
+    let store = Arc::new(MemoryStore::<()>::new());
+
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(SessionLayer::plain(Arc::clone(&store)).cookie_name("id"));
+
+    let key = SessionKey::try_from(1).unwrap();
+    store
+        .update(&key, &(), now() + Duration::from_secs(30))
+        .await
+        .unwrap();
+
+    let sample_cookies = [Cookie::new("hello", "world"), Cookie::new("foo", "bar")];
+    let session_cookie = Cookie::new("id", key.encode());
+
+    for cookies in [
+        [&session_cookie, &sample_cookies[0], &sample_cookies[1]],
+        [&sample_cookies[0], &session_cookie, &sample_cookies[1]],
+        [&sample_cookies[0], &sample_cookies[1], &session_cookie],
+    ] {
+        let mut header_values = cookies
+            .iter()
+            .map(|cookie| cookie.encoded().to_string().parse::<HeaderValue>())
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+            .into_iter();
+        dbg!(&key.encode());
+        let req = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, header_values.next().unwrap())
+            .header(header::COOKIE, header_values.next().unwrap())
+            .header(header::COOKIE, header_values.next().unwrap())
+            .body(Body::empty())
+            .unwrap();
+        app.clone().oneshot(req).await.unwrap();
+    }
 }
