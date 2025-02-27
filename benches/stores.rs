@@ -315,7 +315,7 @@ where
     F2: Fn() -> Ttl,
 {
     let keys = (1..=n.try_into().unwrap())
-        .map(SessionKey::try_from_u128)
+        .map(SessionKey::try_from)
         .collect::<Result<Vec<_>, _>>()
         .unwrap();
 
