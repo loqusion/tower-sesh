@@ -15,8 +15,6 @@ use tower_sesh_core::{
 mod common;
 use common::ErrStore;
 
-const ERROR_MESSAGE: &str = "`ErrStore` always returns an error";
-
 #[tokio::test]
 #[should_panic = "missing request extension"]
 async fn session_extractor_without_layer() {
@@ -56,5 +54,7 @@ async fn ignores_deserialization_error() {
 }
 
 fn serde_err_store<T>() -> Arc<ErrStore<T>> {
-    Arc::new(ErrStore::new(|| store::Error::serde(ERROR_MESSAGE)))
+    Arc::new(ErrStore::new(|| {
+        store::Error::serde("`ErrStore` always returns an error")
+    }))
 }
