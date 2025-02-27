@@ -224,27 +224,34 @@ impl<T> Session<T> {
             data,
             session_key,
             expires_at: _expires_at,
-            status: _status,
+            status,
         } = self.inner.lock().take();
 
-        // FIXME: Action should be based on `status`.
         // FIXME: Determine proper `ttl`.
-        match (data, session_key) {
-            (Some(data), Some(session_key)) => {
-                let ttl = now() + Duration::from_secs(10 * 60 * 60);
+        let ttl = now() + Duration::from_secs(10 * 60 * 60);
+        match (status, session_key, data) {
+            (Renewed, Some(session_key), _) => {
+                store.update_ttl(&session_key, ttl).await?;
+                Ok(SyncAction::Set(session_key))
+            }
+            (Changed, Some(session_key), Some(data)) => {
                 store.update(&session_key, &data, ttl).await?;
                 Ok(SyncAction::Set(session_key))
             }
-            (Some(data), None) => {
-                let ttl = now() + Duration::from_secs(10 * 60 * 60);
+            (Changed, None, Some(data)) => {
                 let session_key = store.create(&data, ttl).await?;
                 Ok(SyncAction::Set(session_key))
             }
-            (None, Some(key)) => {
-                store.delete(&key).await?;
+            (Changed, Some(session_key), None) | (Purged, Some(session_key), _) => {
+                store.delete(&session_key).await?;
                 Ok(SyncAction::Remove)
             }
-            (None, None) => Ok(SyncAction::None),
+            (Unchanged, _, _) | (Renewed, None, _) | (Changed, None, None) | (Purged, None, _) => {
+                Ok(SyncAction::None)
+            }
+            (Taken, _, _) => {
+                unimplemented!("`Session::sync` called in `Taken` state. This is a bug.")
+            }
         }
     }
 
