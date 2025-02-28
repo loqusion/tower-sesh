@@ -31,6 +31,32 @@ pub mod _draft {
     //! [`RedisStore`]: https://docs.rs/tower-sesh-store-redis
     //! [`SqlxStore`]: https://docs.rs/tower-sesh-store-sqlx
     //! [Redis persistence]: https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/
+    //!
+    //! # Feature flags
+    //!
+    //! The following crate [feature flags] are available:
+    //!
+    //! - `axum`: Enables the [`Session`] [extractor] (for use with [`axum`]).
+    //! - `log`: Causes trace instrumentation points to emit [`log`] records
+    //!   (for compatibility with the `log` crate).
+    //! - `memory-store`: Enables [`MemoryStore`].
+    //! - `tracing`: Enables [`tracing`] output. In order to record trace
+    //!   events, you must use a [`Subscriber`] implementation, such as one
+    //!   provided by the [`tracing-subscriber`] crate. Alternatively, you can
+    //!   enable this crate's `log` feature and use a logger compatible with
+    //!   the `log` crate.
+    //! - `value`: Enables the [`Value`] enum, a loosely typed value.
+    //!
+    //! [feature flags]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
+    //! [`Session`]: crate::Session
+    //! [extractor]: https://docs.rs/axum/latest/axum/extract/index.html
+    //! [`axum`]: https://docs.rs/axum
+    //! [`MemoryStore`]: crate::store::MemoryStore
+    //! [`tracing`]: https://docs.rs/tracing
+    //! [`Subscriber`]: https://docs.rs/tracing-core/latest/tracing_core/subscriber/trait.Subscriber.html
+    //! [`tracing-subscriber`]: https://docs.rs/tracing-subscriber
+    //! [`log`]: https://docs.rs/log
+    //! [`Value`]: crate::Value
 }
 
 #[doc(inline)]
