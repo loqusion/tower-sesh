@@ -16,6 +16,7 @@ rust-version.workspace = true
 [features]
 default = ["axum", "memory-store", "tracing", "value"]
 
+log = ["tracing", "tracing/log"]
 memory-store = ["dep:dashmap"]
 value = ["dep:itoa", "dep:ryu", "dep:serde"]
 
