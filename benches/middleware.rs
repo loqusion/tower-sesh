@@ -27,6 +27,101 @@ const NUM_KEYS_ERROR_MESSAGE: &str = "\
     lower the iteration count with `sample_count` or `sample_size`, or increase `NUM_KEYS`\
 ";
 
+mod tower_sessions_compat {
+    use std::collections::HashMap;
+
+    use async_trait::async_trait;
+    use tower_sesh::store::MemoryStore as BaseMemoryStore;
+    use tower_sesh_core::store::SessionStoreImpl as _;
+    use tower_sessions::session_store::Result;
+
+    pub use tower_sessions::{
+        session::{Id, Record},
+        Session, SessionManagerLayer, SessionStore,
+    };
+
+    pub trait SessionStoreInit: SessionStore + Clone {
+        fn init() -> Self;
+    }
+
+    /// It's unfair to compare using `tower-sessions`'s `MemoryStore`, since it
+    /// uses a `Mutex<HashMap>` and we use a `dashmap::DashMap`.
+    #[derive(Debug, Default)]
+    pub struct MemoryStore(BaseMemoryStore<HashMap<String, serde_json::Value>>);
+
+    /// This is needed because `SessionManagerLayer` uses the derive macro,
+    /// which requires its generic parameters to implement `Clone` even if this
+    /// is not actually required
+    impl Clone for MemoryStore {
+        fn clone(&self) -> Self {
+            unimplemented!()
+        }
+    }
+
+    impl SessionStoreInit for MemoryStore {
+        fn init() -> Self {
+            MemoryStore(BaseMemoryStore::new())
+        }
+    }
+
+    #[async_trait]
+    impl SessionStore for MemoryStore {
+        async fn create(&self, session_record: &mut Record) -> Result<()> {
+            let Record {
+                id: _id,
+                data,
+                expiry_date,
+            } = session_record;
+
+            self.0.create(data, *expiry_date).await.unwrap();
+
+            Ok(())
+        }
+
+        async fn save(&self, session_record: &Record) -> Result<()> {
+            let Record {
+                id,
+                data,
+                expiry_date,
+            } = session_record;
+
+            let key = id_to_key(*id);
+            self.0.update(&key, data, *expiry_date).await.unwrap();
+
+            Ok(())
+        }
+
+        async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
+            let key = id_to_key(*session_id);
+            Ok(self.0.load(&key).await.unwrap().map(|record| Record {
+                id: *session_id,
+                data: record.data,
+                expiry_date: record.ttl,
+            }))
+        }
+
+        async fn delete(&self, session_id: &Id) -> Result<()> {
+            let key = id_to_key(*session_id);
+            self.0.delete(&key).await.unwrap();
+
+            Ok(())
+        }
+    }
+
+    #[inline]
+    fn id_to_key(id: Id) -> tower_sesh_core::SessionKey {
+        let inner = id.0 as u128;
+        tower_sesh_core::SessionKey::try_from(inner).unwrap_or_else(
+            #[cold]
+            |_| {
+                unimplemented!(
+                    "Invalid `Id` to `SessionKey` conversion. Try running the benchmarks again."
+                )
+            },
+        )
+    }
+}
+
 trait SessionStoreInit<T>: SessionStore<T> {
     fn init() -> Self;
 }
@@ -596,100 +691,5 @@ where
     #[track_caller]
     fn next(&self) -> Option<T> {
         self.iter.lock().unwrap().next()
-    }
-}
-
-mod tower_sessions_compat {
-    use std::collections::HashMap;
-
-    use async_trait::async_trait;
-    use tower_sesh::store::MemoryStore as BaseMemoryStore;
-    use tower_sesh_core::store::SessionStoreImpl as _;
-    use tower_sessions::session_store::Result;
-
-    pub use tower_sessions::{
-        session::{Id, Record},
-        Session, SessionManagerLayer, SessionStore,
-    };
-
-    pub trait SessionStoreInit: SessionStore + Clone {
-        fn init() -> Self;
-    }
-
-    /// It's unfair to compare using `tower-sessions`'s `MemoryStore`, since it
-    /// uses a `Mutex<HashMap>` and we use a `dashmap::DashMap`.
-    #[derive(Debug, Default)]
-    pub struct MemoryStore(BaseMemoryStore<HashMap<String, serde_json::Value>>);
-
-    /// This is needed because `SessionManagerLayer` uses the derive macro,
-    /// which requires its generic parameters to implement `Clone` even if this
-    /// is not actually required
-    impl Clone for MemoryStore {
-        fn clone(&self) -> Self {
-            unimplemented!()
-        }
-    }
-
-    impl SessionStoreInit for MemoryStore {
-        fn init() -> Self {
-            MemoryStore(BaseMemoryStore::new())
-        }
-    }
-
-    #[async_trait]
-    impl SessionStore for MemoryStore {
-        async fn create(&self, session_record: &mut Record) -> Result<()> {
-            let Record {
-                id: _id,
-                data,
-                expiry_date,
-            } = session_record;
-
-            self.0.create(data, *expiry_date).await.unwrap();
-
-            Ok(())
-        }
-
-        async fn save(&self, session_record: &Record) -> Result<()> {
-            let Record {
-                id,
-                data,
-                expiry_date,
-            } = session_record;
-
-            let key = id_to_key(*id);
-            self.0.update(&key, data, *expiry_date).await.unwrap();
-
-            Ok(())
-        }
-
-        async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
-            let key = id_to_key(*session_id);
-            Ok(self.0.load(&key).await.unwrap().map(|record| Record {
-                id: *session_id,
-                data: record.data,
-                expiry_date: record.ttl,
-            }))
-        }
-
-        async fn delete(&self, session_id: &Id) -> Result<()> {
-            let key = id_to_key(*session_id);
-            self.0.delete(&key).await.unwrap();
-
-            Ok(())
-        }
-    }
-
-    #[inline]
-    fn id_to_key(id: Id) -> tower_sesh_core::SessionKey {
-        let inner = id.0 as u128;
-        tower_sesh_core::SessionKey::try_from(inner).unwrap_or_else(
-            #[cold]
-            |_| {
-                unimplemented!(
-                    "Invalid `Id` to `SessionKey` conversion. Try running the benchmarks again."
-                )
-            },
-        )
     }
 }
