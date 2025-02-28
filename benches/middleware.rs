@@ -443,7 +443,7 @@ mod load_and_use {
             .unwrap();
         }
 
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store);
+        let layer = tower_sessions_compat::SessionManagerLayer::new(store).with_name("id");
 
         async fn handler(session: tower_sessions_compat::Session) {
             let data = session.get::<SessionData>(SessionData::KEY).await.unwrap();
@@ -548,7 +548,7 @@ mod load_and_update {
             .unwrap();
         }
 
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store);
+        let layer = tower_sessions_compat::SessionManagerLayer::new(store).with_name("id");
 
         async fn handler(session: tower_sessions_compat::Session) {
             let mut data = session
