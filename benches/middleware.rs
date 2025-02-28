@@ -93,11 +93,13 @@ mod tower_sessions_compat {
 
         async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
             let key = id_to_key(*session_id);
-            Ok(self.0.load(&key).await.unwrap().map(|record| Record {
+            let record = self.0.load(&key).await.unwrap().map(|record| Record {
                 id: *session_id,
                 data: record.data,
                 expiry_date: record.ttl,
-            }))
+            });
+
+            Ok(record)
         }
 
         async fn delete(&self, session_id: &Id) -> Result<()> {
