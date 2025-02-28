@@ -36,16 +36,20 @@ pub mod _draft {
     //!
     //! The following crate [feature flags] are available:
     //!
-    //! - `axum`: Enables the [`Session`] [extractor] (for use with [`axum`]).
+    //! - `axum` *(enabled by default)*: Enables the [`Session`] [extractor]
+    //!   (for use with [`axum`]).
     //! - `log`: Causes trace instrumentation points to emit [`log`] records
     //!   (for compatibility with the `log` crate).
-    //! - `memory-store`: Enables [`MemoryStore`].
-    //! - `tracing`: Enables [`tracing`] output. In order to record trace
-    //!   events, you must use a [`Subscriber`] implementation, such as one
-    //!   provided by the [`tracing-subscriber`] crate. Alternatively, you can
-    //!   enable this crate's `log` feature and use a logger compatible with
-    //!   the `log` crate.
-    //! - `value`: Enables the [`Value`] enum, a loosely typed value.
+    //! - `memory-store` *(enabled by default)*: Enables [`MemoryStore`].
+    //! - `tracing` *(enabled by default)*: Enables [`tracing`] output. In order
+    //!   to record trace events, you must use a [`Subscriber`] implementation,
+    //!   such as one provided by the [`tracing-subscriber`] crate.
+    //!   Alternatively, you can enable this crate's `log` feature and use a
+    //!   logger compatible with the `log` crate.
+    //! - `value` *(enabled by default)*: Enables the [`Value`] enum, a loosely
+    //!   typed value.
+    //!
+    //! TODO: Don't enable `value` by default.
     //!
     //! [feature flags]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
     //! [`Session`]: crate::Session
