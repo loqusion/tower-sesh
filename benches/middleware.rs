@@ -9,8 +9,9 @@ use std::{
 use axum::{body::Body, routing, Router};
 use divan::black_box;
 use http::{header, Request};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use time::OffsetDateTime;
+use time::{Date, Month, OffsetDateTime, Time};
 use tower::ServiceExt;
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
 use tower_sesh_core::{time::now, SessionKey, SessionStore};
@@ -39,23 +40,123 @@ where
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+type DbId = u64;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct SessionData {
-    #[allow(dead_code)]
+    user_id: DbId,
+    authenticated: bool,
+    roles: Vec<String>,
+    preferences: Preferences,
+    cart: Vec<CartItem>,
+    csrf_token: String,
+    flash_messages: Vec<String>,
+    rate_limit: RateLimit,
+    workflow_state: WorkflowState,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Preferences {
+    theme: Theme,
+    language: Language,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+enum Theme {
+    Light,
+    Dark,
+}
+
+/// The two languages
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum Language {
+    #[serde(alias = "en-US")]
+    EnUs,
+    #[serde(alias = "en-GB")]
+    EnGb,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct CartItem {
+    item_id: DbId,
     name: String,
-    num: u64,
+    quantity: u64,
+    price: Decimal,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct RateLimit {
+    failed_login_attempts: u64,
+    #[serde(with = "time::serde::rfc3339")]
+    last_attempt: OffsetDateTime,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct WorkflowState {
+    step: u64,
+    total_steps: u64,
+    data: WorkflowData,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct WorkflowData {
+    address: String,
 }
 
 impl SessionData {
+    /// Key for the `tower-sessions` hash map.
+    ///
+    /// See https://docs.rs/tower-sessions/latest/tower_sessions/#strongly-typed-sessions
+    const KEY: &str = "data";
+
     fn sample() -> Self {
-        Self {
-            name: "Hello, World!".to_owned(),
-            num: 0,
+        SessionData {
+            user_id: 12345,
+            authenticated: true,
+            roles: vec!["admin".to_owned(), "editor".to_owned()],
+            preferences: Preferences {
+                theme: Theme::Dark,
+                language: Language::EnUs,
+            },
+            cart: vec![
+                CartItem {
+                    item_id: 101,
+                    name: "Laptop".to_owned(),
+                    quantity: 1,
+                    price: Decimal::new(99999, 2),
+                },
+                CartItem {
+                    item_id: 202,
+                    name: "Mouse".to_owned(),
+                    quantity: 2,
+                    price: Decimal::new(2550, 2),
+                },
+            ],
+            csrf_token: "abc123xyz".to_owned(),
+            flash_messages: vec![
+                "Welcome back!".to_owned(),
+                "Your order has been placed successfully.".to_owned(),
+            ],
+            rate_limit: RateLimit {
+                failed_login_attempts: 1,
+                last_attempt: OffsetDateTime::new_utc(
+                    Date::from_calendar_date(2025, Month::February, 28).unwrap(),
+                    Time::from_hms(0, 34, 56).unwrap(),
+                ),
+            },
+            workflow_state: WorkflowState {
+                step: 2,
+                total_steps: 5,
+                data: WorkflowData {
+                    address: "123 Main St, NY".to_owned(),
+                },
+            },
         }
     }
 
     fn modify(&mut self) {
-        self.num = self.num.wrapping_add(1);
+        self.workflow_state.step = self.workflow_state.step.wrapping_add(1);
     }
 }
 
@@ -232,13 +333,12 @@ mod load_and_use {
         let rt = build_rt();
         let store = S::init();
 
-        const DATA_KEY: &str = "hello";
         let ids = ids();
         for id in &ids {
             rt.block_on(store.save(&tower_sessions_compat::Record {
                 id: *id,
                 data: HashMap::from([(
-                    DATA_KEY.to_owned(),
+                    SessionData::KEY.to_owned(),
                     serde_json::to_value(SessionData::sample()).unwrap(),
                 )]),
                 expiry_date: time_now() + Duration::from_secs(100),
@@ -249,7 +349,7 @@ mod load_and_use {
         let layer = tower_sessions_compat::SessionManagerLayer::new(store);
 
         async fn handler(session: tower_sessions_compat::Session) {
-            let data = session.get::<SessionData>(DATA_KEY).await.unwrap();
+            let data = session.get::<SessionData>(SessionData::KEY).await.unwrap();
             black_box(&data);
         }
 
@@ -299,7 +399,7 @@ mod load_and_update {
         }
 
         async fn handler(session: Session<SessionData>) {
-            let mut data = session.get_or_insert_default();
+            let mut data = session.get_or_insert_with(SessionData::sample);
             // For parity with `tower-sessions`
             data.modify();
         }
@@ -338,13 +438,12 @@ mod load_and_update {
         let rt = build_rt();
         let store = S::init();
 
-        const DATA_KEY: &str = "hello";
         let ids = ids();
         for id in &ids {
             rt.block_on(store.save(&tower_sessions_compat::Record {
                 id: *id,
                 data: HashMap::from([(
-                    DATA_KEY.to_owned(),
+                    SessionData::KEY.to_owned(),
                     serde_json::to_value(SessionData::sample()).unwrap(),
                 )]),
                 expiry_date: time_now() + Duration::from_secs(10),
@@ -355,10 +454,14 @@ mod load_and_update {
         let layer = tower_sessions_compat::SessionManagerLayer::new(store);
 
         async fn handler(session: tower_sessions_compat::Session) {
-            let mut data = session.get::<SessionData>(DATA_KEY).await.unwrap().unwrap();
+            let mut data = session
+                .get::<SessionData>(SessionData::KEY)
+                .await
+                .unwrap()
+                .unwrap();
             // We must actually modify the data, or else it will not register as modified
             data.modify();
-            session.insert(DATA_KEY, data).await.unwrap();
+            session.insert(SessionData::KEY, data).await.unwrap();
         }
 
         let app = Router::new().route("/", routing::get(handler)).layer(layer);
@@ -427,7 +530,7 @@ mod create {
 
         async fn handler(session: tower_sessions_compat::Session) {
             session
-                .insert("hello", SessionData::sample())
+                .insert(SessionData::KEY, SessionData::sample())
                 .await
                 .unwrap();
         }
