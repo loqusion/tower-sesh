@@ -100,11 +100,13 @@ impl<T> Inner<T> {
         matches!(self.status, Taken)
     }
 
+    /// Similar to [`Option::take`], the fields are taken out of the struct and
+    /// returned, leaving a "taken" state in its place.
     #[inline]
-    fn take(&mut self) -> Self {
+    fn take(&mut self) -> Inner<T> {
         std::mem::replace(
             self,
-            Self {
+            Inner {
                 session_key: None,
                 data: None,
                 expires_at: None,
@@ -212,6 +214,10 @@ impl<T> Session<T> {
     /// If no store errors occur, a [`SyncAction`] is returned.
     ///
     /// If a store error occurs, it is propagated.
+    ///
+    /// # Panics
+    ///
+    /// If this function is called and awaited more than once, it will panic.
     pub(crate) async fn sync(
         &self,
         store: &impl SessionStore<T>,
