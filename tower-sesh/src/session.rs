@@ -95,12 +95,10 @@ impl<T> Inner<T> {
     }
 
     #[cfg(feature = "tracing")]
-    #[inline]
     fn is_taken(&self) -> bool {
         matches!(self.status, Taken)
     }
 
-    #[inline]
     fn take(&mut self) -> Self {
         std::mem::replace(
             self,
@@ -115,7 +113,6 @@ impl<T> Inner<T> {
 }
 
 impl<T> Session<T> {
-    #[inline]
     fn from_inner(inner: Inner<T>) -> Session<T> {
         Session {
             inner: Arc::new(Mutex::new(inner)),
@@ -255,7 +252,6 @@ impl<T> Session<T> {
         }
     }
 
-    #[inline]
     fn lock(&self) -> MutexGuard<'_, Inner<T>> {
         let lock = self.inner.lock();
 
@@ -331,7 +327,6 @@ impl<'a, T: 'a> SessionGuard<'a, T> {
     ///
     /// The caller of this method must ensure that `guard.data` is a
     /// `Some` variant.
-    #[inline]
     #[track_caller]
     unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         debug_assert!(guard.data.is_some());
@@ -362,7 +357,6 @@ impl<'a, T: 'a> DerefMut for SessionGuard<'a, T> {
 }
 
 impl<'a, T: 'a> OptionSessionGuard<'a, T> {
-    #[inline]
     fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
         OptionSessionGuard(guard)
     }
@@ -478,7 +472,6 @@ pub(crate) mod lazy {
     where
         T: 'static,
     {
-        #[inline]
         fn new(
             cookie: Cookie<'static>,
             store: Arc<impl SessionStore<T>>,
@@ -492,7 +485,6 @@ pub(crate) mod lazy {
             }
         }
 
-        #[inline]
         fn empty() -> LazySession<T> {
             LazySession::Empty {
                 session_cell: Arc::new(OnceCell::new()),

@@ -66,7 +66,6 @@ impl Default for Config {
     /// Defaults are based on [OWASP recommendations].
     ///
     /// [OWASP recommendations]: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies
-    #[inline]
     fn default() -> Self {
         Config {
             cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
@@ -80,8 +79,8 @@ impl Default for Config {
     }
 }
 
+#[allow(clippy::derivable_impls)]
 impl Default for SessionConfig {
-    #[inline]
     fn default() -> Self {
         SessionConfig {}
     }
@@ -425,7 +424,6 @@ impl Config {
         cookie.build()
     }
 
-    #[inline]
     fn cookie_removal(self) -> Cookie<'static> {
         let mut cookie = Cookie::new(self.cookie_name, "");
         cookie.make_removal();
@@ -496,7 +494,6 @@ where
     }
 }
 
-#[inline]
 fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) {
     match HeaderValue::from_str(&cookie.encoded().to_string()) {
         Ok(header_value) => {
