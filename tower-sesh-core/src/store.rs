@@ -96,12 +96,14 @@ pub struct Error {
 /// Represents all the ways a [`SessionStore`] method can fail.
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Error occurred while interacting with the underlying storage mechanism.
-    Store(Box<dyn StdError + Send + Sync>),
-    /// Error occurred while serializing/deserializing.
-    Serde(Box<dyn StdError + Send + Sync>),
     /// Catchall error message
     Message(Box<str>),
+
+    /// Error occurred while interacting with the underlying storage mechanism.
+    Store(Box<dyn StdError + Send + Sync>),
+
+    /// Error occurred while serializing/deserializing.
+    Serde(Box<dyn StdError + Send + Sync>),
 }
 
 impl Error {
