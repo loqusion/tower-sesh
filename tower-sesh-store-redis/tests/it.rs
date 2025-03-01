@@ -21,7 +21,7 @@ use tower_sesh_store_redis::RedisStore;
 pub fn test_key() -> SessionKey {
     static KEY_STATE: AtomicU64 = AtomicU64::new(1);
     let v = KEY_STATE.fetch_add(1, atomic::Ordering::SeqCst) as u128;
-    SessionKey::try_from_u128(v).unwrap()
+    SessionKey::try_from(v).unwrap()
 }
 
 async fn store<T>() -> RedisStore<T> {

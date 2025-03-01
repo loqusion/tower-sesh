@@ -106,25 +106,6 @@ impl From<SessionKey> for NonZeroU128 {
     }
 }
 
-impl SessionKey {
-    // Not public API. Only tests use this.
-    #[doc(hidden)]
-    #[inline]
-    #[deprecated = "use `SessionKey::from` instead"]
-    pub fn from_non_zero_u128(value: NonZeroU128) -> SessionKey {
-        SessionKey(value)
-    }
-
-    // Not public API. Only tests use this.
-    #[doc(hidden)]
-    #[inline]
-    #[deprecated = "use `SessionKey::try_from` instead"]
-    #[allow(deprecated)]
-    pub fn try_from_u128(value: u128) -> Result<SessionKey, std::num::TryFromIntError> {
-        value.try_into().map(SessionKey::from_non_zero_u128)
-    }
-}
-
 /// The error type returned when decoding a session key fails.
 #[derive(Debug)]
 pub enum DecodeSessionKeyError {
