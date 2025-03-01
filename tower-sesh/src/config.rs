@@ -104,18 +104,22 @@ impl PrivateCookie {
 }
 
 impl CookieSecurity for SignedCookie {
+    #[inline]
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>> {
         jar.signed(&self.key).get(name)
     }
 
+    #[inline]
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.signed_mut(&self.key).add(cookie)
     }
 
+    #[inline]
     fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.signed_mut(&self.key).remove(cookie)
     }
 
+    #[inline]
     fn into_key(self) -> Key {
         self.key
     }
@@ -123,18 +127,22 @@ impl CookieSecurity for SignedCookie {
 impl private::Sealed for SignedCookie {}
 
 impl CookieSecurity for PrivateCookie {
+    #[inline]
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>> {
         jar.private(&self.key).get(name)
     }
 
+    #[inline]
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.private_mut(&self.key).add(cookie)
     }
 
+    #[inline]
     fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.private_mut(&self.key).remove(cookie)
     }
 
+    #[inline]
     fn into_key(self) -> Key {
         self.key
     }
@@ -142,18 +150,22 @@ impl CookieSecurity for PrivateCookie {
 impl private::Sealed for PrivateCookie {}
 
 impl CookieSecurity for PlainCookie {
+    #[inline]
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>> {
         jar.get(name).cloned()
     }
 
+    #[inline]
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.add(cookie)
     }
 
+    #[inline]
     fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.remove(cookie)
     }
 
+    #[inline]
     #[track_caller]
     fn into_key(self) -> Key {
         unimplemented!("use `SessionLayer::new()` to sign or encrypt cookies")

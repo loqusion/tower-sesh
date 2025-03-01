@@ -107,6 +107,7 @@ pub enum ErrorKind {
 }
 
 impl Error {
+    #[inline]
     fn new(kind: ErrorKind) -> Error {
         Error { kind }
     }
