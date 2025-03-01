@@ -18,6 +18,7 @@ use tower_sesh_store_redis::RedisStore;
 /// Actually, a CSPRNG is suitable for this purpose, as collisions for
 /// values in the range 1..2^128 are _exceedingly_ rare. Still, the
 /// probability of collision is non-zero.
+// TODO: Use a seeded PRNG instead. `RedisStore` already allows this.
 pub fn test_key() -> SessionKey {
     static KEY_STATE: AtomicU64 = AtomicU64::new(1);
     let v = KEY_STATE.fetch_add(1, atomic::Ordering::SeqCst) as u128;
