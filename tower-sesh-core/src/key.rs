@@ -43,6 +43,7 @@ impl SessionKey {
     /// `-` and `_`) specified in [RFC 4648].
     ///
     /// [RFC 4648]: https://datatracker.ietf.org/doc/html/rfc4648#section-5
+    #[inline]
     #[must_use]
     pub fn encode(&self) -> String {
         SessionKey::BASE64_ENGINE.encode(self.0.get().to_le_bytes())

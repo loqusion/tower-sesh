@@ -342,6 +342,7 @@ impl<'a, T: 'a> SessionGuard<'a, T> {
 impl<'a, T: 'a> Deref for SessionGuard<'a, T> {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
         // to `None`.
@@ -350,6 +351,7 @@ impl<'a, T: 'a> Deref for SessionGuard<'a, T> {
 }
 
 impl<'a, T: 'a> DerefMut for SessionGuard<'a, T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.changed();
 
@@ -369,12 +371,14 @@ impl<'a, T: 'a> OptionSessionGuard<'a, T> {
 impl<'a, T: 'a> Deref for OptionSessionGuard<'a, T> {
     type Target = Option<T>;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0.data
     }
 }
 
 impl<'a, T: 'a> DerefMut for OptionSessionGuard<'a, T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.changed();
 

@@ -18,6 +18,7 @@ pub const DEFAULT_SESSION_EXPIRY_SECONDS: u32 = 2 * WEEK_IN_SECONDS;
 /// instead.
 ///
 /// [`now_utc`]: Ttl::now_utc
+#[inline]
 pub fn now() -> Ttl {
     Ttl::now_local().unwrap_or_else(|_| Ttl::now_utc())
 }

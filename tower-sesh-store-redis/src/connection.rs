@@ -87,6 +87,7 @@ impl ConnectionLike for ConnectionManagerWithRetry {
         .boxed()
     }
 
+    #[inline]
     fn get_db(&self) -> i64 {
         self.0.get_db()
     }
