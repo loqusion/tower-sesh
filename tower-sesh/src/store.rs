@@ -11,6 +11,8 @@ use tower_sesh_core::{
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
+const MAX_ITERATIONS: usize = 8;
+
 #[cfg(feature = "memory-store")]
 pub struct MemoryStore<T> {
     map: DashMap<SessionKey, Record<T>>,
@@ -49,9 +51,22 @@ where
     T: 'static + Send + Sync + Clone,
 {
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
-        let session_key = rand::random();
-        self.update(&session_key, data, ttl).await?;
-        Ok(session_key)
+        let record = Record::new(data.clone(), ttl);
+
+        // Collision resolution
+        // (This is statistically improbable for a sufficiently large session key)
+        for _ in 0..MAX_ITERATIONS {
+            let session_key = rand::random::<SessionKey>();
+            match self.map.entry(session_key.clone()) {
+                dashmap::Entry::Vacant(entry) => {
+                    entry.insert(record);
+                    return Ok(session_key);
+                }
+                dashmap::Entry::Occupied(_) => continue,
+            }
+        }
+
+        Err(err_max_iterations_reached())
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
@@ -80,6 +95,11 @@ where
         self.map.remove(session_key);
         Ok(())
     }
+}
+
+#[cold]
+fn err_max_iterations_reached() -> Error {
+    Error::message("max iterations reached when handling session key collisions")
 }
 
 pub struct CachingStore<T, Cache: SessionStore<T>, Store: SessionStore<T>> {
