@@ -13,10 +13,11 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use time::{Date, Month, OffsetDateTime, Time};
 use tower::ServiceExt;
-use tower_sesh::{store::MemoryStore, Session, SessionLayer};
-use tower_sesh_core::{time::now, SessionKey, SessionStore};
+use tower_sesh::{Session, SessionLayer};
+use tower_sesh_core::{time::now, SessionKey};
 
 use build_multi_rt as build_rt;
+use common::{tower_sesh_impl, tower_sessions_impl};
 
 const THREADS: &[usize] = &[0, 1, 2, 4, 8, 16];
 
@@ -27,113 +28,180 @@ const NUM_KEYS_ERROR_MESSAGE: &str = "\
     lower the iteration count with `sample_count` or `sample_size`, or increase `NUM_KEYS`\
 ";
 
-mod tower_sessions_compat {
-    use std::collections::HashMap;
+mod common {
+    use std::hash::Hash;
 
-    use async_trait::async_trait;
-    use tower_sesh::store::MemoryStore as BaseMemoryStore;
-    use tower_sesh_core::store::SessionStoreImpl as _;
-    use tower_sessions::session_store::Result;
+    use dashmap::DashMap;
 
-    pub use tower_sessions::{
-        session::{Id, Record},
-        Session, SessionManagerLayer, SessionStore,
-    };
-
-    pub trait SessionStoreInit: SessionStore + Clone {
-        fn init() -> Self;
+    /// A common store implementation used for both `tower-sesh` and `tower-sessions`
+    /// so we can get a fair comparison
+    pub struct MemoryStore<K, V> {
+        map: DashMap<K, V>,
     }
 
-    /// It's unfair to compare using `tower-sessions`'s `MemoryStore`, since it
-    /// uses a `Mutex<HashMap>` and we use a `dashmap::DashMap`.
-    #[derive(Debug, Default)]
-    pub struct MemoryStore(BaseMemoryStore<HashMap<String, serde_json::Value>>);
+    impl<K, V> std::fmt::Debug for MemoryStore<K, V> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("MemoryStore { .. }")
+        }
+    }
 
-    /// This is needed because `SessionManagerLayer` uses the derive macro,
-    /// which requires its generic parameters to implement `Clone` even if this
-    /// is not actually required
-    impl Clone for MemoryStore {
+    /// This is never actually used: both `tower-sesh` and `tower-sessions` keep
+    /// their stores behind an `Arc` and delegate to `Arc::clone`. This is only
+    /// necessary because `tower-sessions`'s `SessionManagerLayer` uses
+    /// `#[derive(Clone)]`.
+    impl<K, V> Clone for MemoryStore<K, V> {
         fn clone(&self) -> Self {
             unimplemented!()
         }
     }
 
-    impl SessionStoreInit for MemoryStore {
-        fn init() -> Self {
-            MemoryStore(BaseMemoryStore::new())
+    impl<K, V> MemoryStore<K, V>
+    where
+        K: Eq + Hash,
+    {
+        pub fn new() -> Self {
+            MemoryStore {
+                map: DashMap::new(),
+            }
         }
     }
 
-    #[async_trait]
-    impl SessionStore for MemoryStore {
-        async fn create(&self, session_record: &mut Record) -> Result<()> {
-            let Record {
-                id: _id,
-                data,
-                expiry_date,
-            } = session_record;
+    pub mod tower_sesh_impl {
+        use async_trait::async_trait;
+        use tower_sesh_core::{
+            store::{Error, Record, SessionStoreImpl},
+            SessionKey, SessionStore, Ttl,
+        };
 
-            self.0.create(data, *expiry_date).await.unwrap();
+        use crate::time_now;
 
-            Ok(())
+        use super::MemoryStore as MemoryStoreBase;
+
+        pub type MemoryStore<T> = MemoryStoreBase<SessionKey, Record<T>>;
+
+        type Result<T, E = Error> = std::result::Result<T, E>;
+
+        pub trait SessionStoreInit<T>: SessionStore<T> {
+            fn init() -> Self;
         }
 
-        async fn save(&self, session_record: &Record) -> Result<()> {
-            let Record {
-                id,
-                data,
-                expiry_date,
-            } = session_record;
-
-            let key = id_to_key(*id);
-            self.0.update(&key, data, *expiry_date).await.unwrap();
-
-            Ok(())
+        impl<T> SessionStoreInit<T> for MemoryStore<T>
+        where
+            T: Clone + Send + Sync + 'static,
+        {
+            fn init() -> Self {
+                MemoryStore::new()
+            }
         }
 
-        async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
-            let key = id_to_key(*session_id);
-            let record = self.0.load(&key).await.unwrap().map(|record| Record {
-                id: *session_id,
-                data: record.data,
-                expiry_date: record.ttl,
-            });
+        impl<T> SessionStore<T> for MemoryStore<T> where T: Clone + Send + Sync + 'static {}
 
-            Ok(record)
-        }
+        #[async_trait]
+        impl<T> SessionStoreImpl<T> for MemoryStore<T>
+        where
+            T: Clone + Send + Sync + 'static,
+        {
+            async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
+                let record = Record::new(data.clone(), ttl);
 
-        async fn delete(&self, session_id: &Id) -> Result<()> {
-            let key = id_to_key(*session_id);
-            self.0.delete(&key).await.unwrap();
+                let session_key = rand::random::<SessionKey>();
+                match self.map.entry(session_key.clone()) {
+                    dashmap::Entry::Vacant(entry) => {
+                        entry.insert(record);
+                        Ok(session_key)
+                    }
+                    dashmap::Entry::Occupied(_) => {
+                        unreachable!("collisions are not included in benchmarks")
+                    }
+                }
+            }
 
-            Ok(())
+            async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
+                Ok(self
+                    .map
+                    .get(session_key)
+                    .as_deref()
+                    .cloned()
+                    .filter(|record| record.ttl >= time_now()))
+            }
+
+            async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
+                let record = Record::new(data.clone(), ttl);
+                self.map.insert(session_key.clone(), record);
+                Ok(())
+            }
+
+            async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
+                if let Some(mut record) = self.map.get_mut(session_key) {
+                    record.ttl = ttl;
+                }
+                Ok(())
+            }
+
+            async fn delete(&self, session_key: &SessionKey) -> Result<()> {
+                self.map.remove(session_key);
+                Ok(())
+            }
         }
     }
 
-    #[inline]
-    fn id_to_key(id: Id) -> tower_sesh_core::SessionKey {
-        let inner = id.0 as u128;
-        tower_sesh_core::SessionKey::try_from(inner).unwrap_or_else(
-            #[cold]
-            |_| {
-                unimplemented!(
-                    "Invalid `Id` to `SessionKey` conversion. Try running the benchmarks again."
-                )
-            },
-        )
-    }
-}
+    pub mod tower_sessions_impl {
+        use async_trait::async_trait;
+        use tower_sessions::{
+            session::{Id, Record},
+            session_store::Result,
+            SessionStore,
+        };
 
-trait SessionStoreInit<T>: SessionStore<T> {
-    fn init() -> Self;
-}
+        use crate::time_now;
 
-impl<T> SessionStoreInit<T> for MemoryStore<T>
-where
-    T: Clone + Send + Sync + 'static,
-{
-    fn init() -> Self {
-        MemoryStore::new()
+        use super::MemoryStore as MemoryStoreBase;
+
+        pub type MemoryStore = MemoryStoreBase<Id, Record>;
+
+        pub trait SessionStoreInit: SessionStore + Clone {
+            fn init() -> Self;
+        }
+
+        impl SessionStoreInit for MemoryStore {
+            fn init() -> Self {
+                MemoryStore::new()
+            }
+        }
+
+        #[async_trait]
+        impl SessionStore for MemoryStore {
+            async fn create(&self, session_record: &mut Record) -> Result<()> {
+                match self.map.entry(session_record.id) {
+                    dashmap::Entry::Vacant(entry) => {
+                        entry.insert(session_record.clone());
+                        Ok(())
+                    }
+                    dashmap::Entry::Occupied(_) => {
+                        unreachable!("collisions are not included in benchmarks")
+                    }
+                }
+            }
+
+            async fn save(&self, session_record: &Record) -> Result<()> {
+                self.map.insert(session_record.id, session_record.clone());
+                Ok(())
+            }
+
+            async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
+                Ok(self
+                    .map
+                    .get(session_id)
+                    .as_deref()
+                    .cloned()
+                    .filter(|record| record.expiry_date >= time_now()))
+            }
+
+            async fn delete(&self, session_id: &Id) -> Result<()> {
+                self.map.remove(session_id);
+                Ok(())
+            }
+        }
     }
 }
 
@@ -276,9 +344,9 @@ mod baseline {
 
     #[divan::bench(
         name = "tower-sesh",
-        types = [MemoryStore<SessionData>]
+        types = [tower_sesh_impl::MemoryStore<SessionData>]
     )]
-    fn tower_sesh<S: SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
+    fn tower_sesh<S: tower_sesh_impl::SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = Arc::new(S::init());
         let layer = SessionLayer::plain(store);
@@ -299,12 +367,12 @@ mod baseline {
 
     #[divan::bench(
         name = "tower-sessions",
-        types = [tower_sessions_compat::MemoryStore]
+        types = [tower_sessions_impl::MemoryStore]
     )]
-    fn tower_sessions<S: tower_sessions_compat::SessionStoreInit>(bencher: divan::Bencher) {
+    fn tower_sessions<S: tower_sessions_impl::SessionStoreInit>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = S::init();
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store);
+        let layer = tower_sessions::SessionManagerLayer::new(store);
 
         async fn handler() {}
 
@@ -327,9 +395,9 @@ mod extractor_no_load {
 
     #[divan::bench(
         name = "tower-sesh",
-        types = [MemoryStore<SessionData>]
+        types = [tower_sesh_impl::MemoryStore<SessionData>]
     )]
-    fn tower_sesh<S: SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
+    fn tower_sesh<S: tower_sesh_impl::SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = Arc::new(S::init());
         let layer = SessionLayer::plain(store);
@@ -350,14 +418,14 @@ mod extractor_no_load {
 
     #[divan::bench(
         name = "tower-sessions",
-        types = [tower_sessions_compat::MemoryStore]
+        types = [tower_sessions_impl::MemoryStore]
     )]
-    fn tower_sessions<S: tower_sessions_compat::SessionStoreInit>(bencher: divan::Bencher) {
+    fn tower_sessions<S: tower_sessions_impl::SessionStoreInit>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = S::init();
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store);
+        let layer = tower_sessions::SessionManagerLayer::new(store);
 
-        async fn handler(_session: tower_sessions_compat::Session) {}
+        async fn handler(_session: tower_sessions::Session) {}
 
         let app = Router::new().route("/", routing::get(handler)).layer(layer);
         let request = || Request::builder().uri("/").body(Body::empty()).unwrap();
@@ -378,9 +446,9 @@ mod load_and_use {
 
     #[divan::bench(
         name = "tower-sesh",
-        types = [MemoryStore<SessionData>]
+        types = [tower_sesh_impl::MemoryStore<SessionData>]
     )]
-    fn tower_sesh<S: SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
+    fn tower_sesh<S: tower_sesh_impl::SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = Arc::new(S::init());
         let layer = SessionLayer::plain(Arc::clone(&store)).cookie_name("id");
@@ -424,15 +492,15 @@ mod load_and_use {
     #[allow(clippy::to_string_in_format_args)]
     #[divan::bench(
         name = "tower-sessions",
-        types = [tower_sessions_compat::MemoryStore]
+        types = [tower_sessions_impl::MemoryStore]
     )]
-    fn tower_sessions<S: tower_sessions_compat::SessionStoreInit>(bencher: divan::Bencher) {
+    fn tower_sessions<S: tower_sessions_impl::SessionStoreInit>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = S::init();
 
         let ids = ids();
         for id in &ids {
-            rt.block_on(store.save(&tower_sessions_compat::Record {
+            rt.block_on(store.save(&tower_sessions::session::Record {
                 id: *id,
                 data: HashMap::from([(
                     SessionData::KEY.to_owned(),
@@ -443,9 +511,9 @@ mod load_and_use {
             .unwrap();
         }
 
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store).with_name("id");
+        let layer = tower_sessions::SessionManagerLayer::new(store).with_name("id");
 
-        async fn handler(session: tower_sessions_compat::Session) {
+        async fn handler(session: tower_sessions::Session) {
             let data = session.get::<SessionData>(SessionData::KEY).await.unwrap();
             black_box(&data);
         }
@@ -482,9 +550,9 @@ mod load_and_update {
 
     #[divan::bench(
         name = "tower-sesh",
-        types = [MemoryStore<SessionData>]
+        types = [tower_sesh_impl::MemoryStore<SessionData>]
     )]
-    fn tower_sesh<S: SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
+    fn tower_sesh<S: tower_sesh_impl::SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = Arc::new(S::init());
         let layer = SessionLayer::plain(Arc::clone(&store)).cookie_name("id");
@@ -529,15 +597,15 @@ mod load_and_update {
     #[allow(clippy::to_string_in_format_args)]
     #[divan::bench(
         name = "tower-sessions",
-        types = [tower_sessions_compat::MemoryStore]
+        types = [tower_sessions_impl::MemoryStore]
     )]
-    fn tower_sessions<S: tower_sessions_compat::SessionStoreInit>(bencher: divan::Bencher) {
+    fn tower_sessions<S: tower_sessions_impl::SessionStoreInit>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = S::init();
 
         let ids = ids();
         for id in &ids {
-            rt.block_on(store.save(&tower_sessions_compat::Record {
+            rt.block_on(store.save(&tower_sessions::session::Record {
                 id: *id,
                 data: HashMap::from([(
                     SessionData::KEY.to_owned(),
@@ -548,9 +616,9 @@ mod load_and_update {
             .unwrap();
         }
 
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store).with_name("id");
+        let layer = tower_sessions::SessionManagerLayer::new(store).with_name("id");
 
-        async fn handler(session: tower_sessions_compat::Session) {
+        async fn handler(session: tower_sessions::Session) {
             let mut data = session
                 .get::<SessionData>(SessionData::KEY)
                 .await
@@ -593,9 +661,9 @@ mod create {
 
     #[divan::bench(
         name = "tower-sesh",
-        types = [MemoryStore<SessionData>]
+        types = [tower_sesh_impl::MemoryStore<SessionData>]
     )]
-    fn tower_sesh<S: SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
+    fn tower_sesh<S: tower_sesh_impl::SessionStoreInit<SessionData>>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = Arc::new(S::init());
         let layer = SessionLayer::plain(Arc::clone(&store)).cookie_name("id");
@@ -618,14 +686,14 @@ mod create {
 
     #[divan::bench(
         name = "tower-sessions",
-        types = [tower_sessions_compat::MemoryStore]
+        types = [tower_sessions_impl::MemoryStore]
     )]
-    fn tower_sessions<S: tower_sessions_compat::SessionStoreInit>(bencher: divan::Bencher) {
+    fn tower_sessions<S: tower_sessions_impl::SessionStoreInit>(bencher: divan::Bencher) {
         let rt = build_rt();
         let store = S::init();
-        let layer = tower_sessions_compat::SessionManagerLayer::new(store);
+        let layer = tower_sessions::SessionManagerLayer::new(store);
 
-        async fn handler(session: tower_sessions_compat::Session) {
+        async fn handler(session: tower_sessions::Session) {
             session
                 .insert(SessionData::KEY, SessionData::sample())
                 .await
@@ -661,6 +729,7 @@ fn build_multi_rt() -> tokio::runtime::Runtime {
         .expect("Failed building the Runtime")
 }
 
+#[inline]
 fn time_now() -> OffsetDateTime {
     OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc())
 }
@@ -671,9 +740,9 @@ fn keys() -> Vec<SessionKey> {
         .collect()
 }
 
-fn ids() -> Vec<tower_sessions_compat::Id> {
+fn ids() -> Vec<tower_sessions::session::Id> {
     (1..=NUM_KEYS.try_into().unwrap())
-        .map(tower_sessions_compat::Id)
+        .map(tower_sessions::session::Id)
         .collect()
 }
 
