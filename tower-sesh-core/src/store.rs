@@ -140,6 +140,13 @@ impl Error {
     pub fn kind(&self) -> &ErrorKind {
         &self.kind
     }
+
+    /// Error returned when session key collision resolution reaches max
+    /// iterations.
+    #[cold]
+    pub fn max_iterations_reached() -> Error {
+        Error::message("max iterations reached when handling session key collisions")
+    }
 }
 
 impl fmt::Debug for Error {

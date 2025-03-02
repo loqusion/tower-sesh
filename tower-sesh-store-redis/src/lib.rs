@@ -311,7 +311,7 @@ where
             }
         }
 
-        Err(err_max_iterations_reached())
+        Err(Error::max_iterations_reached())
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
@@ -411,11 +411,6 @@ fn to_record<T>(data: T, timestamp: i64) -> Result<Record<T>> {
         Ok(ttl) => Ok(Record::new(data, ttl)),
         Err(err) => Err(Error::message(format!("invalid timestamp: {}", err))),
     }
-}
-
-#[cold]
-fn err_max_iterations_reached() -> Error {
-    Error::message("max iterations reached when handling session key collisions")
 }
 
 #[cold]

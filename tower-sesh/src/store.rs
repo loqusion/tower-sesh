@@ -66,7 +66,7 @@ where
             }
         }
 
-        Err(err_max_iterations_reached())
+        Err(Error::max_iterations_reached())
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
@@ -95,11 +95,6 @@ where
         self.map.remove(session_key);
         Ok(())
     }
-}
-
-#[cold]
-fn err_max_iterations_reached() -> Error {
-    Error::message("max iterations reached when handling session key collisions")
 }
 
 pub struct CachingStore<T, Cache: SessionStore<T>, Store: SessionStore<T>> {
