@@ -62,12 +62,17 @@ struct Inner<T> {
     status: Status,
 }
 
-/// # State transitions
+/// The status of a session.
 ///
-/// Unchanged -> Changed | Renewed | Purged
-/// Renewed -> Changed | Purged
-/// Changed -> Purged
-/// Purged
+/// Valid state transitions are as follows:
+///
+/// `Unchanged` -> `Changed` | `Renewed` | `Purged`
+/// `Renewed` -> `Changed` | `Purged`
+/// `Changed` -> `Purged`
+/// `Purged`
+///
+/// `Taken` means the session `Inner` fields have been `mem::replace`d; using
+/// any of the fields after a session is `Taken` is a bug.
 #[derive(Clone, Copy, Debug)]
 enum Status {
     /// `Session` is unchanged, so no sync action is required.
