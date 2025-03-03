@@ -89,10 +89,22 @@ use Status::*;
 
 impl<T> Inner<T> {
     #[inline]
+    fn renewed(&mut self) {
+        if matches!(self.status, Unchanged) {
+            self.status = Renewed;
+        }
+    }
+
+    #[inline]
     fn changed(&mut self) {
         if !matches!(self.status, Purged) {
             self.status = Changed;
         }
+    }
+
+    #[inline]
+    fn purged(&mut self) {
+        self.status = Purged;
     }
 
     #[cfg(feature = "tracing")]
@@ -213,6 +225,16 @@ impl<T> Session<T> {
         T: Default,
     {
         self.get_or_insert_with(T::default)
+    }
+
+    #[inline]
+    pub fn renew(&self) {
+        self.lock().renewed();
+    }
+
+    #[inline]
+    pub fn purge(&self) {
+        self.lock().purged();
     }
 
     /// Sync this session to the passed session store, if it needs syncing.
