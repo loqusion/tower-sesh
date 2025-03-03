@@ -461,8 +461,12 @@ mod load_and_use {
 
         let keys = keys();
         for key in &keys {
-            rt.block_on(store.update(key, &SessionData::sample(), now() + Duration::from_secs(10)))
-                .unwrap();
+            rt.block_on(store.update(
+                key,
+                &SessionData::sample(),
+                now() + Duration::from_secs(100),
+            ))
+            .unwrap();
         }
 
         async fn handler(session: Session<SessionData>) {
@@ -565,8 +569,12 @@ mod load_and_update {
 
         let keys = keys();
         for key in &keys {
-            rt.block_on(store.update(key, &SessionData::sample(), now() + Duration::from_secs(10)))
-                .unwrap();
+            rt.block_on(store.update(
+                key,
+                &SessionData::sample(),
+                now() + Duration::from_secs(100),
+            ))
+            .unwrap();
         }
 
         async fn handler(session: Session<SessionData>) {
@@ -617,7 +625,7 @@ mod load_and_update {
                     SessionData::KEY.to_owned(),
                     serde_json::to_value(SessionData::sample()).unwrap(),
                 )]),
-                expiry_date: time_now() + Duration::from_secs(10),
+                expiry_date: time_now() + Duration::from_secs(100),
             }))
             .unwrap();
         }
