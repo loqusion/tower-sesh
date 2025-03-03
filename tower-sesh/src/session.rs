@@ -88,6 +88,7 @@ enum Status {
 use Status::*;
 
 impl<T> Inner<T> {
+    #[inline]
     fn changed(&mut self) {
         if !matches!(self.status, Purged) {
             self.status = Changed;
@@ -124,6 +125,7 @@ impl<T> Session<T> {
         }
     }
 
+    #[inline]
     fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
         let inner = Inner {
             session_key: Some(session_key),
@@ -134,6 +136,7 @@ impl<T> Session<T> {
         Session::from_inner(inner)
     }
 
+    #[inline]
     fn empty() -> Session<T> {
         let inner = Inner {
             session_key: None,
@@ -154,6 +157,7 @@ impl<T> Session<T> {
         Session::from_inner(inner)
     }
 
+    #[inline]
     #[must_use]
     pub fn get(&self) -> OptionSessionGuard<'_, T> {
         let lock = self.lock();
@@ -172,6 +176,7 @@ impl<T> Session<T> {
         unsafe { SessionGuard::new(lock) }
     }
 
+    #[inline]
     pub fn get_or_insert(&self, value: T) -> SessionGuard<'_, T> {
         let mut lock = self.lock();
 
@@ -185,6 +190,7 @@ impl<T> Session<T> {
         unsafe { SessionGuard::new(lock) }
     }
 
+    #[inline]
     pub fn get_or_insert_with<F>(&self, f: F) -> SessionGuard<'_, T>
     where
         F: FnOnce() -> T,
