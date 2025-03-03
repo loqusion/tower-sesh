@@ -111,7 +111,10 @@ mod common {
                         Ok(session_key)
                     }
                     dashmap::Entry::Occupied(_) => {
-                        unreachable!("collisions are not included in benchmarks")
+                        unreachable!(
+                            "collisions are not included in benchmarks; \
+                            try running benchmarks again"
+                        )
                     }
                 }
             }
@@ -178,7 +181,10 @@ mod common {
                         Ok(())
                     }
                     dashmap::Entry::Occupied(_) => {
-                        unreachable!("collisions are not included in benchmarks")
+                        unreachable!(
+                            "collisions are not included in benchmarks; \
+                            try running benchmarks again"
+                        )
                     }
                 }
             }
