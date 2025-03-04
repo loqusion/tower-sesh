@@ -170,14 +170,14 @@ impl SameSite {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Config {
-    pub(crate) cookie_name: Cow<'static, str>,
-    pub(crate) domain: Option<Cow<'static, str>>,
-    pub(crate) http_only: bool,
-    pub(crate) path: Option<Cow<'static, str>>,
-    pub(crate) same_site: cookie::SameSite,
-    pub(crate) secure: bool,
-    pub(crate) session_config: SessionConfig,
+struct Config {
+    cookie_name: Cow<'static, str>,
+    domain: Option<Cow<'static, str>>,
+    http_only: bool,
+    path: Option<Cow<'static, str>>,
+    same_site: cookie::SameSite,
+    secure: bool,
+    session_config: SessionConfig,
 }
 
 #[derive(Clone, Debug)]
