@@ -120,12 +120,13 @@ mod common {
             }
 
             async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
-                Ok(self
+                let record = self
                     .map
                     .get(session_key)
                     .as_deref()
                     .cloned()
-                    .filter(|record| record.ttl >= time_now()))
+                    .filter(|record| record.ttl >= time_now());
+                Ok(record)
             }
 
             async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
@@ -195,12 +196,13 @@ mod common {
             }
 
             async fn load(&self, session_id: &Id) -> Result<Option<Record>> {
-                Ok(self
+                let record = self
                     .map
                     .get(session_id)
                     .as_deref()
                     .cloned()
-                    .filter(|record| record.expiry_date >= time_now()))
+                    .filter(|record| record.expiry_date >= time_now());
+                Ok(record)
             }
 
             async fn delete(&self, session_id: &Id) -> Result<()> {

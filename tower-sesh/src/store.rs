@@ -70,12 +70,13 @@ where
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
-        Ok(self
+        let record = self
             .map
             .get(session_key)
             .as_deref()
             .cloned()
-            .filter(|record| record.ttl >= now()))
+            .filter(|record| record.ttl >= now());
+        Ok(record)
     }
 
     async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> {
