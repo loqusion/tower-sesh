@@ -95,16 +95,6 @@ impl SameSite {
     }
 }
 
-impl fmt::Display for SameSite {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            SameSite::Strict => f.write_str("Strict"),
-            SameSite::Lax => f.write_str("Lax"),
-            SameSite::None => f.write_str("None"),
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub(crate) struct Config {
     pub(crate) cookie_name: Cow<'static, str>,
