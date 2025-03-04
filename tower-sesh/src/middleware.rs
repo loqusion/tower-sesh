@@ -160,16 +160,6 @@ pub enum SameSite {
 }
 
 impl SameSite {
-    #[allow(dead_code)]
-    fn from_cookie_same_site(value: cookie::SameSite) -> SameSite {
-        match value {
-            cookie::SameSite::Strict => SameSite::Strict,
-            cookie::SameSite::Lax => SameSite::Lax,
-            cookie::SameSite::None => SameSite::None,
-        }
-    }
-
-    #[allow(dead_code)]
     fn into_cookie_same_site(self) -> cookie::SameSite {
         match self {
             SameSite::Strict => cookie::SameSite::Strict,
