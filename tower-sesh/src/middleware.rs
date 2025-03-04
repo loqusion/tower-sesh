@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    error::Error,
     fmt,
     marker::PhantomData,
     sync::Arc,
@@ -42,6 +43,77 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
 pub struct SessionManager<S, T, Store: SessionStore<T>, C> {
     inner: S,
     layer: SessionLayer<T, Store, C>,
+}
+
+const KEY_LEN: usize = 64;
+
+/// A 64-byte cryptographic key used by [`SessionLayer`] to sign or encrypt
+/// cookies.
+///
+/// TODO: More
+#[derive(Clone)]
+pub struct Key([u8; KEY_LEN]);
+
+impl Key {
+    #[track_caller]
+    fn into_cookie_key(self) -> cookie::Key {
+        match cookie::Key::try_from(self.0.as_slice()) {
+            Ok(key) => key,
+            Err(err) => panic!("failed to convert key to `cookie::Key`: {err}"),
+        }
+    }
+}
+
+impl fmt::Debug for Key {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Key(..)")
+    }
+}
+
+impl From<[u8; KEY_LEN]> for Key {
+    fn from(value: [u8; KEY_LEN]) -> Self {
+        Key(value)
+    }
+}
+
+impl TryFrom<&[u8]> for Key {
+    type Error = KeyError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        <[u8; KEY_LEN]>::try_from(value)
+            .map(Key::from)
+            .map_err(|_| KeyError)
+    }
+}
+
+impl TryFrom<Vec<u8>> for Key {
+    type Error = KeyError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Key::try_from(value.as_slice())
+    }
+}
+
+impl TryFrom<&Vec<u8>> for Key {
+    type Error = KeyError;
+
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        Key::try_from(value.as_slice())
+    }
+}
+
+/// The error type returned when a conversion from a byte slice to a [`Key`]
+/// fails.
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub struct KeyError;
+
+impl Error for KeyError {}
+
+impl fmt::Display for KeyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("key must be 64 bytes in length")
+    }
 }
 
 /// The [`SameSite`] cookie attribute, which controls whether or not a cookie is
@@ -151,29 +223,26 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
     /// [`signed`]: SessionLayer::signed
     /// [`plain`]: SessionLayer::plain
     ///
-    /// # Panics
-    ///
-    /// Panics if `key` is less than 64 bytes in length.
-    ///
     /// # Examples
     ///
     /// ```
     /// use std::sync::Arc;
-    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    /// use tower_sesh::{middleware::Key, store::MemoryStore, SessionLayer};
     ///
-    /// # fn key() -> Vec<u8> { vec![0; 64] }
     /// # type SessionData = ();
     /// #
-    /// let key = key(); // TODO: Where do you get a key?
+    /// fn key() -> Key {
+    ///     // TODO: Where do you get a key?
+    /// # Key::from([0; 64])
+    /// }
+    ///
+    /// let key = key();
     /// let store = Arc::new(MemoryStore::<SessionData>::new());
-    /// let layer = SessionLayer::new(store, &key);
+    /// let layer = SessionLayer::new(store, key);
     /// ```
     #[track_caller]
-    pub fn new(store: Arc<Store>, key: &[u8]) -> SessionLayer<T, Store> {
-        let key = match cookie::Key::try_from(key) {
-            Ok(key) => key,
-            Err(_) => panic!("key must be 64 bytes in length"),
-        };
+    pub fn new(store: Arc<Store>, key: Key) -> SessionLayer<T, Store> {
+        let key = key.into_cookie_key();
         Self {
             store,
             config: Config::default(),
@@ -193,14 +262,18 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// ```
     /// use std::sync::Arc;
-    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    /// use tower_sesh::{middleware::Key, store::MemoryStore, SessionLayer};
     ///
-    /// # fn key() -> Vec<u8> { vec![0; 64] }
     /// # type SessionData = ();
     /// #
-    /// let key = key(); // TODO: Where do you get a key?
+    /// fn key() -> Key {
+    ///     // TODO: Where do you get a key?
+    /// # Key::from([0; 64])
+    /// }
+    ///
+    /// let key = key();
     /// let store = Arc::new(MemoryStore::<SessionData>::new());
-    /// let layer = SessionLayer::new(store, &key).signed();
+    /// let layer = SessionLayer::new(store, key).signed();
     /// ```
     #[track_caller]
     pub fn signed(self) -> SessionLayer<T, Store, SignedCookie> {
@@ -221,14 +294,18 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     ///
     /// ```
     /// use std::sync::Arc;
-    /// use tower_sesh::{store::MemoryStore, SessionLayer};
+    /// use tower_sesh::{middleware::Key, store::MemoryStore, SessionLayer};
     ///
-    /// # fn key() -> Vec<u8> { vec![0; 64] }
     /// # type SessionData = ();
     /// #
-    /// let key = key(); // TODO: Where do you get a key?
+    /// fn key() -> Key {
+    ///     // TODO: Where do you get a key?
+    /// # Key::from([0; 64])
+    /// }
+    ///
+    /// let key = key();
     /// let store = Arc::new(MemoryStore::<SessionData>::new());
-    /// let layer = SessionLayer::new(store, &key).private();
+    /// let layer = SessionLayer::new(store, key).private();
     /// ```
     #[track_caller]
     pub fn private(self) -> SessionLayer<T, Store, PrivateCookie> {
@@ -264,9 +341,9 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// # use std::sync::Arc;
     /// # use tower_sesh::store::MemoryStore;
     ///
-    /// # let key = vec![0; 64];
+    /// # let key = tower_sesh::middleware::Key::from([0; 64]);
     /// # let store = Arc::new(MemoryStore::<()>::new());
-    /// let layer = SessionLayer::new(store, &key).cookie_name("id");
+    /// let layer = SessionLayer::new(store, key).cookie_name("id");
     /// ```
     #[track_caller]
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
@@ -298,9 +375,9 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// # use std::sync::Arc;
     /// # use tower_sesh::store::MemoryStore;
     ///
-    /// # let key = vec![0; 64];
+    /// # let key = tower_sesh::middleware::Key::from([0; 64]);
     /// # let store = Arc::new(MemoryStore::<()>::new());
-    /// let layer = SessionLayer::new(store, &key).domain("doc.rust-lang.org");
+    /// let layer = SessionLayer::new(store, key).domain("doc.rust-lang.org");
     /// ```
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
         self.config.domain = Some(domain.into());
@@ -340,9 +417,9 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// # use std::sync::Arc;
     /// # use tower_sesh::store::MemoryStore;
     ///
-    /// # let key = vec![0; 64];
+    /// # let key = tower_sesh::middleware::Key::from([0; 64]);
     /// # let store = Arc::new(MemoryStore::<()>::new());
-    /// let layer = SessionLayer::new(store, &key).path("/std");
+    /// let layer = SessionLayer::new(store, key).path("/std");
     /// ```
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
         self.config.path = Some(path.into());
@@ -362,9 +439,9 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// # use std::sync::Arc;
     /// # use tower_sesh::store::MemoryStore;
     ///
-    /// # let key = vec![0; 64];
+    /// # let key = tower_sesh::middleware::Key::from([0; 64]);
     /// # let store = Arc::new(MemoryStore::<()>::new());
-    /// let layer = SessionLayer::new(store, &key).same_site(SameSite::Strict);
+    /// let layer = SessionLayer::new(store, key).same_site(SameSite::Strict);
     /// ```
     pub fn same_site(mut self, same_site: SameSite) -> Self {
         self.config.same_site = same_site.into_cookie_same_site();
@@ -555,6 +632,42 @@ fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) 
         }
         Err(err) => {
             error!(err = %err.display_chain(), cookie = %cookie.encoded(), "this is likely a bug");
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::iter;
+
+    use quickcheck::{quickcheck, Arbitrary};
+
+    use super::*;
+
+    impl Arbitrary for Key {
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            let inner = {
+                let mut buf = [0u8; KEY_LEN];
+                for (i, num) in iter::repeat_with(|| <u8 as Arbitrary>::arbitrary(g))
+                    .take(KEY_LEN)
+                    .enumerate()
+                {
+                    buf[i] = num;
+                }
+                buf
+            };
+            Key::from(inner)
+        }
+    }
+
+    quickcheck! {
+        fn key_debug_redacts_content(key: Key) -> bool {
+            format!("{:?}", key) == "Key(..)"
+        }
+
+        fn converting_key_does_not_panic(key: Key) -> bool {
+            key.into_cookie_key();
+            true
         }
     }
 }
