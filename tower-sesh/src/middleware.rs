@@ -50,7 +50,19 @@ const KEY_LEN: usize = 64;
 /// A 64-byte cryptographic key used by [`SessionLayer`] to sign or encrypt
 /// cookies.
 ///
-/// TODO: More
+/// TODO: Come back after high-level documentation is written
+///
+/// # Examples
+///
+/// A key can be constructed from a slice or vector containing 64 bytes:
+///
+/// ```
+/// use tower_sesh::middleware::Key;
+///
+/// let mut vec: Vec<u8> = vec![0; 64];
+/// rand::fill(&mut vec[..]); // Fill with random bytes
+/// let key = Key::try_from(vec).unwrap();
+/// ```
 #[derive(Clone)]
 pub struct Key([u8; KEY_LEN]);
 
