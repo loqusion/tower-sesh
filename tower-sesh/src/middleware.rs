@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    fmt,
     marker::PhantomData,
     sync::Arc,
     task::{Context, Poll},
@@ -16,8 +17,6 @@ use crate::{
     session::{self, SyncAction},
     util::{CookieJarExt, ErrorExt},
 };
-
-pub use crate::config::SameSite;
 
 /// A layer that provides [`Session`] as an extractor.
 ///
@@ -43,6 +42,67 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
 pub struct SessionManager<S, T, Store: SessionStore<T>, C> {
     inner: S,
     layer: SessionLayer<T, Store, C>,
+}
+
+/// The [`SameSite`] cookie attribute, which controls whether or not a cookie is
+/// sent with cross-site requests.
+///
+/// A cookie with a `SameSite` attribute is imposed restrictions on when it is
+/// sent to the origin server in a cross-site request:
+///
+/// - `Strict`: The cookie is never sent in cross-site requests.
+/// - `Lax`: The cookie is sent in cross-site top-level navigations.
+/// - `None`: The cookie is sent in all cross-site requests if the `Secure`
+///   flag is also set; otherwise, the cookie is ignored.
+///
+/// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
+/// definition are subject to change.
+///
+/// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+/// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
+// NOTE: `Copy` should not be implemented in case web standards change in the future.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SameSite {
+    /// The cookie is never sent in cross-site requests.
+    Strict,
+
+    /// The cookie is sent in cross-site top-level navigations.
+    Lax,
+
+    /// The cookie is sent in all cross-site requests if the `Secure` flag is
+    /// also set; otherwise, the cookie is ignored.
+    None,
+}
+
+impl SameSite {
+    #[allow(dead_code)]
+    fn from_cookie_same_site(value: cookie::SameSite) -> SameSite {
+        match value {
+            cookie::SameSite::Strict => SameSite::Strict,
+            cookie::SameSite::Lax => SameSite::Lax,
+            cookie::SameSite::None => SameSite::None,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn into_cookie_same_site(self) -> cookie::SameSite {
+        match self {
+            SameSite::Strict => cookie::SameSite::Strict,
+            SameSite::Lax => cookie::SameSite::Lax,
+            SameSite::None => cookie::SameSite::None,
+        }
+    }
+}
+
+impl fmt::Display for SameSite {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SameSite::Strict => f.write_str("Strict"),
+            SameSite::Lax => f.write_str("Lax"),
+            SameSite::None => f.write_str("None"),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
