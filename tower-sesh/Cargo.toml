@@ -32,7 +32,7 @@ tower = "0.5.2"
 tower-sesh-core = { version = "=0.1.0-alpha.3", path = "../tower-sesh-core" }
 
 # optional dependencies
-axum = { version = "0.7.9", optional = true, default-features = false }
+axum = { version = "0.8", optional = true, default-features = false }
 dashmap = { version = "6.0.0", optional = true }
 itoa = { version = "1.0.14", optional = true }
 ryu = { version = "1.0.18", optional = true }
@@ -40,7 +40,7 @@ serde = { workspace = true, optional = true }
 tracing = { version = "0.1", optional = true, default-features = false, features = ["std"] }
 
 [dev-dependencies]
-axum = { version = "0.7.9", default-features = false }
+axum = { version = "0.8", default-features = false }
 insta = "1.42.0"
 quickcheck = "1.0.3"
 serde_json = "1.0.136"

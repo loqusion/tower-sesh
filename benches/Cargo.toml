@@ -11,7 +11,7 @@ store-redis = ["dep:tower-sesh-store-redis"]
 
 [dependencies]
 async-trait = "=0.1.86"
-axum = { version = "=0.7.9", default-features = false }
+axum = { version = "=0.8.1", default-features = false }
 dashmap = "=6.1.0"
 divan = "=0.1.17"
 http = "=1.2.0"
@@ -25,9 +25,8 @@ tower = "=0.5.2"
 tower-sesh = { path = "../tower-sesh", features = ["memory-store"] }
 tower-sesh-core = { path = "../tower-sesh-core" }
 tower-sesh-store-redis = { path = "../tower-sesh-store-redis", optional = true }
-# `tower_sessions::Session` does not implement `FromRequestParts` in 0.14.0, for some reason
-tower-sessions = { version = "=0.13.0", default-features = false, features = ["axum-core"] }
-tower-sessions-core = { version = "=0.13.0", default-features = false, features = ["axum-core"] }
+tower-sessions = { version = "=0.14.0", default-features = false, features = ["axum-core"] }
+tower-sessions-core = { version = "=0.14.0", default-features = false, features = ["axum-core"] }
 
 [[bench]]
 name = "middleware"

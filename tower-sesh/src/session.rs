@@ -4,7 +4,6 @@ use std::{
     time::Duration,
 };
 
-use async_trait::async_trait;
 use parking_lot::{Mutex, MutexGuard};
 use tower_sesh_core::{time::now, Record, SessionKey, SessionStore, Ttl};
 
@@ -337,10 +336,10 @@ define_rejection! {
 }
 
 #[cfg(feature = "axum")]
-#[async_trait]
 impl<S, T> axum::extract::FromRequestParts<S> for Session<T>
 where
-    T: 'static + Send + Sync,
+    T: Send + Sync + 'static,
+    S: Sync,
 {
     type Rejection = SessionRejection;
 
