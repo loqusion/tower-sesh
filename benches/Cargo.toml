@@ -10,16 +10,16 @@ full = ["store-redis"]
 store-redis = ["dep:tower-sesh-store-redis"]
 
 [dependencies]
-async-trait = "=0.1.86"
+async-trait = "=0.1.87"
 axum = { version = "=0.8.1", default-features = false }
 dashmap = "=6.1.0"
 divan = "=0.1.17"
 http = "=1.2.0"
 rand = { version = "=0.9.0", default-features = false, features = ["std", "thread_rng"] }
 rust_decimal = { version = "=1.36.0", default-features = false, features = ["std", "serde"] }
-serde = { version = "=1.0.217", features = ["derive"] }
+serde = { version = "=1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
-time = { version = "=0.3.37", features = ["formatting", "parsing"] }
+time = { version = "=0.3.38", features = ["formatting", "parsing"] }
 tokio = { version = "=1.43.0", features = ["full"] }
 tower = "=0.5.2"
 tower-sesh = { path = "../tower-sesh", features = ["memory-store"] }
