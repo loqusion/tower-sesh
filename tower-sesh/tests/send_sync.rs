@@ -144,7 +144,6 @@ assert_value!(tower_sesh::Session<YY>: Send & Sync & Unpin);
 assert_value!(tower_sesh::Session<YN>: Send & Sync & Unpin);
 assert_value!(tower_sesh::Session<NN>: !Send & !Sync & Unpin);
 assert_value!(tower_sesh::SessionLayer<YY, MockStore<YY>>: Send & Sync & Unpin);
-assert_value!(tower_sesh::Value: Send & Sync & Unpin);
 assert_value!(tower_sesh::middleware::SessionManager<(), YY, MockStore<YY>, tower_sesh::config::PrivateCookie>: Send & Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<YY>: !Send & Sync & Unpin);
 assert_value!(tower_sesh::session::SessionGuard<YN>: !Send & !Sync & Unpin);
@@ -152,5 +151,3 @@ assert_value!(tower_sesh::session::SessionGuard<NN>: !Send & !Sync & Unpin);
 #[cfg(feature = "axum")]
 assert_value!(tower_sesh::session::SessionRejection: Send & Sync & Unpin);
 assert_value!(tower_sesh::store::CachingStore<YY, MockStore<YY>, MockStore<YY>>: Send & Sync & Unpin);
-assert_value!(tower_sesh::value::Map<String, tower_sesh::Value>: Send & Sync & Unpin);
-assert_value!(tower_sesh::value::Number: Send & Sync & Unpin);

@@ -46,10 +46,6 @@ pub mod _draft {
     //!   such as one provided by the [`tracing-subscriber`] crate.
     //!   Alternatively, you can enable this crate's `log` feature and use a
     //!   logger compatible with the `log` crate.
-    //! - `value` *(enabled by default)*: Enables the [`Value`] enum, a loosely
-    //!   typed value.
-    //!
-    //! TODO: Don't enable `value` by default.
     //!
     //! [feature flags]: https://doc.rust-lang.org/cargo/reference/features.html#the-features-section
     //! [`Session`]: crate::Session
@@ -60,16 +56,12 @@ pub mod _draft {
     //! [`Subscriber`]: https://docs.rs/tracing-core/latest/tracing_core/subscriber/trait.Subscriber.html
     //! [`tracing-subscriber`]: https://docs.rs/tracing-subscriber
     //! [`log`]: https://docs.rs/log
-    //! [`Value`]: crate::Value
 }
 
 #[doc(inline)]
 pub use middleware::SessionLayer;
 #[doc(inline)]
 pub use session::Session;
-#[cfg(feature = "value")]
-#[doc(inline)]
-pub use value::Value;
 
 #[macro_use]
 mod macros;
@@ -77,8 +69,6 @@ mod macros;
 pub mod middleware;
 pub mod session;
 pub mod store;
-#[cfg(feature = "value")]
-pub mod value;
 
 // Not public API. Items in this module do not follow semantic versioning.
 #[doc(hidden)]

@@ -1,14 +1,10 @@
 // Adapted from https://github.com/serde-rs/json.
-//
-// Instead of checking that a value serializes to a given JSON string, this
-// checks that a value serializes to a given `tower_sesh::Value`, and
-// additionally checks that the `tower_sesh::Value` serializes and deserializes
-// to various data formats without any errors or data loss.
+// This makes additional checks for data formats other than JSON.
 
 use std::{collections::BTreeMap, fmt::Debug};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use tower_sesh::{
+use serde_json::{
     value::{from_value, to_value},
     Value,
 };
@@ -108,38 +104,17 @@ fn test_write_i64() {
 #[test]
 fn test_write_f64() {
     check_all(&[
-        (&3.0, Value::try_from(3.0).unwrap()),
-        (&3.1, Value::try_from(3.1).unwrap()),
-        (&-1.5, Value::try_from(-1.5).unwrap()),
-        (&0.5, Value::try_from(0.5).unwrap()),
-        (&f64::MIN, Value::try_from(f64::MIN).unwrap()),
-        (&f64::MAX, Value::try_from(f64::MAX).unwrap()),
-        (&f64::EPSILON, Value::try_from(f64::EPSILON).unwrap()),
+        (&3.0, Value::from(3.0)),
+        (&3.1, Value::from(3.1)),
+        (&-1.5, Value::from(-1.5)),
+        (&0.5, Value::from(0.5)),
+        (&f64::MIN, Value::from(f64::MIN)),
+        (&f64::MAX, Value::from(f64::MAX)),
+        (&f64::EPSILON, Value::from(f64::EPSILON)),
     ]);
 }
 
-macro_rules! test_nonfinite {
-    ($($name:ident : $e:expr)+) => {
-        $(
-            #[test]
-            #[should_panic = "float must be finite"]
-            fn $name() {
-                check_all(&[($e, Value::Null)]);
-            }
-        )+
-    };
-}
-
-test_nonfinite! {
-    test_write_f64_pos_nan: &f64::NAN.copysign(1.0)
-    test_write_f64_neg_nan: &f64::NAN.copysign(-1.0)
-    test_write_f64_pos_inf: &f64::INFINITY
-    test_write_f64_neg_inf: &f64::NEG_INFINITY
-    test_write_f32_pos_nan: &f32::NAN.copysign(1.0)
-    test_write_f32_neg_nan: &f32::NAN.copysign(-1.0)
-    test_write_f32_pos_inf: &f32::INFINITY
-    test_write_f32_neg_inf: &f32::NEG_INFINITY
-}
+// TODO: Test nonfinite values
 
 #[test]
 fn test_write_str() {
@@ -193,7 +168,7 @@ fn test_write_list() {
     let long_test_list = Value::from([
         Value::from(false),
         Value::Null,
-        Value::from([Value::from("foo\nbar"), Value::try_from(3.5).unwrap()]),
+        Value::from([Value::from("foo\nbar"), Value::from(3.5)]),
     ]);
 
     check_all(&[(&long_test_list, long_test_list.clone())])
@@ -201,7 +176,7 @@ fn test_write_list() {
 
 // TODO: Fill in the rest
 #[test]
-#[ignore = "unimplemented"]
+#[ignore]
 fn test_write_object() {
     check_all(&[(
         &treemap!() as &BTreeMap<String, ()>,
@@ -224,7 +199,7 @@ fn test_write_tuple() {
 
 // TODO: Fill in the rest
 #[test]
-#[ignore = "unimplemented"]
+#[ignore]
 fn test_write_enum() {
     check_all(&[(&Animal::Dog, to_value(Animal::Dog).unwrap())]);
 }
