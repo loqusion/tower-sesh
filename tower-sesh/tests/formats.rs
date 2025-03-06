@@ -117,6 +117,9 @@ fn test_write_f64() {
         (&f64::MIN, Value::from(f64::MIN)),
         (&f64::MAX, Value::from(f64::MAX)),
         (&f64::EPSILON, Value::from(f64::EPSILON)),
+        // Edge case from:
+        // https://github.com/serde-rs/json/issues/536#issuecomment-583714900
+        (&2.638344616030823e-256, Value::from(2.638344616030823e-256)),
     ]);
 }
 
