@@ -85,6 +85,22 @@ impl<'de> Deserialize<'de> for Value {
             }
 
             #[inline]
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                self.visit_byte_buf(Vec::from(v))
+            }
+
+            #[inline]
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(Value::ByteArray(v))
+            }
+
+            #[inline]
             fn visit_none<E>(self) -> Result<Self::Value, E> {
                 Ok(Value::Null)
             }
