@@ -126,6 +126,11 @@ fn test_write_str() {
 }
 
 #[test]
+fn test_write_bool() {
+    check_all(&[(&true, Value::from(true)), (&false, Value::from(false))]);
+}
+
+#[test]
 fn test_write_char() {
     check_all(&[
         (&'n', Value::from("n")),
@@ -178,14 +183,118 @@ fn test_write_list() {
     check_all(&[(&long_test_list, long_test_list.clone())])
 }
 
-// TODO: Fill in the rest
 #[test]
-#[ignore]
 fn test_write_object() {
-    check_all(&[(
-        &treemap!() as &BTreeMap<String, ()>,
-        Value::from_iter([] as [(&str, ()); 0]),
+    check_all(&[
+        (&treemap!(), Value::from_iter([] as [(&str, ()); 0])),
+        (
+            &treemap!("a".to_owned() => true),
+            Value::from_iter([("a", true)]),
+        ),
+        (
+            &treemap!(
+                "a".to_owned() => true,
+                "b".to_owned() => false,
+            ),
+            Value::from_iter([("a", true), ("b", false)]),
+        ),
+    ]);
+
+    check_all(&[
+        (
+            &treemap!(
+                "a".to_owned() => treemap!(),
+                "b".to_owned() => treemap!(),
+                "c".to_owned() => treemap!(),
+            ),
+            Value::from_iter([
+                ("a", Value::from_iter([] as [(&str, ()); 0])),
+                ("b", Value::from_iter([] as [(&str, ()); 0])),
+                ("c", Value::from_iter([] as [(&str, ()); 0])),
+            ]),
+        ),
+        (
+            &treemap!(
+                "a".to_owned() => treemap!(
+                    "a".to_owned() => treemap!("a".to_owned() => vec![1, 2, 3]),
+                    "b".to_owned() => treemap!(),
+                    "c".to_owned() => treemap!(),
+                ),
+                "b".to_owned() => treemap!(),
+                "c".to_owned() => treemap!(),
+            ),
+            Value::from_iter([
+                (
+                    "a",
+                    Value::from_iter([
+                        ("a", Value::from_iter([("a", vec![1, 2, 3])])),
+                        ("b", Value::from_iter([] as [(&str, ()); 0])),
+                        ("c", Value::from_iter([] as [(&str, ()); 0])),
+                    ]),
+                ),
+                ("b", Value::from_iter([] as [(&str, ()); 0])),
+                ("c", Value::from_iter([] as [(&str, ()); 0])),
+            ]),
+        ),
+        (
+            &treemap!(
+                "a".to_owned() => treemap!(),
+                "b".to_owned() => treemap!(
+                    "a".to_owned() => treemap!("a".to_owned() => vec![1, 2, 3]),
+                    "b".to_owned() => treemap!(),
+                    "c".to_owned() => treemap!(),
+                ),
+                "c".to_owned() => treemap!(),
+            ),
+            Value::from_iter([
+                ("a", Value::from_iter([] as [(&str, ()); 0])),
+                (
+                    "b",
+                    Value::from_iter([
+                        ("a", Value::from_iter([("a", vec![1, 2, 3])])),
+                        ("b", Value::from_iter([] as [(&str, ()); 0])),
+                        ("c", Value::from_iter([] as [(&str, ()); 0])),
+                    ]),
+                ),
+                ("c", Value::from_iter([] as [(&str, ()); 0])),
+            ]),
+        ),
+        (
+            &treemap!(
+                "a".to_owned() => treemap!(),
+                "b".to_owned() => treemap!(),
+                "c".to_owned() => treemap!(
+                    "a".to_owned() => treemap!("a".to_owned() => vec![1, 2, 3]),
+                    "b".to_owned() => treemap!(),
+                    "c".to_owned() => treemap!(),
+                ),
+            ),
+            Value::from_iter([
+                ("a", Value::from_iter([] as [(&str, ()); 0])),
+                ("b", Value::from_iter([] as [(&str, ()); 0])),
+                (
+                    "c",
+                    Value::from_iter([
+                        ("a", Value::from_iter([("a", vec![1, 2, 3])])),
+                        ("b", Value::from_iter([] as [(&str, ()); 0])),
+                        ("c", Value::from_iter([] as [(&str, ()); 0])),
+                    ]),
+                ),
+            ]),
+        ),
+    ]);
+
+    check_all(&[(&treemap!('c' => ()), Value::from_iter([("c", ())]))]);
+
+    let complex_obj = Value::from_iter([(
+        "b",
+        vec![
+            Value::from_iter([("c", "\x0c\x1f\r")]),
+            Value::from_iter([("c", "")]),
+        ],
     )]);
+
+    check_all(&[(&complex_obj.clone(), complex_obj)])
 }
 
 #[test]
@@ -201,11 +310,40 @@ fn test_write_tuple() {
     )]);
 }
 
-// TODO: Fill in the rest
 #[test]
-#[ignore]
 fn test_write_enum() {
-    check_all(&[(&Animal::Dog, to_value(Animal::Dog).unwrap())]);
+    check_all(&[
+        (&Animal::Dog, to_value(Animal::Dog).unwrap()),
+        (
+            &Animal::Frog("Henry".to_owned(), vec![]),
+            Value::from_iter([(
+                "Frog",
+                vec![Value::from("Henry"), Value::from([] as [isize; 0])],
+            )]),
+        ),
+        (
+            &Animal::Frog("Henry".to_owned(), vec![349]),
+            Value::from_iter([("Frog", vec![Value::from("Henry"), Value::from([349])])]),
+        ),
+        (
+            &Animal::Frog("Henry".to_owned(), vec![349, 102]),
+            Value::from_iter([("Frog", vec![Value::from("Henry"), Value::from([349, 102])])]),
+        ),
+        (
+            &Animal::Cat {
+                age: 5,
+                name: "Kate".to_owned(),
+            },
+            Value::from_iter([(
+                "Cat",
+                Value::from_iter([("age", Value::from(5)), ("name", Value::from("Kate"))]),
+            )]),
+        ),
+        (
+            &Animal::AntHive(vec!["Bob".to_owned(), "Stuart".to_owned()]),
+            Value::from_iter([("AntHive", vec!["Bob", "Stuart"])]),
+        ),
+    ]);
 }
 
 #[test]
@@ -218,5 +356,20 @@ fn test_write_option() {
     check_all(&[(
         &Some(vec!["foo".to_owned(), "bar".to_owned()]),
         Value::from(["foo", "bar"]),
+    )])
+}
+
+#[test]
+fn test_write_newtype_struct() {
+    #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+    struct Newtype(BTreeMap<String, i32>);
+
+    let inner = Newtype(treemap!("inner".to_owned() => 123));
+    let outer = treemap!("outer".to_owned() => to_value(&inner).unwrap());
+
+    check_all(&[(&inner, Value::from_iter([("inner", 123)]))]);
+    check_all(&[(
+        &outer,
+        Value::from_iter([("outer", Value::from_iter([("inner", 123)]))]),
     )])
 }
