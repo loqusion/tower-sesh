@@ -75,6 +75,12 @@ where
         check(
             *data,
             expected,
+            serde_json::to_vec_pretty,
+            f!(serde_json::from_slice),
+        );
+        check(
+            *data,
+            expected,
             rmp_serde::to_vec_named,
             f!(rmp_serde::from_slice),
         );
