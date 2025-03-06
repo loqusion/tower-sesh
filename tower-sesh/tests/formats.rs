@@ -120,8 +120,6 @@ fn test_write_f64() {
     ]);
 }
 
-// TODO: Test nonfinite values
-
 #[test]
 fn test_write_str() {
     check_all(&[("", Value::from("")), ("foo", Value::from("foo"))]);
