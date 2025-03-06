@@ -13,13 +13,13 @@ macro_rules! treemap {
     () => {
         ::std::collections::BTreeMap::new()
     };
-    ($($k:expr => $v:expr),+ $(,)?) => {
+    ($($k:expr => $v:expr),+ $(,)?) => {{
         let mut m = ::std::collections::BTreeMap::new();
         $(
-            m.insert($k, v);
+            m.insert($k, $v);
         )+
         m
-    };
+    }};
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
