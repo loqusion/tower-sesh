@@ -75,7 +75,7 @@ where
         check(
             *data,
             expected,
-            rmp_serde::to_vec,
+            rmp_serde::to_vec_named,
             f!(rmp_serde::from_slice),
         );
     }
