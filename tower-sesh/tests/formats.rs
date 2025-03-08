@@ -376,3 +376,104 @@ fn test_write_newtype_struct() {
         Value::from_iter([("outer", Value::from_iter([("inner", 123)]))]),
     )])
 }
+
+macro_rules! check_field_reordering {
+    (
+        serialize: $serialize:expr,
+        deserialize: $deserialize:expr,
+        v1: $v1:ident : $ty1:ty,
+        v2: $v2:ident : $ty2:ty,
+        expected: $expected:expr
+        $(,)?
+    ) => {{
+        let ser = $serialize($v1).unwrap();
+        let de: $ty2 = $deserialize(&ser).unwrap();
+        assert_eq!($v1, &de);
+
+        let ser = $serialize($v2).unwrap();
+        let de: $ty1 = $deserialize(&ser).unwrap();
+        assert_eq!(&de, $v2);
+
+        let value = to_value($v1).unwrap();
+        let value2 = to_value($v2).unwrap();
+        assert_eq!(&value, $expected);
+        assert_eq!(&value2, $expected);
+
+        let ser = $serialize(&value).unwrap();
+        let de: Value = $deserialize(&ser).unwrap();
+        assert_eq!(value, de);
+        assert_eq!(&from_value::<T1>(value.clone()).unwrap(), $v1);
+    }};
+}
+
+fn check_field_reordering<T1, T2>(v1: &T1, v2: &T2, expected: &Value)
+where
+    T1: PartialEq + PartialEq<T2> + DeserializeOwned + Serialize + Debug,
+    T2: DeserializeOwned + Serialize + Debug,
+{
+    check_field_reordering!(
+        serialize: serde_json::to_vec,
+        deserialize: serde_json::from_slice,
+        v1: v1: T1,
+        v2: v2: T2,
+        expected: expected,
+    );
+    check_field_reordering!(
+        serialize: serde_json::to_vec_pretty,
+        deserialize: serde_json::from_slice,
+        v1: v1: T1,
+        v2: v2: T2,
+        expected: expected,
+    );
+    check_field_reordering!(
+        serialize: rmp_serde::to_vec_named,
+        deserialize: rmp_serde::from_slice,
+        v1: v1: T1,
+        v2: v2: T2,
+        expected: expected,
+    );
+}
+
+#[test]
+fn test_field_reordering() {
+    #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+    #[serde(rename = "Person")]
+    struct Person1 {
+        age: usize,
+        name: String,
+    }
+
+    #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+    #[serde(rename = "Person")]
+    struct Person2 {
+        name: String,
+        age: usize,
+    }
+
+    impl PartialEq<Person2> for Person1 {
+        fn eq(&self, other: &Person2) -> bool {
+            self.age == other.age && self.name == other.name
+        }
+    }
+
+    impl PartialEq<Person1> for Person2 {
+        fn eq(&self, other: &Person1) -> bool {
+            self.age == other.age && self.name == other.name
+        }
+    }
+
+    check_field_reordering(
+        &Person1 {
+            age: -1isize as usize,
+            name: "Persephone".to_owned(),
+        },
+        &Person2 {
+            name: "Persephone".to_owned(),
+            age: -1isize as usize,
+        },
+        &Value::from_iter([
+            ("age", Value::from(-1isize as usize)),
+            ("name", Value::from("Persephone")),
+        ]),
+    );
+}
