@@ -348,7 +348,7 @@ where
         parts: &mut http::request::Parts,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
-        match lazy::get_or_init(&mut parts.extensions).await {
+        match lazy::get_or_init(&parts.extensions).await {
             Ok(Some(session)) => Ok(session.clone()),
             Ok(None) => Err(SessionRejection),
             // Panic because this indicates a bug in the program rather than an
@@ -464,7 +464,7 @@ pub(crate) mod lazy {
     }
 
     pub(super) async fn get_or_init<T>(
-        extensions: &mut Extensions,
+        extensions: &Extensions,
     ) -> Result<Option<&Session<T>>, Error>
     where
         T: 'static + Send,
