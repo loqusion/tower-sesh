@@ -177,6 +177,18 @@ impl<T> Inner<T> {
     }
 }
 
+/// Which action was performed by `Session::sync`.
+pub(crate) enum SyncAction {
+    /// The session was created, updated, or renewed with the session key.
+    Set(SessionKey),
+
+    /// The session was removed.
+    Remove,
+
+    /// The session was unmodified. No action was performed.
+    None,
+}
+
 impl<T> Session<T> {
     #[inline]
     fn from_inner(inner: Inner<T>) -> Session<T> {
@@ -303,18 +315,6 @@ impl<T> Session<T> {
 
         lock
     }
-}
-
-/// Which action was performed by `Session::sync`.
-pub(crate) enum SyncAction {
-    /// The session was created, updated, or renewed with the session key.
-    Set(SessionKey),
-
-    /// The session was removed.
-    Remove,
-
-    /// The session was unmodified. No action was performed.
-    None,
 }
 
 impl<T> Clone for Session<T> {
