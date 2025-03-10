@@ -600,7 +600,8 @@ where
             let mut response = fut.await?;
 
             if let Some(session) = session_handle.get() {
-                let sync_result = session.sync(store.as_ref()).await;
+                let sync_result = session.take().sync(store.as_ref()).await;
+
                 match sync_result {
                     Ok(SyncAction::Set(session_key)) => {
                         let mut jar = CookieJar::new();

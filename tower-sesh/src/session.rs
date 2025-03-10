@@ -54,7 +54,7 @@ pub struct SessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 /// [`get`]: Session::get
 pub struct OptionSessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 
-struct Inner<T> {
+pub(crate) struct Inner<T> {
     session_key: Option<SessionKey>,
     data: Option<T>,
     expires_at: Option<Ttl>,
@@ -130,6 +130,50 @@ impl<T> Inner<T> {
                 status: Taken,
             },
         )
+    }
+
+    /// Sync this session to the passed session store, if it needs syncing.
+    ///
+    /// This method should be called on the return value of [`Session::take`].
+    /// We need to `take` the data, since borrowing it from `Session` requires
+    /// holding a mutex lock across an await point. (Using the `Session` after
+    /// this function is called would be a bug, in any case.)
+    ///
+    /// # Panics
+    ///
+    /// If this function is called when `status` is [`Status::Taken`], it will
+    /// panic.
+    pub(crate) async fn sync(
+        self,
+        store: &impl SessionStore<T>,
+    ) -> Result<SyncAction, tower_sesh_core::store::Error> {
+        // FIXME: Determine proper `ttl`.
+        let ttl = now() + Duration::from_secs(10 * 60 * 60);
+
+        match (self.status, self.session_key, self.data) {
+            (Renewed, Some(session_key), _) => {
+                store.update_ttl(&session_key, ttl).await?;
+                Ok(SyncAction::Set(session_key))
+            }
+            (Changed, Some(session_key), Some(data)) => {
+                store.update(&session_key, &data, ttl).await?;
+                Ok(SyncAction::Set(session_key))
+            }
+            (Changed, None, Some(data)) => {
+                let session_key = store.create(&data, ttl).await?;
+                Ok(SyncAction::Set(session_key))
+            }
+            (Changed, Some(session_key), None) | (Purged, Some(session_key), _) => {
+                store.delete(&session_key).await?;
+                Ok(SyncAction::Remove)
+            }
+            (Unchanged, _, _) | (Renewed, None, _) | (Changed, None, None) | (Purged, None, _) => {
+                Ok(SyncAction::None)
+            }
+            (Taken, _, _) => {
+                unreachable!("`Session::sync` called in `Taken` state. This is a bug.")
+            }
+        }
     }
 }
 
@@ -241,56 +285,11 @@ impl<T> Session<T> {
         self.lock().purged();
     }
 
-    /// Sync this session to the passed session store, if it needs syncing.
-    ///
-    /// If no store errors occur, a [`SyncAction`] is returned.
-    ///
-    /// If a store error occurs, it is propagated.
-    ///
-    /// # Panics
-    ///
-    /// If this function is called and awaited more than once, it will panic.
-    pub(crate) async fn sync(
-        &self,
-        store: &impl SessionStore<T>,
-    ) -> Result<SyncAction, tower_sesh_core::store::Error> {
-        // We have to `take` here, since borrowing requires holding the mutex
-        // lock across an await point, which would make the future returned by
-        // this function `!Send`.
-        // Using the `Session` after this point would be a bug, in any case.
-        let Inner {
-            data,
-            session_key,
-            expires_at: _expires_at,
-            status,
-        } = self.inner.lock().take();
-
-        // FIXME: Determine proper `ttl`.
-        let ttl = now() + Duration::from_secs(10 * 60 * 60);
-        match (status, session_key, data) {
-            (Renewed, Some(session_key), _) => {
-                store.update_ttl(&session_key, ttl).await?;
-                Ok(SyncAction::Set(session_key))
-            }
-            (Changed, Some(session_key), Some(data)) => {
-                store.update(&session_key, &data, ttl).await?;
-                Ok(SyncAction::Set(session_key))
-            }
-            (Changed, None, Some(data)) => {
-                let session_key = store.create(&data, ttl).await?;
-                Ok(SyncAction::Set(session_key))
-            }
-            (Changed, Some(session_key), None) | (Purged, Some(session_key), _) => {
-                store.delete(&session_key).await?;
-                Ok(SyncAction::Remove)
-            }
-            (Unchanged, _, _) | (Renewed, None, _) | (Changed, None, None) | (Purged, None, _) => {
-                Ok(SyncAction::None)
-            }
-            (Taken, _, _) => {
-                unreachable!("`Session::sync` called in `Taken` state. This is a bug.")
-            }
-        }
+    /// Similar to [`Option::take`], the fields are taken out of the [`Inner`]
+    /// struct and returned, leaving a "taken" state in its place.
+    #[inline]
+    pub(crate) fn take(&self) -> Inner<T> {
+        self.inner.lock().take()
     }
 
     #[inline]
