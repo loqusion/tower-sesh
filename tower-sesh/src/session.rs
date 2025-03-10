@@ -120,6 +120,7 @@ impl<T> Inner<T> {
     /// Similar to [`Option::take`], the fields are taken out of the struct and
     /// returned, leaving a "taken" state in its place.
     #[inline]
+    #[must_use]
     fn take(&mut self) -> Inner<T> {
         std::mem::replace(
             self,
@@ -300,6 +301,7 @@ impl<T> Session<T> {
     /// Similar to [`Option::take`], the fields are taken out of the [`Inner`]
     /// struct and returned, leaving a "taken" state in its place.
     #[inline]
+    #[must_use]
     pub(crate) fn take(&self) -> Inner<T> {
         self.inner.lock().take()
     }
