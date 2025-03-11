@@ -10,7 +10,7 @@ pub type Ttl = OffsetDateTime;
 
 const WEEK_IN_SECONDS: u32 = 60 * 60 * 24 * 7;
 /// Default expiry offset for a session, in seconds.
-pub const DEFAULT_SESSION_EXPIRY_SECONDS: u32 = 2 * WEEK_IN_SECONDS;
+pub const SESSION_EXPIRY_SECONDS_DEFAULT: u32 = 2 * WEEK_IN_SECONDS;
 
 /// Returns the current date and time with the local system's UTC offset.
 ///

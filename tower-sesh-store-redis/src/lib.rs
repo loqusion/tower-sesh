@@ -21,7 +21,7 @@ use rng::PhantomThreadRng;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
     store::{Error, SessionStoreImpl},
-    time::DEFAULT_SESSION_EXPIRY_SECONDS,
+    time::SESSION_EXPIRY_SECONDS_DEFAULT,
     Record, SessionKey, SessionStore, Ttl,
 };
 
@@ -320,7 +320,7 @@ where
 
         let (value, timestamp) = redis::pipe()
             .atomic()
-            .expire(&key, i64::from(DEFAULT_SESSION_EXPIRY_SECONDS)) // Ensure the key has a timeout if one isn't set
+            .expire(&key, i64::from(SESSION_EXPIRY_SECONDS_DEFAULT)) // Ensure the key has a timeout if one isn't set
             .arg("NX")
             .ignore()
             .get(&key)
