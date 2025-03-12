@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
-use tower_sesh_core::{time::now, SessionKey, SessionStore};
+use rand_chacha::ChaCha20Rng as TestRng;
+use tower_sesh_core::{store::SessionStoreRng, time::now, SessionKey, SessionStore};
 
 #[doc(hidden)]
 pub mod __private {
@@ -31,18 +31,22 @@ macro_rules! test_suite {
     };
 }
 
-pub async fn test_smoke(_store: impl SessionStore<()>) {}
+pub async fn test_smoke(_store: impl SessionStore<()> + SessionStoreRng<TestRng>) {}
 
-pub async fn test_loading_a_missing_session_returns_none(store: impl SessionStore<()>) {
-    let mut rng = ChaCha20Rng::seed_from_u64(999412874);
+pub async fn test_loading_a_missing_session_returns_none(
+    store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(999412874);
     let session_key = rng.random::<SessionKey>();
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
 }
 
-pub async fn test_update_creates_missing_entry(store: impl SessionStore<String>) {
-    let mut rng = ChaCha20Rng::seed_from_u64(56474);
+pub async fn test_update_creates_missing_entry(
+    store: impl SessionStore<String> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(56474);
     let session_key = rng.random::<SessionKey>();
     let ttl = now() + Duration::from_secs(10);
 

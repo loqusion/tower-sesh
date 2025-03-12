@@ -4,7 +4,7 @@ use std::{env, sync::LazyLock, time::Duration};
 
 use redis::aio::ConnectionManagerConfig;
 use serde::{de::DeserializeOwned, Serialize};
-use tower_sesh_core::SessionStore;
+use tower_sesh_core::{store::SessionStoreRng, SessionStore};
 use tower_sesh_store_redis::RedisStore;
 
 static REDIS_URL: LazyLock<&'static str> = LazyLock::new(|| {
@@ -13,9 +13,10 @@ static REDIS_URL: LazyLock<&'static str> = LazyLock::new(|| {
         .leak()
 });
 
-async fn store<T>() -> impl SessionStore<T>
+async fn store<T, Rng>() -> impl SessionStore<T> + SessionStoreRng<Rng>
 where
     T: Serialize + DeserializeOwned + Send + Sync + 'static,
+    Rng: rand::CryptoRng + Send + 'static,
 {
     RedisStore::with_config(
         REDIS_URL.clone(),
