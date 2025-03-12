@@ -11,13 +11,11 @@ use std::{borrow::Cow, fmt, marker::PhantomData};
 
 use async_trait::async_trait;
 use connection::{ConnectionManagerWithRetry, GetConnection};
-use parking_lot::Mutex;
-use rand::{rngs::ThreadRng, CryptoRng, Rng};
+use rand::{rngs::ThreadRng, Rng};
 use redis::{
     aio::ConnectionManagerConfig, AsyncCommands, Client, ExistenceCheck, IntoConnectionInfo,
     RedisResult, SetExpiry, SetOptions,
 };
-use rng::PhantomThreadRng;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
     store::{Error, SessionStoreImpl},
@@ -28,22 +26,15 @@ use tower_sesh_core::{
 pub use redis;
 
 pub mod connection;
-pub mod rng;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub struct RedisStore<
-    T,
-    C: GetConnection = ConnectionManagerWithRetry,
-    R: CryptoRng = PhantomThreadRng,
-> {
+pub struct RedisStore<T, C: GetConnection = ConnectionManagerWithRetry> {
     client: C,
     config: Config,
 
     #[cfg(feature = "test-util")]
-    rng: Option<Mutex<R>>,
-    #[cfg(not(feature = "test-util"))]
-    _rng_marker: PhantomData<Option<Mutex<R>>>,
+    rng: Option<Box<parking_lot::Mutex<dyn rand::CryptoRng + Send + 'static>>>,
 
     _marker: PhantomData<fn() -> T>,
 }
@@ -127,10 +118,10 @@ impl<T> RedisStore<T> {
     }
 }
 
-impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
+impl<T, C: GetConnection> RedisStore<T, C> {
     #[cfg(feature = "test-util")]
     #[inline]
-    fn with_client(client: C) -> RedisStore<T, C, R> {
+    fn with_client(client: C) -> RedisStore<T, C> {
         Self {
             client,
             config: Config::default(),
@@ -141,17 +132,16 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
 
     #[cfg(not(feature = "test-util"))]
     #[inline]
-    fn with_client(client: C) -> RedisStore<T, C, R> {
+    fn with_client(client: C) -> RedisStore<T, C> {
         Self {
             client,
             config: Config::default(),
-            _rng_marker: PhantomData,
             _marker: PhantomData,
         }
     }
 }
 
-impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
+impl<T, C: GetConnection> RedisStore<T, C> {
     /// Set the Redis key prefix used to store sessions.
     ///
     /// When a session is stored, the Redis [key] is constructed by appending
@@ -161,7 +151,7 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// Default is `"session:"`.
     ///
     /// [key]: https://redis.io/docs/latest/develop/use/keyspace/
-    pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C, R> {
+    pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C> {
         self.config.key_prefix = prefix.into();
         self
     }
@@ -197,43 +187,32 @@ impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
     /// # }).unwrap();
     /// ```
     #[cfg(feature = "test-util")]
-    pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C, Rng>
+    pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C>
     where
-        Rng: CryptoRng + Send + 'static,
+        Rng: rand::CryptoRng + Send + 'static,
     {
         RedisStore {
             client: self.client,
             config: self.config,
-            rng: Some(Mutex::new(rng)),
+            rng: Some(Box::new(parking_lot::Mutex::new(rng))),
             _marker: PhantomData,
         }
     }
 }
 
-impl<T, C: GetConnection, R: CryptoRng> fmt::Debug for RedisStore<T, C, R>
+impl<T, C: GetConnection> fmt::Debug for RedisStore<T, C>
 where
     C: fmt::Debug,
-    R: fmt::Debug,
 {
-    #[cfg(not(feature = "test-util"))]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RedisStore")
             .field("client", &self.client)
             .field("config", &self.config)
-            .finish()
-    }
-
-    #[cfg(feature = "test-util")]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RedisStore")
-            .field("client", &self.client)
-            .field("config", &self.config)
-            .field("rng", &self.rng)
             .finish()
     }
 }
 
-impl<T, C: GetConnection, R: CryptoRng> RedisStore<T, C, R> {
+impl<T, C: GetConnection> RedisStore<T, C> {
     fn redis_key(&self, session_key: &SessionKey) -> String {
         let mut redis_key =
             String::with_capacity(self.config.key_prefix.len() + SessionKey::ENCODED_LEN);
@@ -270,18 +249,15 @@ macro_rules! ensure_redis_timestamp {
     };
 }
 
-impl<T, C: GetConnection, R: CryptoRng> SessionStore<T> for RedisStore<T, C, R>
-where
-    T: 'static + Send + Sync + Serialize + DeserializeOwned,
-    R: 'static + Send,
+impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where
+    T: 'static + Send + Sync + Serialize + DeserializeOwned
 {
 }
 
 #[async_trait]
-impl<T, C: GetConnection, R: CryptoRng> SessionStoreImpl<T> for RedisStore<T, C, R>
+impl<T, C: GetConnection> SessionStoreImpl<T> for RedisStore<T, C>
 where
     T: 'static + Send + Sync + Serialize + DeserializeOwned,
-    R: 'static + Send,
 {
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
@@ -431,21 +407,12 @@ fn err_negative_unix_timestamp(ttl: Ttl) -> Error {
 
 #[cfg(test)]
 mod test {
-    use rand::rngs::{OsRng, ReseedingRng, StdRng};
-    use rand_chacha::{rand_core::UnwrapErr, ChaCha12Core, ChaCha12Rng};
-
     use super::*;
 
     #[test]
     fn test_constraints() {
         fn require_traits<T: SessionStore<()> + Send + Sync + 'static>() {}
 
-        require_traits::<RedisStore<(), ConnectionManagerWithRetry, PhantomThreadRng>>();
-        require_traits::<RedisStore<(), ConnectionManagerWithRetry, StdRng>>();
-        require_traits::<RedisStore<(), ConnectionManagerWithRetry, UnwrapErr<OsRng>>>();
-        require_traits::<
-            RedisStore<(), ConnectionManagerWithRetry, ReseedingRng<ChaCha12Core, OsRng>>,
-        >();
-        require_traits::<RedisStore<(), ConnectionManagerWithRetry, ChaCha12Rng>>();
+        require_traits::<RedisStore<(), ConnectionManagerWithRetry>>();
     }
 }
