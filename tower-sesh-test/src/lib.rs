@@ -20,7 +20,7 @@ macro_rules! test_suite {
         $(
             #[tokio::test]
             async fn $test() {
-                $crate::paste::paste!{
+                $crate::paste::paste! {
                     $crate::[<test_ $test>]($store).await;
                 }
             }
