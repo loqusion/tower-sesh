@@ -64,6 +64,7 @@ impl<T> MemoryStore<T> {
     }
 }
 
+#[doc(hidden)]
 #[cfg(all(feature = "memory-store", feature = "test-util"))]
 impl<T, Rng> tower_sesh_core::store::SessionStoreRng<Rng> for MemoryStore<T>
 where
@@ -154,6 +155,7 @@ impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> CachingStore<T, Cache, S
     }
 }
 
+#[doc(hidden)]
 #[cfg(feature = "test-util")]
 impl<T, Cache: SessionStore<T>, Store: SessionStore<T>, Rng>
     tower_sesh_core::store::SessionStoreRng<Rng> for CachingStore<T, Cache, Store>

@@ -157,6 +157,7 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 }
 
+#[doc(hidden)]
 #[cfg(feature = "test-util")]
 impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
 where
