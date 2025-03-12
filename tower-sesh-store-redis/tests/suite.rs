@@ -1,16 +1,7 @@
 #![cfg(feature = "test-util")]
 
-use std::{
-    env,
-    sync::{
-        atomic::{AtomicU64, Ordering::SeqCst},
-        LazyLock,
-    },
-    time::Duration,
-};
+use std::{env, sync::LazyLock, time::Duration};
 
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 use redis::aio::ConnectionManagerConfig;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::SessionStore;
@@ -21,8 +12,6 @@ static REDIS_URL: LazyLock<&'static str> = LazyLock::new(|| {
         .expect("`REDIS_URL` environment variable must be set")
         .leak()
 });
-
-static SEED: AtomicU64 = AtomicU64::new(0);
 
 async fn store<T>() -> impl SessionStore<T>
 where
@@ -36,7 +25,6 @@ where
     )
     .await
     .expect("failed to connect to redis")
-    .rng(ChaCha20Rng::seed_from_u64(SEED.fetch_add(1, SeqCst)))
 }
 
 tower_sesh_test::test_suite!(store().await);

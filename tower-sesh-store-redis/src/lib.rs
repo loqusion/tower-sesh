@@ -18,7 +18,7 @@ use redis::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
-    store::{Error, SessionStoreImpl},
+    store::{Error, SessionStoreImpl, SessionStoreRng},
     time::SESSION_EXPIRY_SECONDS_DEFAULT,
     Record, SessionKey, SessionStore, Ttl,
 };
@@ -155,48 +155,15 @@ impl<T, C: GetConnection> RedisStore<T, C> {
         self.config.key_prefix = prefix.into();
         self
     }
+}
 
-    /// Change the RNG used to generate random session keys.
-    ///
-    /// If an RNG isn't provided, [`ThreadRng`] is used by default.
-    ///
-    /// [`ThreadRng`]: rand::rngs::ThreadRng
-    ///
-    /// # Note about performance
-    ///
-    /// The RNG passed to this method is synchronized between threads with a
-    /// mutex. This can cause performance degradation, especially in a
-    /// multi-threaded context. Therefore, using this method is not recommended
-    /// unless you need determinism (for instance, in tests).
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use rand::SeedableRng;
-    /// use rand_chacha::ChaCha12Rng;
-    /// use tower_sesh_store_redis::RedisStore;
-    ///
-    /// # type SessionData = ();
-    /// #
-    /// # tokio_test::block_on(async {
-    /// let rng = ChaCha12Rng::seed_from_u64(1337); // seed_from_u64 is suitable for testing purposes
-    /// let store = RedisStore::<SessionData>::open("redis://127.0.0.1/")
-    ///     .await?
-    ///     .rng(rng);
-    /// # Ok::<_, anyhow::Error>(())
-    /// # }).unwrap();
-    /// ```
-    #[cfg(feature = "test-util")]
-    pub fn rng<Rng>(self, rng: Rng) -> RedisStore<T, C>
-    where
-        Rng: rand::CryptoRng + Send + 'static,
-    {
-        RedisStore {
-            client: self.client,
-            config: self.config,
-            rng: Some(Box::new(parking_lot::Mutex::new(rng))),
-            _marker: PhantomData,
-        }
+#[cfg(feature = "test-util")]
+impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
+where
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
     }
 }
 
