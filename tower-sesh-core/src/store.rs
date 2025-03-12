@@ -57,14 +57,38 @@ pub trait SessionStore<T>: 'static + Send + Sync + SessionStoreImpl<T> {}
 #[doc(hidden)]
 #[async_trait]
 pub trait SessionStoreImpl<T>: 'static + Send + Sync {
+    /// Creates a session, returning the session key that may be used to
+    /// subsequently retrieve the session.
+    ///
+    /// Implementors should randomly generate a session key and perform
+    /// collision resolution (even though collisions are statistically
+    /// improbable).
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey>;
 
+    /// Returns a record containing the data and expiry corresponding to the
+    /// session identified by the provided session key.
+    ///
+    /// If there is no session identified by the given session key, `Ok(None)`
+    /// is returned.
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>>;
 
+    /// Updates the session identified by the provided session key.
+    ///
+    /// If no session identified by the session key exists, or if it has
+    /// expired, it should be created.
     async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()>;
 
+    /// Updates the expiry of the session identified by the provided session
+    /// key.
+    ///
+    /// If no session identified by the session key exists, or if it has
+    /// expired, this should be a no-op with an `Ok` result.
     async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()>;
 
+    /// Deletes the session identified by the provided session key.
+    ///
+    /// If no session identified by the session key exists, this should be a
+    /// no-op with an `Ok` result.
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }
 
