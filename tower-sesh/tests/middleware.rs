@@ -26,6 +26,18 @@ fn invalid_cookie_name() {
     SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).cookie_name("\n");
 }
 
+#[test]
+#[should_panic = "not implemented"]
+fn plain_to_private() {
+    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).private();
+}
+
+#[test]
+#[should_panic = "not implemented"]
+fn plain_to_signed() {
+    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).signed();
+}
+
 #[tokio::test]
 async fn preserves_existing_set_cookie() {
     async fn handler(session: Session<()>) -> impl IntoResponse {
