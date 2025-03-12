@@ -1,11 +1,184 @@
 use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
-use cookie::Cookie;
-use http::{header, HeaderValue, Request};
+use cookie::{Cookie, CookieJar};
+use http::{header, HeaderValue, Request, Response};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
 use tower_sesh_core::{store::SessionStoreImpl, time::now, SessionKey};
+
+fn jar_from_response<B>(
+    res: &Response<B>,
+) -> Result<CookieJar, Box<dyn std::error::Error + Send + Sync + 'static>> {
+    res.headers()
+        .get_all(header::SET_COOKIE)
+        .into_iter()
+        .try_fold(CookieJar::new(), |mut jar, header_value| {
+            let s = header_value.to_str()?;
+            let cookie = Cookie::parse_encoded(s)?;
+            jar.add_original(cookie.into_owned());
+            Ok(jar)
+        })
+}
+
+#[tokio::test]
+async fn option_cookie_name() {
+    async fn handler(session: Session<()>) {
+        session.insert(());
+    }
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into()).cookie_name("hello");
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.get("hello").is_some());
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+}
+
+#[tokio::test]
+async fn option_domain() {
+    async fn handler(session: Session<()>) {
+        session.insert(());
+    }
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+        .cookie_name("id")
+        .domain("doc.rust-lang.org");
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+    let cookie = jar.get("id").unwrap();
+    assert_eq!(cookie.domain(), Some("doc.rust-lang.org"));
+}
+
+#[tokio::test]
+async fn option_http_only() {
+    async fn handler(session: Session<()>) {
+        session.insert(());
+    }
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+        .cookie_name("id")
+        .http_only(true);
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+    let cookie = jar.get("id").unwrap();
+    assert_eq!(cookie.http_only(), Some(true));
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+        .cookie_name("id")
+        .http_only(false);
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+    let cookie = jar.get("id").unwrap();
+    assert!(!cookie.http_only().unwrap_or(false));
+}
+
+#[tokio::test]
+async fn option_path() {
+    async fn handler(session: Session<()>) {
+        session.insert(());
+    }
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+        .cookie_name("id")
+        .path("/std");
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+    let cookie = jar.get("id").unwrap();
+    assert_eq!(cookie.path(), Some("/std"));
+}
+
+#[tokio::test]
+async fn option_same_site() {
+    use tower_sesh::middleware::SameSite;
+
+    async fn handler(session: Session<()>) {
+        session.insert(());
+    }
+
+    for (same_site, expected) in [
+        (SameSite::Strict, cookie::SameSite::Strict),
+        (SameSite::Lax, cookie::SameSite::Lax),
+        (SameSite::None, cookie::SameSite::None),
+    ] {
+        let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+            .cookie_name("id")
+            .same_site(same_site);
+        let app = Router::new()
+            .route("/", routing::get(handler))
+            .layer(session_layer);
+        let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+        let res = app.oneshot(req).await.unwrap();
+
+        let jar = jar_from_response(&res).unwrap();
+        assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+        let cookie = jar.get("id").unwrap();
+        assert_eq!(cookie.same_site(), Some(expected));
+    }
+}
+
+#[tokio::test]
+async fn option_secure() {
+    async fn handler(session: Session<()>) {
+        session.insert(());
+    }
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+        .cookie_name("id")
+        .secure(true);
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+    let cookie = jar.get("id").unwrap();
+    assert_eq!(cookie.secure(), Some(true));
+
+    let session_layer = SessionLayer::plain(MemoryStore::<()>::new().into())
+        .cookie_name("id")
+        .secure(false);
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(session_layer);
+    let req = Request::builder().uri("/").body(Body::empty()).unwrap();
+    let res = app.oneshot(req).await.unwrap();
+
+    let jar = jar_from_response(&res).unwrap();
+    assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+    let cookie = jar.get("id").unwrap();
+    assert!(!cookie.secure().unwrap_or(false));
+}
 
 #[tokio::test]
 #[should_panic = "called more than once!"]
