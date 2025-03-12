@@ -3,6 +3,7 @@ use std::{fmt, marker::PhantomData};
 use async_trait::async_trait;
 #[cfg(feature = "memory-store")]
 use dashmap::DashMap;
+use rand::{rngs::ThreadRng, Rng};
 use tower_sesh_core::{
     store::{Error, SessionStoreImpl},
     time::now,
@@ -19,13 +20,24 @@ const MAX_ITERATIONS: usize = 8;
 #[cfg(feature = "memory-store")]
 pub struct MemoryStore<T> {
     map: DashMap<SessionKey, Record<T>>,
+    #[cfg(feature = "test-util")]
+    rng: Option<Box<parking_lot::Mutex<dyn rand::CryptoRng + Send + 'static>>>,
 }
 
 #[cfg(feature = "memory-store")]
 impl<T> Default for MemoryStore<T> {
+    #[cfg(not(feature = "test-util"))]
     fn default() -> Self {
         MemoryStore {
             map: DashMap::new(),
+        }
+    }
+
+    #[cfg(feature = "test-util")]
+    fn default() -> Self {
+        MemoryStore {
+            map: DashMap::new(),
+            rng: None,
         }
     }
 }
@@ -34,6 +46,31 @@ impl<T> Default for MemoryStore<T> {
 impl<T> MemoryStore<T> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    #[cfg(not(feature = "test-util"))]
+    #[inline]
+    fn random_key(&self) -> SessionKey {
+        ThreadRng::default().random()
+    }
+
+    #[cfg(feature = "test-util")]
+    fn random_key(&self) -> SessionKey {
+        if let Some(rng) = &self.rng {
+            rng.lock().random()
+        } else {
+            ThreadRng::default().random()
+        }
+    }
+}
+
+#[cfg(all(feature = "memory-store", feature = "test-util"))]
+impl<T, Rng> tower_sesh_core::store::SessionStoreRng<Rng> for MemoryStore<T>
+where
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
     }
 }
 
@@ -59,7 +96,7 @@ where
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
         for _ in 0..MAX_ITERATIONS {
-            let session_key = rand::random::<SessionKey>();
+            let session_key = self.random_key();
             match self.map.entry(session_key.clone()) {
                 dashmap::Entry::Vacant(entry) => {
                     entry.insert(record);
