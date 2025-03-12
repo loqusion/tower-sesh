@@ -6,8 +6,11 @@ use dashmap::DashMap;
 use tower_sesh_core::{
     store::{Error, SessionStoreImpl},
     time::now,
-    Record, SessionKey, SessionStore, Ttl,
+    Record, SessionKey, Ttl,
 };
+
+#[doc(inline)]
+pub use tower_sesh_core::SessionStore;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
