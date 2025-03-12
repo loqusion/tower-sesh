@@ -39,6 +39,7 @@ pub async fn test_create_does_collision_resolution(
 ) {
     let rng = TestRng::seed_from_u64(4787236816789423423);
     let session_key = rng.clone().random::<SessionKey>();
+    assert_eq!(session_key, rng.clone().random()); // sanity check
 
     store
         .update(&session_key, &"hello, world!".to_owned(), ttl())
