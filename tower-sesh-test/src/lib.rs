@@ -5,7 +5,10 @@ use rand_chacha::ChaCha20Rng;
 use tower_sesh_core::{time::now, SessionKey, SessionStore};
 
 #[doc(hidden)]
-pub use paste;
+pub mod __private {
+    pub use paste;
+    pub use tokio;
+}
 
 #[macro_export]
 macro_rules! test_suite {
@@ -18,9 +21,9 @@ macro_rules! test_suite {
 
     (@impl $store:expr => $($test:ident)+) => {
         $(
-            #[tokio::test]
+            #[$crate::__private::tokio::test]
             async fn $test() {
-                $crate::paste::paste! {
+                $crate::__private::paste::paste! {
                     $crate::[<test_ $test>]($store).await;
                 }
             }
