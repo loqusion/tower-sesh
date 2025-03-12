@@ -97,8 +97,9 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 ///
 /// # Example
 ///
-/// This example is only suitable for testing purposes: synchronizing an RNG
-/// with a mutex results in performance degradation.
+/// The trait implementation in this example is only suitable for testing
+/// purposes: synchronizing an RNG with a mutex results in performance
+/// degradation.
 ///
 /// ```rust
 /// use std::sync::Mutex;
