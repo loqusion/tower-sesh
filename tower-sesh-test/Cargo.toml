@@ -1,0 +1,14 @@
+[package]
+name = "tower-sesh-test"
+version = "0.0.0"
+publish = false
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tower-sesh = { path = "../tower-sesh" }
+tower-sesh-core = { path = "../tower-sesh-core" }
+
+[lints]
+workspace = true
