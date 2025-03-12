@@ -92,6 +92,55 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }
 
+/// A trait allowing a session store to override the PRNG used to randomly
+/// generate session keys.
+///
+/// # Example
+///
+/// This example is only suitable for testing purposes: synchronizing an RNG
+/// with a mutex results in performance degradation.
+///
+/// ```rust
+/// use std::sync::Mutex;
+/// use rand::{CryptoRng, SeedableRng};
+/// use rand_chacha::ChaCha20Rng;
+/// use tower_sesh_core::store::SessionStoreRng;
+///
+/// pub struct Store {
+///     #[cfg(feature = "test-util")]
+/// #   _unused: (),
+///     rng: Option<Box<Mutex<dyn CryptoRng + Send + 'static>>>,
+///     // ...
+/// }
+/// #
+/// # impl Store {
+/// #   fn new() -> Self {
+/// #       Self {
+/// #           #[cfg(feature = "test-util")]
+/// #           _unused: (),
+/// #           rng: None
+/// #       }
+/// #   }
+/// # }
+///
+/// #[cfg(feature = "test-util")]
+/// # {}
+/// impl<Rng> SessionStoreRng<Rng> for Store
+/// where
+///     Rng: CryptoRng + Send + 'static,
+/// {
+///     fn rng(&mut self, rng: Rng) {
+///         self.rng = Some(Box::new(Mutex::new(rng)));
+///     }
+/// }
+///
+/// let mut store = Store::new();
+/// store.rng(ChaCha20Rng::seed_from_u64(9));
+/// ```
+pub trait SessionStoreRng<Rng: rand::CryptoRng + Send + 'static> {
+    fn rng(&mut self, rng: Rng);
+}
+
 /// A struct containing a session's data and expiration time.
 #[derive(Clone, Debug)]
 #[non_exhaustive]
