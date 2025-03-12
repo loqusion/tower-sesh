@@ -45,7 +45,7 @@ type Result<T, E = Error> = std::result::Result<T, E>;
 // is because `Value`'s `Deserialize::deserialize` delegates to
 // `Deserializer::deserialize_any`.)
 
-/// Backing storage for session data.
+/// Storage mechanism used to store, retrieve, and mutate session data.
 ///
 /// This trait is sealed and intended to be opaque. The details of this trait
 /// are open to change across non-major version bumps; as such, depending on
