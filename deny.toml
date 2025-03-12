@@ -2,6 +2,7 @@
 
 [graph]
 all-features = true
+exclude = ["tower-sesh-test"]
 
 [advisories]
 unmaintained = "workspace"
