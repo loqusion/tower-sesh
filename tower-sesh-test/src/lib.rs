@@ -15,7 +15,8 @@ macro_rules! test_suite {
     ($store:expr) => {
         $crate::test_suite! {
             @impl $store =>
-            smoke loading_a_missing_session_returns_none update_creates_missing_entry
+            smoke create_does_collision_resolution loading_a_missing_session_returns_none
+            update_creates_missing_entry
         }
     };
 
@@ -32,6 +33,49 @@ macro_rules! test_suite {
 }
 
 pub async fn test_smoke(_store: impl SessionStore<()> + SessionStoreRng<TestRng>) {}
+
+pub async fn test_create_does_collision_resolution(
+    mut store: impl SessionStore<String> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(4787236816789423423);
+    let session_key = rng.clone().random::<SessionKey>();
+    let ttl = now() + Duration::from_secs(10);
+
+    store
+        .update(&session_key, &"hello, world!".to_owned(), ttl)
+        .await
+        .unwrap();
+
+    store.rng(rng.clone());
+    let created_key = store
+        .create(&"not hello, world!".to_owned(), ttl)
+        .await
+        .unwrap();
+
+    assert_ne!(session_key, created_key);
+    let original_data = store.load(&session_key).await.unwrap().unwrap().data;
+    let created_data = store.load(&created_key).await.unwrap().unwrap().data;
+    assert_ne!(original_data, created_data);
+
+    store.rng(rng.clone());
+    let another_created_key = store
+        .create(&"another not hello, world!".to_owned(), ttl)
+        .await
+        .unwrap();
+
+    assert_ne!(session_key, another_created_key);
+    assert_ne!(created_key, another_created_key);
+    let original_data = store.load(&session_key).await.unwrap().unwrap().data;
+    let created_data = store.load(&created_key).await.unwrap().unwrap().data;
+    let another_created_data = store
+        .load(&another_created_key)
+        .await
+        .unwrap()
+        .unwrap()
+        .data;
+    assert_ne!(original_data, another_created_data);
+    assert_ne!(created_data, another_created_data);
+}
 
 pub async fn test_loading_a_missing_session_returns_none(
     store: impl SessionStore<()> + SessionStoreRng<TestRng>,
