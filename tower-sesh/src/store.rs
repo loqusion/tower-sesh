@@ -154,6 +154,19 @@ impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> CachingStore<T, Cache, S
     }
 }
 
+#[cfg(feature = "test-util")]
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>, Rng>
+    tower_sesh_core::store::SessionStoreRng<Rng> for CachingStore<T, Cache, Store>
+where
+    Store: tower_sesh_core::store::SessionStoreRng<Rng>,
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        // The RNG is only set for `store` since we only call `create` on `store`
+        self.store.rng(rng);
+    }
+}
+
 impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> fmt::Debug for CachingStore<T, Cache, Store>
 where
     Cache: fmt::Debug,
