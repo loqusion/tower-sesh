@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
-use tower_sesh_core::{store::SessionStoreRng, time::now, SessionKey, SessionStore};
+use tower_sesh_core::{store::SessionStoreRng, time::now, SessionKey, SessionStore, Ttl};
 
 #[doc(hidden)]
 pub mod __private {
@@ -39,16 +39,15 @@ pub async fn test_create_does_collision_resolution(
 ) {
     let rng = TestRng::seed_from_u64(4787236816789423423);
     let session_key = rng.clone().random::<SessionKey>();
-    let ttl = now() + Duration::from_secs(10);
 
     store
-        .update(&session_key, &"hello, world!".to_owned(), ttl)
+        .update(&session_key, &"hello, world!".to_owned(), ttl())
         .await
         .unwrap();
 
     store.rng(rng.clone());
     let created_key = store
-        .create(&"not hello, world!".to_owned(), ttl)
+        .create(&"not hello, world!".to_owned(), ttl())
         .await
         .unwrap();
 
@@ -59,7 +58,7 @@ pub async fn test_create_does_collision_resolution(
 
     store.rng(rng.clone());
     let another_created_key = store
-        .create(&"another not hello, world!".to_owned(), ttl)
+        .create(&"another not hello, world!".to_owned(), ttl())
         .await
         .unwrap();
 
@@ -92,10 +91,9 @@ pub async fn test_update_creates_missing_entry(
 ) {
     let mut rng = TestRng::seed_from_u64(56474);
     let session_key = rng.random::<SessionKey>();
-    let ttl = now() + Duration::from_secs(10);
 
     store
-        .update(&session_key, &"hello world".to_owned(), ttl)
+        .update(&session_key, &"hello world".to_owned(), ttl())
         .await
         .unwrap();
 
@@ -104,4 +102,8 @@ pub async fn test_update_creates_missing_entry(
         record.as_ref().map(|rec| rec.data.as_str()),
         Some("hello world")
     );
+}
+
+fn ttl() -> Ttl {
+    now() + Duration::from_secs(10)
 }
