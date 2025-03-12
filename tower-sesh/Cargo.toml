@@ -19,6 +19,8 @@ default = ["axum", "memory-store", "tracing"]
 log = ["tracing", "tracing/log"]
 memory-store = ["dep:dashmap"]
 
+test-util = []
+
 [dependencies]
 async-once-cell = "0.5.4"
 async-trait = { workspace = true }
