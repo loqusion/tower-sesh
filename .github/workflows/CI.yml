@@ -100,7 +100,7 @@ jobs:
         run: cargo test --doc --workspace --all-features
 
   test-caching-store:
-    name: "cargo test (${{ matrix.rust }}) - caching store"
+    name: "cargo test caching store (${{ matrix.rust }})"
     needs: check
     strategy:
       matrix:
