@@ -12,7 +12,7 @@
 //! [GitHub repository]: https://github.com/loqusion/tower-sesh
 
 // TODO: Include this in `tower-sesh` docs
-#[cfg_attr(not(localdocs), doc(hidden))]
+#[cfg_attr(not(tower_sesh_docs_local), doc(hidden))]
 pub mod _draft {
     //! Top-level documentation draft.
     //!

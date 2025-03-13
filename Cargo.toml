@@ -25,7 +25,7 @@ rand = { version = "0.9", default-features = false, features = ["std"] }
 serde = { version = "1", default-features = false, features = ["std"] }
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(localdocs)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tower_sesh_docs_local)'] }
 
 [profile.dev.package]
 insta.opt-level = 3
