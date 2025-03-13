@@ -28,4 +28,10 @@ where
     .expect("failed to connect to redis")
 }
 
+#[cfg(not(tower_sesh_test_caching_store))]
 tower_sesh_test::test_suite!(store().await);
+#[cfg(tower_sesh_test_caching_store)]
+tower_sesh_test::test_suite!(tower_sesh::store::CachingStore::from_cache_and_store(
+    tower_sesh::store::MemoryStore::new(),
+    store().await
+));
