@@ -1,5 +1,6 @@
-use std::time::Duration;
+use std::{collections::HashMap, future::Future, hash::Hash, time::Duration};
 
+use futures::FutureExt;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
 use tower_sesh_core::{store::SessionStoreRng, time::now, SessionKey, SessionStore, Ttl};
@@ -37,44 +38,55 @@ pub async fn test_smoke(_store: impl SessionStore<()> + SessionStoreRng<TestRng>
 pub async fn test_create_does_collision_resolution(
     mut store: impl SessionStore<String> + SessionStoreRng<TestRng>,
 ) {
+    async fn get_or_insert_async<K, V, F>(map: &mut HashMap<K, V>, key: K, future: F) -> &mut V
+    where
+        K: Eq + Hash,
+        F: Future<Output = V>,
+    {
+        use std::collections::hash_map::Entry;
+        match map.entry(key) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => entry.insert(future.await),
+        }
+    }
+
+    async fn assert_unique_keys_and_data(keys: &[SessionKey], store: &impl SessionStore<String>) {
+        let load = |key| store.load(key).map(|result| result.unwrap().unwrap().data);
+        let mut map: HashMap<&SessionKey, String> = HashMap::new();
+        for (i, key1) in keys.iter().enumerate() {
+            let data1 = get_or_insert_async(&mut map, key1, load(key1))
+                .await
+                .to_owned();
+            for key2 in keys.iter().skip(i + 1) {
+                assert_ne!(key1, key2);
+                let data2 = get_or_insert_async(&mut map, key2, load(key2))
+                    .await
+                    .to_owned();
+                assert_ne!(data1, data2);
+            }
+        }
+    }
+
+    let test_cases = [
+        "hello, world!",
+        "not hello, world!",
+        "another not hello, world!",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect::<Vec<_>>();
+    let mut keys: Vec<SessionKey> = Vec::new();
+
     let rng = TestRng::seed_from_u64(4787236816789423423);
-    let session_key = rng.clone().random::<SessionKey>();
-    assert_eq!(session_key, rng.clone().random()); // sanity check
+    assert_eq!(rng.clone().random::<SessionKey>(), rng.clone().random()); // sanity check
 
-    store
-        .update(&session_key, &"hello, world!".to_owned(), ttl())
-        .await
-        .unwrap();
+    for data in test_cases.iter() {
+        store.rng(rng.clone());
+        let created_key = store.create(data, ttl()).await.unwrap();
+        keys.push(created_key);
 
-    store.rng(rng.clone());
-    let created_key = store
-        .create(&"not hello, world!".to_owned(), ttl())
-        .await
-        .unwrap();
-
-    assert_ne!(session_key, created_key);
-    let original_data = store.load(&session_key).await.unwrap().unwrap().data;
-    let created_data = store.load(&created_key).await.unwrap().unwrap().data;
-    assert_ne!(original_data, created_data);
-
-    store.rng(rng.clone());
-    let another_created_key = store
-        .create(&"another not hello, world!".to_owned(), ttl())
-        .await
-        .unwrap();
-
-    assert_ne!(session_key, another_created_key);
-    assert_ne!(created_key, another_created_key);
-    let original_data = store.load(&session_key).await.unwrap().unwrap().data;
-    let created_data = store.load(&created_key).await.unwrap().unwrap().data;
-    let another_created_data = store
-        .load(&another_created_key)
-        .await
-        .unwrap()
-        .unwrap()
-        .data;
-    assert_ne!(original_data, another_created_data);
-    assert_ne!(created_data, another_created_data);
+        assert_unique_keys_and_data(&keys, &store).await;
+    }
 }
 
 pub async fn test_loading_a_missing_session_returns_none(
