@@ -17,7 +17,7 @@ macro_rules! test_suite {
         $crate::test_suite! {
             @impl $store =>
             smoke create_does_collision_resolution loading_a_missing_session_returns_none
-            update
+            loading_an_expired_session_returns_none update
         }
     };
 
@@ -94,6 +94,21 @@ pub async fn test_loading_a_missing_session_returns_none(
 ) {
     let mut rng = TestRng::seed_from_u64(999412874);
     let session_key = rng.random::<SessionKey>();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_an_expired_session_returns_none(
+    mut store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(31348441);
+    store.rng(rng);
+
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    let session_key = store.create(&(), five_microseconds_from_now).await.unwrap();
+
+    tokio::time::sleep(Duration::from_micros(10)).await;
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
