@@ -3,7 +3,7 @@ use std::{collections::HashMap, future::Future, hash::Hash, time::Duration};
 use futures::FutureExt;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
-use tower_sesh_core::{store::SessionStoreRng, time::now, SessionKey, SessionStore, Ttl};
+use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};
 
 #[doc(hidden)]
 pub mod __private {
@@ -118,5 +118,5 @@ pub async fn test_update_creates_missing_entry(
 }
 
 fn ttl() -> Ttl {
-    now() + Duration::from_secs(10)
+    Ttl::now_local().unwrap() + Duration::from_secs(10)
 }
