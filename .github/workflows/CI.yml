@@ -98,3 +98,35 @@ jobs:
         run: cargo nextest run --profile ci --workspace --features test-util
       - name: Run doctests
         run: cargo test --doc --workspace --all-features
+
+  test-caching-store:
+    name: "cargo test (${{ matrix.rust }}) - caching store"
+    needs: check
+    strategy:
+      matrix:
+        rust: [stable, beta, nightly]
+      fail-fast: true
+    runs-on: ubuntu-latest
+    env:
+      REDIS_URL: redis://localhost:6379
+    services:
+      # Required for tower-sesh-store-redis
+      redis:
+        image: redis:7.4.1-alpine
+        ports:
+          - "6379:6379"
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: "install Rust ${{ matrix.rust }}"
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - name: install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      - name: Run tests
+        run: RUSTFLAGS="--cfg tower_sesh_test_caching_store" cargo nextest run --profile ci --features test-util
