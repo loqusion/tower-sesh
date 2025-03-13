@@ -17,7 +17,7 @@ macro_rules! test_suite {
         $crate::test_suite! {
             @impl $store =>
             smoke create_does_collision_resolution loading_a_missing_session_returns_none
-            update_creates_missing_entry
+            update
         }
     };
 
@@ -99,22 +99,32 @@ pub async fn test_loading_a_missing_session_returns_none(
     assert!(record.is_none());
 }
 
-pub async fn test_update_creates_missing_entry(
-    store: impl SessionStore<String> + SessionStoreRng<TestRng>,
-) {
-    let mut rng = TestRng::seed_from_u64(56474);
+pub async fn test_update(store: impl SessionStore<String> + SessionStoreRng<TestRng>) {
+    let mut rng = TestRng::seed_from_u64(25593);
     let session_key = rng.random::<SessionKey>();
 
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+
+    // creates missing entry
+    let before = Ttl::now_local().unwrap();
     store
         .update(&session_key, &"hello world".to_owned(), ttl())
         .await
         .unwrap();
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, "hello world");
+    assert!(record.ttl > before);
 
-    let record = store.load(&session_key).await.unwrap();
-    assert_eq!(
-        record.as_ref().map(|rec| rec.data.as_str()),
-        Some("hello world")
-    );
+    // updates existing entry
+    let before = Ttl::now_local().unwrap();
+    store
+        .update(&session_key, &"another hello world".to_owned(), ttl())
+        .await
+        .unwrap();
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, "another hello world");
+    assert!(record.ttl > before);
 }
 
 fn ttl() -> Ttl {
