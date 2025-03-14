@@ -20,6 +20,7 @@ macro_rules! test_suite {
             loading_an_expired_session_returns_none_create
             loading_an_expired_session_returns_none_update
             loading_an_expired_session_returns_none_update_ttl update
+            delete_after_create delete_after_update delete_does_not_error_for_missing_entry
         }
     };
 
@@ -166,6 +167,40 @@ pub async fn test_update(store: impl SessionStore<String> + SessionStoreRng<Test
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.data, "another hello world");
     assert!(record.ttl > before);
+}
+
+pub async fn test_delete_after_create(mut store: impl SessionStore<()> + SessionStoreRng<TestRng>) {
+    let rng = TestRng::seed_from_u64(306111374);
+    store.rng(rng);
+
+    let session_key = store.create(&(), ttl()).await.unwrap();
+    store.delete(&session_key).await.unwrap();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_delete_after_update(store: impl SessionStore<()> + SessionStoreRng<TestRng>) {
+    let mut rng = TestRng::seed_from_u64(200708635);
+    let session_key = rng.random::<SessionKey>();
+
+    store.update(&session_key, &(), ttl()).await.unwrap();
+    store.delete(&session_key).await.unwrap();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_delete_does_not_error_for_missing_entry(
+    store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(136113526);
+    let session_key = rng.random::<SessionKey>();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+
+    store.delete(&session_key).await.unwrap();
 }
 
 fn ttl() -> Ttl {
