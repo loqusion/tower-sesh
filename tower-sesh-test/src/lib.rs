@@ -17,7 +17,9 @@ macro_rules! test_suite {
         $crate::test_suite! {
             @impl $store =>
             smoke create_does_collision_resolution loading_a_missing_session_returns_none
-            loading_an_expired_session_returns_none update
+            loading_an_expired_session_returns_none_create
+            loading_an_expired_session_returns_none_update
+            loading_an_expired_session_returns_none_update_ttl update
         }
     };
 
@@ -99,7 +101,7 @@ pub async fn test_loading_a_missing_session_returns_none(
     assert!(record.is_none());
 }
 
-pub async fn test_loading_an_expired_session_returns_none(
+pub async fn test_loading_an_expired_session_returns_none_create(
     mut store: impl SessionStore<()> + SessionStoreRng<TestRng>,
 ) {
     let rng = TestRng::seed_from_u64(31348441);
@@ -107,6 +109,43 @@ pub async fn test_loading_an_expired_session_returns_none(
 
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
     let session_key = store.create(&(), five_microseconds_from_now).await.unwrap();
+
+    tokio::time::sleep(Duration::from_micros(10)).await;
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_an_expired_session_returns_none_update(
+    store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(880523847);
+    let session_key = rng.random::<SessionKey>();
+
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    store
+        .update(&session_key, &(), five_microseconds_from_now)
+        .await
+        .unwrap();
+
+    tokio::time::sleep(Duration::from_micros(10)).await;
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_an_expired_session_returns_none_update_ttl(
+    mut store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(2587831351);
+    store.rng(rng);
+
+    let session_key = store.create(&(), ttl()).await.unwrap();
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    store
+        .update_ttl(&session_key, five_microseconds_from_now)
+        .await
+        .unwrap();
 
     tokio::time::sleep(Duration::from_micros(10)).await;
 
