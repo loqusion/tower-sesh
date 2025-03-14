@@ -1,6 +1,6 @@
 use std::{collections::HashMap, future::Future, hash::Hash, time::Duration};
 
-use futures::FutureExt;
+use futures::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
 use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};
@@ -40,30 +40,17 @@ pub async fn test_smoke(_store: impl SessionStore<()> + SessionStoreRng<TestRng>
 pub async fn test_create_does_collision_resolution(
     mut store: impl SessionStore<String> + SessionStoreRng<TestRng>,
 ) {
-    async fn get_or_insert_async<K, V, F>(map: &mut HashMap<K, V>, key: K, future: F) -> &mut V
-    where
-        K: Eq + Hash,
-        F: Future<Output = V>,
-    {
-        use std::collections::hash_map::Entry;
-        match map.entry(key) {
-            Entry::Occupied(entry) => entry.into_mut(),
-            Entry::Vacant(entry) => entry.insert(future.await),
-        }
-    }
-
     async fn assert_unique_keys_and_data(keys: &[SessionKey], store: &impl SessionStore<String>) {
-        let load = |key| store.load(key).map(|result| result.unwrap().unwrap().data);
-        let mut map: HashMap<&SessionKey, String> = HashMap::new();
-        for (i, key1) in keys.iter().enumerate() {
-            let data1 = get_or_insert_async(&mut map, key1, load(key1))
-                .await
-                .to_owned();
-            for key2 in keys.iter().skip(i + 1) {
+        let data = stream::iter(keys.iter().map(|key| store.load(key)))
+            .buffered(keys.len())
+            .map_ok(|record| record.unwrap().data)
+            .try_collect::<Vec<_>>()
+            .await
+            .unwrap();
+
+        for (i, (key1, data1)) in keys.iter().zip(data.iter()).enumerate() {
+            for (key2, data2) in keys.iter().zip(data.iter()).skip(i + 1) {
                 assert_ne!(key1, key2);
-                let data2 = get_or_insert_async(&mut map, key2, load(key2))
-                    .await
-                    .to_owned();
                 assert_ne!(data1, data2);
             }
         }
