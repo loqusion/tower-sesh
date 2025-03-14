@@ -139,6 +139,11 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 /// store.rng(ChaCha20Rng::seed_from_u64(9));
 /// ```
 pub trait SessionStoreRng<Rng: rand::CryptoRng + Send + 'static> {
+    /// Overrides the PRNG used by the session store to randomly generate
+    /// session keys.
+    ///
+    /// This is only suitable for tests, as it results in performance
+    /// degradation.
     fn rng(&mut self, rng: Rng);
 }
 
