@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use futures::prelude::*;
+use futures_util::{stream, StreamExt, TryStreamExt};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
 use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};

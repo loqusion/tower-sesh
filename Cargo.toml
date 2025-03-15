@@ -20,7 +20,7 @@ rust-version = "1.81.0"
 
 [workspace.dependencies]
 async-trait = "0.1"
-futures = { version = "0.3", default-features = false, features = ["std"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 rand = { version = "0.9", default-features = false, features = ["std"] }
 serde = { version = "1", default-features = false, features = ["std"] }
 

@@ -25,7 +25,7 @@ test-util = []
 async-once-cell = "0.5.4"
 async-trait = { workspace = true }
 cookie = { version = "0.18.1", features = ["signed", "private", "percent-encode"] }
-futures = { workspace = true, features = ["async-await"] }
+futures-util = { workspace = true, features = ["async-await", "async-await-macro"] }
 http = "1"
 parking_lot = { version = "0.12.3" }
 rand = { workspace = true, features = ["thread_rng"] }

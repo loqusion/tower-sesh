@@ -23,7 +23,7 @@ tokio-comp = ["redis/tokio-comp"]
 
 [dependencies]
 async-trait = { workspace = true }
-futures = { workspace = true }
+futures-util = { workspace = true }
 parking_lot = "0.12.3"
 rand = { workspace = true }
 redis = { version = "0.27.6", default-features = false, features = ["aio", "connection-manager", "keep-alive"] }

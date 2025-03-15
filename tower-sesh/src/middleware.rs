@@ -8,7 +8,7 @@ use std::{
 };
 
 use cookie::{Cookie, CookieJar};
-use futures::{future::BoxFuture, FutureExt};
+use futures_util::{future::BoxFuture, FutureExt};
 use http::{header, HeaderMap, HeaderValue, Request, Response};
 use tower::{Layer, Service};
 use tower_sesh_core::{SessionKey, SessionStore};

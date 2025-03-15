@@ -224,7 +224,7 @@ where
         let store_fut = self.store.update(session_key, data, ttl);
         let cache_fut = self.cache.update(session_key, data, ttl);
 
-        futures::try_join!(store_fut, cache_fut)?;
+        futures_util::try_join!(store_fut, cache_fut)?;
 
         Ok(())
     }
@@ -233,7 +233,7 @@ where
         let store_fut = self.store.update_ttl(session_key, ttl);
         let cache_fut = self.cache.update_ttl(session_key, ttl);
 
-        futures::try_join!(store_fut, cache_fut)?;
+        futures_util::try_join!(store_fut, cache_fut)?;
 
         Ok(())
     }
@@ -242,7 +242,7 @@ where
         let store_fut = self.store.delete(session_key);
         let cache_fut = self.cache.delete(session_key);
 
-        futures::try_join!(store_fut, cache_fut)?;
+        futures_util::try_join!(store_fut, cache_fut)?;
 
         Ok(())
     }
