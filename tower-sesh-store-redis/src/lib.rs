@@ -165,17 +165,6 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 }
 
-#[doc(hidden)]
-#[cfg(feature = "test-util")]
-impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
-where
-    Rng: rand::CryptoRng + Send + 'static,
-{
-    fn rng(&mut self, rng: Rng) {
-        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
-    }
-}
-
 impl<T, C: GetConnection> fmt::Debug for RedisStore<T, C>
 where
     C: fmt::Debug,
@@ -327,6 +316,17 @@ where
         let _: () = conn.del(&key).await.map_err(Error::store)?;
 
         Ok(())
+    }
+}
+
+#[doc(hidden)]
+#[cfg(feature = "test-util")]
+impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
+where
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
     }
 }
 
