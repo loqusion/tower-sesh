@@ -4,6 +4,14 @@
 //!
 //! [`tower-sesh`]: https://docs.rs/tower-sesh/latest/tower_sesh/
 
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms, single_use_lifetimes),
+        allow(dead_code, unused_assignments, unused_variables)
+    )
+))]
+
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
 compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
 

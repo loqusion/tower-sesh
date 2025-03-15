@@ -12,6 +12,14 @@
 //!
 //! And then keep releases in sync with `tower-sesh-core`.
 
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms, single_use_lifetimes),
+        allow(dead_code, unexpected_cfgs, unused_assignments, unused_variables)
+    )
+))]
+
 #[doc(inline)]
 pub use crate::key::SessionKey;
 #[doc(inline)]
