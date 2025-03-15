@@ -204,5 +204,5 @@ pub async fn test_delete_does_not_error_for_missing_entry(
 }
 
 fn ttl() -> Ttl {
-    Ttl::now_local().unwrap() + Duration::from_secs(10)
+    Ttl::now_local().unwrap() + Duration::from_secs(10 * 60)
 }
