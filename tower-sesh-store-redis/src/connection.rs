@@ -3,7 +3,7 @@
 use std::{error::Error, fmt};
 
 use async_trait::async_trait;
-use futures::FutureExt;
+use futures_util::FutureExt;
 use redis::{
     aio::{ConnectionLike, ConnectionManager, ConnectionManagerConfig},
     Client, Cmd, Pipeline, RedisError, RedisFuture, RedisResult, Value,

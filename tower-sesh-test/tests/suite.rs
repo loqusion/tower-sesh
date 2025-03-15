@@ -5,9 +5,9 @@ mod memory_store {
 }
 
 mod memory_store_caching_store {
-    use tower_sesh::store::MemoryStore;
+    use tower_sesh::store::{CachingStore, MemoryStore};
 
-    tower_sesh_test::test_suite!(tower_sesh::store::CachingStore::from_cache_and_store(
+    tower_sesh_test::test_suite!(CachingStore::from_cache_and_store(
         MemoryStore::new(),
         MemoryStore::new()
     ));

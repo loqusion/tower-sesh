@@ -4,6 +4,14 @@
 //!
 //! [`tower-sesh`]: https://docs.rs/tower-sesh/latest/tower_sesh/
 
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms, single_use_lifetimes),
+        allow(dead_code, unused_assignments, unused_variables)
+    )
+))]
+
 #[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
 compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
 
@@ -154,17 +162,6 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     pub fn key_prefix(mut self, prefix: impl Into<Cow<'static, str>>) -> RedisStore<T, C> {
         self.config.key_prefix = prefix.into();
         self
-    }
-}
-
-#[doc(hidden)]
-#[cfg(feature = "test-util")]
-impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
-where
-    Rng: rand::CryptoRng + Send + 'static,
-{
-    fn rng(&mut self, rng: Rng) {
-        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
     }
 }
 
@@ -319,6 +316,17 @@ where
         let _: () = conn.del(&key).await.map_err(Error::store)?;
 
         Ok(())
+    }
+}
+
+#[doc(hidden)]
+#[cfg(feature = "test-util")]
+impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
+where
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
     }
 }
 

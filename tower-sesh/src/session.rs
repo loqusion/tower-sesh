@@ -430,7 +430,7 @@ pub(crate) mod lazy {
 
     use async_once_cell::OnceCell;
     use cookie::Cookie;
-    use futures::future;
+    use futures_util::future;
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 

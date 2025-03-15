@@ -214,17 +214,17 @@ impl Error {
         Error::new(ErrorKind::Message(msg.into()))
     }
 
-    /// Returns the corresponding `ErrorKind` for this error.
-    #[inline]
-    pub fn kind(&self) -> &ErrorKind {
-        &self.kind
-    }
-
     /// Error returned when session key collision resolution reaches max
     /// iterations.
     #[cold]
     pub fn max_iterations_reached() -> Error {
         Error::message("max iterations reached when handling session key collisions")
+    }
+
+    /// Returns the corresponding `ErrorKind` for this error.
+    #[inline]
+    pub fn kind(&self) -> &ErrorKind {
+        &self.kind
     }
 }
 

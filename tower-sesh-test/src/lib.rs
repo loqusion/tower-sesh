@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use futures::prelude::*;
+use futures_util::{stream, StreamExt, TryStreamExt};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
 use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};
@@ -204,5 +204,5 @@ pub async fn test_delete_does_not_error_for_missing_entry(
 }
 
 fn ttl() -> Ttl {
-    Ttl::now_local().unwrap() + Duration::from_secs(10)
+    Ttl::now_local().unwrap() + Duration::from_secs(10 * 60)
 }

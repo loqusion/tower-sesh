@@ -11,6 +11,14 @@
 //!
 //! [GitHub repository]: https://github.com/loqusion/tower-sesh
 
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms, single_use_lifetimes),
+        allow(dead_code, unused_assignments, unused_variables)
+    )
+))]
+
 // TODO: Include this in `tower-sesh` docs
 #[cfg_attr(not(tower_sesh_docs_local), doc(hidden))]
 pub mod _draft {

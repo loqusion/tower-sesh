@@ -15,8 +15,6 @@ pub use tower_sesh_core::SessionStore;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-const MAX_ITERATIONS: usize = 8;
-
 #[cfg(feature = "memory-store")]
 pub struct MemoryStore<T> {
     map: DashMap<SessionKey, Record<T>>,
@@ -64,17 +62,6 @@ impl<T> MemoryStore<T> {
     }
 }
 
-#[doc(hidden)]
-#[cfg(all(feature = "memory-store", feature = "test-util"))]
-impl<T, Rng> tower_sesh_core::store::SessionStoreRng<Rng> for MemoryStore<T>
-where
-    Rng: rand::CryptoRng + Send + 'static,
-{
-    fn rng(&mut self, rng: Rng) {
-        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
-    }
-}
-
 #[cfg(feature = "memory-store")]
 impl<T> fmt::Debug for MemoryStore<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -96,6 +83,7 @@ where
 
         // Collision resolution
         // (This is statistically improbable for a sufficiently large session key)
+        const MAX_ITERATIONS: usize = 8;
         for _ in 0..MAX_ITERATIONS {
             let session_key = self.random_key();
             match self.map.entry(session_key.clone()) {
@@ -139,6 +127,17 @@ where
     }
 }
 
+#[doc(hidden)]
+#[cfg(all(feature = "memory-store", feature = "test-util"))]
+impl<T, Rng> tower_sesh_core::store::SessionStoreRng<Rng> for MemoryStore<T>
+where
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        self.rng = Some(Box::new(parking_lot::Mutex::new(rng)));
+    }
+}
+
 pub struct CachingStore<T, Cache: SessionStore<T>, Store: SessionStore<T>> {
     cache: Cache,
     store: Store,
@@ -152,20 +151,6 @@ impl<T, Cache: SessionStore<T>, Store: SessionStore<T>> CachingStore<T, Cache, S
             store,
             _marker: PhantomData,
         }
-    }
-}
-
-#[doc(hidden)]
-#[cfg(feature = "test-util")]
-impl<T, Cache: SessionStore<T>, Store: SessionStore<T>, Rng>
-    tower_sesh_core::store::SessionStoreRng<Rng> for CachingStore<T, Cache, Store>
-where
-    Store: tower_sesh_core::store::SessionStoreRng<Rng>,
-    Rng: rand::CryptoRng + Send + 'static,
-{
-    fn rng(&mut self, rng: Rng) {
-        // The RNG is only set for `store` since we only call `create` on `store`
-        self.store.rng(rng);
     }
 }
 
@@ -224,7 +209,7 @@ where
         let store_fut = self.store.update(session_key, data, ttl);
         let cache_fut = self.cache.update(session_key, data, ttl);
 
-        futures::try_join!(store_fut, cache_fut)?;
+        futures_util::try_join!(store_fut, cache_fut)?;
 
         Ok(())
     }
@@ -233,7 +218,7 @@ where
         let store_fut = self.store.update_ttl(session_key, ttl);
         let cache_fut = self.cache.update_ttl(session_key, ttl);
 
-        futures::try_join!(store_fut, cache_fut)?;
+        futures_util::try_join!(store_fut, cache_fut)?;
 
         Ok(())
     }
@@ -242,8 +227,22 @@ where
         let store_fut = self.store.delete(session_key);
         let cache_fut = self.cache.delete(session_key);
 
-        futures::try_join!(store_fut, cache_fut)?;
+        futures_util::try_join!(store_fut, cache_fut)?;
 
         Ok(())
+    }
+}
+
+#[doc(hidden)]
+#[cfg(feature = "test-util")]
+impl<T, Cache: SessionStore<T>, Store: SessionStore<T>, Rng>
+    tower_sesh_core::store::SessionStoreRng<Rng> for CachingStore<T, Cache, Store>
+where
+    Store: tower_sesh_core::store::SessionStoreRng<Rng>,
+    Rng: rand::CryptoRng + Send + 'static,
+{
+    fn rng(&mut self, rng: Rng) {
+        // The RNG is only set for `store` since we only call `create` on `store`
+        self.store.rng(rng);
     }
 }
