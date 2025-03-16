@@ -100,7 +100,7 @@ pub async fn test_loading_session_after_create(
     let rng = TestRng::seed_from_u64(3005911574);
     store.rng(rng);
 
-    let data = SessionData::sample_with(1);
+    let data = SessionData::sample();
     let ttl = ttl_strict();
     let session_key = store.create(&data, ttl).await.unwrap();
 
