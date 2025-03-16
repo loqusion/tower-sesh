@@ -21,6 +21,10 @@ macro_rules! test_suite {
             @impl $store =>
             smoke
             create_does_collision_resolution
+            loading_session_after_create
+            loading_session_after_update_nonexisting
+            loading_session_after_update_existing
+            loading_session_after_update_ttl
             loading_a_missing_session_returns_none
             loading_an_expired_session_returns_none_create
             loading_an_expired_session_returns_none_update_nonexisting
@@ -89,6 +93,68 @@ pub async fn test_create_does_collision_resolution(
 
         assert_unique_keys_and_data(&keys, &store).await;
     }
+}
+
+pub async fn test_loading_session_after_create(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(3005911574);
+    store.rng(rng);
+
+    let data1 = SessionData::sample_with(1);
+    let ttl = ttl_strict();
+    let session_key = store.create(&data1, ttl).await.unwrap();
+
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, data1);
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_loading_session_after_update_nonexisting(
+    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(2848227658);
+    let session_key = rng.random::<SessionKey>();
+
+    let data = SessionData::sample();
+    let ttl = ttl_strict();
+    store.update(&session_key, &data, ttl).await.unwrap();
+
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, data);
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_loading_session_after_update_existing(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(2280217217);
+    store.rng(rng);
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
+
+    let data = SessionData::sample();
+    let ttl = ttl_strict();
+    store.update(&session_key, &data, ttl).await.unwrap();
+
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, data);
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_loading_session_after_update_ttl(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(122915542);
+    store.rng(rng);
+    let data = SessionData::sample();
+    let session_key = store.create(&data, ttl()).await.unwrap();
+
+    let ttl = ttl_strict();
+    store.update_ttl(&session_key, ttl).await.unwrap();
+
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, data);
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
 }
 
 pub async fn test_loading_a_missing_session_returns_none(
@@ -434,6 +500,15 @@ fn ttl() -> Ttl {
 
 fn ttl_of(f: Ttl) -> Ttl {
     f + Duration::from_secs(10 * 60)
+}
+
+fn ttl_strict() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    ttl_strict_of(now)
+}
+
+fn ttl_strict_of(f: Ttl) -> Ttl {
+    f + Duration::from_millis(900)
 }
 
 trait TtlExt {
