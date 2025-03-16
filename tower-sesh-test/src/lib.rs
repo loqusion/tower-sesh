@@ -19,12 +19,17 @@ macro_rules! test_suite {
     ($store:expr) => {
         $crate::test_suite! {
             @impl $store =>
-            smoke create_does_collision_resolution loading_a_missing_session_returns_none
+            smoke
+            create_does_collision_resolution
+            loading_a_missing_session_returns_none
             loading_an_expired_session_returns_none_create
             loading_an_expired_session_returns_none_update_nonexisting
             loading_an_expired_session_returns_none_update_existing
-            loading_an_expired_session_returns_none_update_ttl update
-            delete_after_create delete_after_update delete_does_not_error_for_missing_entry
+            loading_an_expired_session_returns_none_update_ttl
+            update
+            delete_after_create
+            delete_after_update
+            delete_does_not_error_for_missing_entry
         }
     };
 
