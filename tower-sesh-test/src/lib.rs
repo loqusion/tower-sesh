@@ -3,6 +3,9 @@ use std::time::Duration;
 use futures_util::{stream, StreamExt, TryStreamExt};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+use time::{Date, Month, OffsetDateTime, Time};
 use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};
 
 #[doc(hidden)]
@@ -36,12 +39,15 @@ macro_rules! test_suite {
     };
 }
 
-pub async fn test_smoke(_store: impl SessionStore<()> + SessionStoreRng<TestRng>) {}
+pub async fn test_smoke(_store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>) {}
 
 pub async fn test_create_does_collision_resolution(
-    mut store: impl SessionStore<String> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
-    async fn assert_unique_keys_and_data(keys: &[SessionKey], store: &impl SessionStore<String>) {
+    async fn assert_unique_keys_and_data(
+        keys: &[SessionKey],
+        store: &impl SessionStore<SessionData>,
+    ) {
         let data = stream::iter(keys.iter().map(|key| store.load(key)))
             .buffered(keys.len())
             .map_ok(|record| record.unwrap().data)
@@ -57,14 +63,10 @@ pub async fn test_create_does_collision_resolution(
         }
     }
 
-    let test_cases = [
-        "hello, world!",
-        "not hello, world!",
-        "another not hello, world!",
-    ]
-    .into_iter()
-    .map(String::from)
-    .collect::<Vec<_>>();
+    let test_cases = [1, 2, 3]
+        .into_iter()
+        .map(SessionData::sample_with)
+        .collect::<Vec<_>>();
     let mut keys: Vec<SessionKey> = Vec::new();
 
     let rng = TestRng::seed_from_u64(4787236816789423423);
@@ -80,7 +82,7 @@ pub async fn test_create_does_collision_resolution(
 }
 
 pub async fn test_loading_a_missing_session_returns_none(
-    store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(999412874);
     let session_key = rng.random::<SessionKey>();
@@ -90,13 +92,16 @@ pub async fn test_loading_a_missing_session_returns_none(
 }
 
 pub async fn test_loading_an_expired_session_returns_none_create(
-    mut store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let rng = TestRng::seed_from_u64(31348441);
     store.rng(rng);
 
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
-    let session_key = store.create(&(), five_microseconds_from_now).await.unwrap();
+    let session_key = store
+        .create(&SessionData::sample(), five_microseconds_from_now)
+        .await
+        .unwrap();
 
     tokio::time::sleep(Duration::from_micros(10)).await;
 
@@ -105,14 +110,18 @@ pub async fn test_loading_an_expired_session_returns_none_create(
 }
 
 pub async fn test_loading_an_expired_session_returns_none_update(
-    store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(880523847);
     let session_key = rng.random::<SessionKey>();
 
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
     store
-        .update(&session_key, &(), five_microseconds_from_now)
+        .update(
+            &session_key,
+            &SessionData::sample(),
+            five_microseconds_from_now,
+        )
         .await
         .unwrap();
 
@@ -123,12 +132,12 @@ pub async fn test_loading_an_expired_session_returns_none_update(
 }
 
 pub async fn test_loading_an_expired_session_returns_none_update_ttl(
-    mut store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let rng = TestRng::seed_from_u64(2587831351);
     store.rng(rng);
 
-    let session_key = store.create(&(), ttl()).await.unwrap();
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
     store
         .update_ttl(&session_key, five_microseconds_from_now)
@@ -141,7 +150,7 @@ pub async fn test_loading_an_expired_session_returns_none_update_ttl(
     assert!(record.is_none());
 }
 
-pub async fn test_update(store: impl SessionStore<String> + SessionStoreRng<TestRng>) {
+pub async fn test_update(store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>) {
     let mut rng = TestRng::seed_from_u64(25593);
     let session_key = rng.random::<SessionKey>();
 
@@ -149,42 +158,45 @@ pub async fn test_update(store: impl SessionStore<String> + SessionStoreRng<Test
     assert!(record.is_none());
 
     // creates missing entry
+    let data1 = SessionData::sample_with(1);
     let before = Ttl::now_local().unwrap();
-    store
-        .update(&session_key, &"hello world".to_owned(), ttl())
-        .await
-        .unwrap();
+    store.update(&session_key, &data1, ttl()).await.unwrap();
     let record = store.load(&session_key).await.unwrap().unwrap();
-    assert_eq!(record.data, "hello world");
+    assert_eq!(record.data, data1);
     assert!(record.ttl > before);
 
     // updates existing entry
+    let data2 = SessionData::sample_with(2);
     let before = Ttl::now_local().unwrap();
-    store
-        .update(&session_key, &"another hello world".to_owned(), ttl())
-        .await
-        .unwrap();
+    store.update(&session_key, &data2, ttl()).await.unwrap();
     let record = store.load(&session_key).await.unwrap().unwrap();
-    assert_eq!(record.data, "another hello world");
+    assert_eq!(record.data, data2);
     assert!(record.ttl > before);
 }
 
-pub async fn test_delete_after_create(mut store: impl SessionStore<()> + SessionStoreRng<TestRng>) {
+pub async fn test_delete_after_create(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
     let rng = TestRng::seed_from_u64(306111374);
     store.rng(rng);
 
-    let session_key = store.create(&(), ttl()).await.unwrap();
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
     store.delete(&session_key).await.unwrap();
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
 }
 
-pub async fn test_delete_after_update(store: impl SessionStore<()> + SessionStoreRng<TestRng>) {
+pub async fn test_delete_after_update(
+    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
     let mut rng = TestRng::seed_from_u64(200708635);
     let session_key = rng.random::<SessionKey>();
 
-    store.update(&session_key, &(), ttl()).await.unwrap();
+    store
+        .update(&session_key, &SessionData::sample(), ttl())
+        .await
+        .unwrap();
     store.delete(&session_key).await.unwrap();
 
     let record = store.load(&session_key).await.unwrap();
@@ -192,7 +204,7 @@ pub async fn test_delete_after_update(store: impl SessionStore<()> + SessionStor
 }
 
 pub async fn test_delete_does_not_error_for_missing_entry(
-    store: impl SessionStore<()> + SessionStoreRng<TestRng>,
+    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(136113526);
     let session_key = rng.random::<SessionKey>();
@@ -201,6 +213,123 @@ pub async fn test_delete_does_not_error_for_missing_entry(
     assert!(record.is_none());
 
     store.delete(&session_key).await.unwrap();
+}
+
+#[doc(hidden)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct SessionData {
+    user_id: DbId,
+    authenticated: bool,
+    roles: Vec<String>,
+    preferences: Preferences,
+    cart: Vec<CartItem>,
+    csrf_token: String,
+    flash_messages: Vec<String>,
+    rate_limit: RateLimit,
+    workflow_state: WorkflowState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct DbId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct Preferences {
+    theme: Theme,
+    language: Language,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+enum Theme {
+    Light,
+    Dark,
+}
+
+/// The two languages
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum Language {
+    #[serde(alias = "en-US")]
+    EnUs,
+    #[serde(alias = "en-GB")]
+    EnGb,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct CartItem {
+    item_id: DbId,
+    name: String,
+    quantity: u64,
+    price: Decimal,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct RateLimit {
+    failed_login_attempts: u64,
+    #[serde(with = "time::serde::rfc3339")]
+    last_attempt: OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct WorkflowState {
+    step: u64,
+    total_steps: u64,
+    data: WorkflowData,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct WorkflowData {
+    address: String,
+}
+
+impl SessionData {
+    fn sample() -> Self {
+        SessionData::sample_with(12345)
+    }
+
+    fn sample_with(user_id: u64) -> Self {
+        SessionData {
+            user_id: DbId(user_id),
+            authenticated: true,
+            roles: vec!["admin".to_owned(), "editor".to_owned()],
+            preferences: Preferences {
+                theme: Theme::Dark,
+                language: Language::EnUs,
+            },
+            cart: vec![
+                CartItem {
+                    item_id: DbId(101),
+                    name: "Laptop".to_owned(),
+                    quantity: 1,
+                    price: Decimal::new(99999, 2),
+                },
+                CartItem {
+                    item_id: DbId(202),
+                    name: "Mouse".to_owned(),
+                    quantity: 2,
+                    price: Decimal::new(2550, 2),
+                },
+            ],
+            csrf_token: "abc123xyz".to_owned(),
+            flash_messages: vec![
+                "Welcome back!".to_owned(),
+                "Your order has been placed successfully.".to_owned(),
+            ],
+            rate_limit: RateLimit {
+                failed_login_attempts: 1,
+                last_attempt: OffsetDateTime::new_utc(
+                    Date::from_calendar_date(2025, Month::February, 28).unwrap(),
+                    Time::from_hms(0, 34, 56).unwrap(),
+                ),
+            },
+            workflow_state: WorkflowState {
+                step: 2,
+                total_steps: 5,
+                data: WorkflowData {
+                    address: "123 Main St, NY".to_owned(),
+                },
+            },
+        }
+    }
 }
 
 fn ttl() -> Ttl {
