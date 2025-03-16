@@ -26,7 +26,7 @@ use redis::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
-    store::{Error, SessionStoreImpl, SessionStoreRng},
+    store::{Error, SessionStoreImpl},
     time::SESSION_EXPIRY_SECONDS_DEFAULT,
     Record, SessionKey, SessionStore, Ttl,
 };
@@ -321,7 +321,7 @@ where
 
 #[doc(hidden)]
 #[cfg(feature = "test-util")]
-impl<T, C: GetConnection, Rng> SessionStoreRng<Rng> for RedisStore<T, C>
+impl<T, C: GetConnection, Rng> tower_sesh_core::store::SessionStoreRng<Rng> for RedisStore<T, C>
 where
     Rng: rand::CryptoRng + Send + 'static,
 {
