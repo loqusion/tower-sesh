@@ -5,7 +5,7 @@ use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng as TestRng;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use time::{Date, Month, OffsetDateTime, Time};
+use time::{Date, Month, OffsetDateTime, Time, UtcDateTime};
 use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};
 
 #[doc(hidden)]
@@ -159,19 +159,19 @@ pub async fn test_update(store: impl SessionStore<SessionData> + SessionStoreRng
 
     // creates missing entry
     let data1 = SessionData::sample_with(1);
-    let before = Ttl::now_local().unwrap();
-    store.update(&session_key, &data1, ttl()).await.unwrap();
+    let ttl1 = ttl();
+    store.update(&session_key, &data1, ttl1).await.unwrap();
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.data, data1);
-    assert!(record.ttl > before);
+    assert_eq!(record.ttl.normalize(), ttl1.normalize());
 
     // updates existing entry
     let data2 = SessionData::sample_with(2);
-    let before = Ttl::now_local().unwrap();
-    store.update(&session_key, &data2, ttl()).await.unwrap();
+    let ttl2 = ttl();
+    store.update(&session_key, &data2, ttl2).await.unwrap();
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.data, data2);
-    assert!(record.ttl > before);
+    assert_eq!(record.ttl.normalize(), ttl2.normalize());
 }
 
 pub async fn test_delete_after_create(
@@ -333,5 +333,24 @@ impl SessionData {
 }
 
 fn ttl() -> Ttl {
-    Ttl::now_local().unwrap() + Duration::from_secs(10 * 60)
+    let now = Ttl::now_local().unwrap();
+    ttl_of(now)
+}
+
+fn ttl_of(f: Ttl) -> Ttl {
+    f + Duration::from_secs(10 * 60)
+}
+
+trait TtlExt {
+    type Normalized;
+
+    fn normalize(self) -> Self::Normalized;
+}
+
+impl TtlExt for Ttl {
+    type Normalized = UtcDateTime;
+
+    fn normalize(self) -> Self::Normalized {
+        self.replace_nanosecond(0).unwrap().to_utc()
+    }
 }
