@@ -115,6 +115,9 @@ pub async fn test_loading_session_after_update_nonexisting(
     let mut rng = TestRng::seed_from_u64(2848227658);
     let session_key = rng.random::<SessionKey>();
 
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+
     let data = SessionData::sample();
     let ttl = ttl_strict();
     store.update(&session_key, &data, ttl).await.unwrap();
