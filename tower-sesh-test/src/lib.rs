@@ -21,7 +21,8 @@ macro_rules! test_suite {
             @impl $store =>
             smoke create_does_collision_resolution loading_a_missing_session_returns_none
             loading_an_expired_session_returns_none_create
-            loading_an_expired_session_returns_none_update
+            loading_an_expired_session_returns_none_update_nonexisting
+            loading_an_expired_session_returns_none_update_existing
             loading_an_expired_session_returns_none_update_ttl update
             delete_after_create delete_after_update delete_does_not_error_for_missing_entry
         }
@@ -109,11 +110,34 @@ pub async fn test_loading_an_expired_session_returns_none_create(
     assert!(record.is_none());
 }
 
-pub async fn test_loading_an_expired_session_returns_none_update(
+pub async fn test_loading_an_expired_session_returns_none_update_nonexisting(
     store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(880523847);
     let session_key = rng.random::<SessionKey>();
+
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    store
+        .update(
+            &session_key,
+            &SessionData::sample(),
+            five_microseconds_from_now,
+        )
+        .await
+        .unwrap();
+
+    tokio::time::sleep(Duration::from_micros(10)).await;
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_an_expired_session_returns_none_update_existing(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(92143371);
+    store.rng(rng);
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
 
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
     store
@@ -136,8 +160,8 @@ pub async fn test_loading_an_expired_session_returns_none_update_ttl(
 ) {
     let rng = TestRng::seed_from_u64(2587831351);
     store.rng(rng);
-
     let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
+
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
     store
         .update_ttl(&session_key, five_microseconds_from_now)
