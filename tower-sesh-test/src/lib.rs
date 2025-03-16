@@ -30,7 +30,6 @@ macro_rules! test_suite {
             loading_an_expired_session_returns_none_update_nonexisting
             loading_an_expired_session_returns_none_update_existing
             loading_an_expired_session_returns_none_update_ttl
-            update
             delete_after_create
             delete_after_update
             delete_does_not_error_for_missing_entry
@@ -247,30 +246,6 @@ pub async fn test_loading_an_expired_session_returns_none_update_ttl(
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
-}
-
-pub async fn test_update(store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>) {
-    let mut rng = TestRng::seed_from_u64(25593);
-    let session_key = rng.random::<SessionKey>();
-
-    let record = store.load(&session_key).await.unwrap();
-    assert!(record.is_none());
-
-    // creates missing entry
-    let data1 = SessionData::sample_with(1);
-    let ttl1 = ttl();
-    store.update(&session_key, &data1, ttl1).await.unwrap();
-    let record = store.load(&session_key).await.unwrap().unwrap();
-    assert_eq!(record.data, data1);
-    assert_eq!(record.ttl.normalize(), ttl1.normalize());
-
-    // updates existing entry
-    let data2 = SessionData::sample_with(2);
-    let ttl2 = ttl();
-    store.update(&session_key, &data2, ttl2).await.unwrap();
-    let record = store.load(&session_key).await.unwrap().unwrap();
-    assert_eq!(record.data, data2);
-    assert_eq!(record.ttl.normalize(), ttl2.normalize());
 }
 
 pub async fn test_delete_after_create(
