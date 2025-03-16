@@ -30,6 +30,10 @@ macro_rules! test_suite {
             delete_after_create
             delete_after_update
             delete_does_not_error_for_missing_entry
+            ttl_with_999_999_999_nanoseconds_create
+            ttl_with_999_999_999_nanoseconds_update_nonexisting
+            ttl_with_999_999_999_nanoseconds_update_existing
+            ttl_with_999_999_999_nanoseconds_update_ttl
         }
     };
 
@@ -242,6 +246,68 @@ pub async fn test_delete_does_not_error_for_missing_entry(
     assert!(record.is_none());
 
     store.delete(&session_key).await.unwrap();
+}
+
+fn ttl_edge_case() -> Ttl {
+    (Ttl::now_local().unwrap() + Duration::from_secs(10 * 60))
+        .replace_nanosecond(1_000_000_000 - 1)
+        .unwrap()
+}
+
+pub async fn test_ttl_with_999_999_999_nanoseconds_create(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(747720501);
+    store.rng(rng);
+
+    let ttl = ttl_edge_case();
+    let session_key = store.create(&SessionData::sample(), ttl).await.unwrap();
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_ttl_with_999_999_999_nanoseconds_update_nonexisting(
+    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(1551031452);
+    let session_key = rng.random::<SessionKey>();
+
+    let ttl = ttl_edge_case();
+    store
+        .update(&session_key, &SessionData::sample(), ttl)
+        .await
+        .unwrap();
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_ttl_with_999_999_999_nanoseconds_update_existing(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(2177610229);
+    store.rng(rng);
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
+
+    let ttl = ttl_edge_case();
+    store
+        .update(&session_key, &SessionData::sample(), ttl)
+        .await
+        .unwrap();
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_ttl_with_999_999_999_nanoseconds_update_ttl(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(337520113);
+    store.rng(rng);
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
+
+    let ttl = ttl_edge_case();
+    store.update_ttl(&session_key, ttl).await.unwrap();
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.ttl.normalize(), ttl.normalize());
 }
 
 #[doc(hidden)]
