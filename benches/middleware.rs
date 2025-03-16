@@ -213,9 +213,7 @@ mod common {
     }
 }
 
-type DbId = u64;
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct SessionData {
     user_id: DbId,
     authenticated: bool,
@@ -228,20 +226,23 @@ struct SessionData {
     workflow_state: WorkflowState,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct DbId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct Preferences {
     theme: Theme,
     language: Language,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 enum Theme {
     Light,
     Dark,
 }
 
 /// The two languages
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 enum Language {
     #[serde(alias = "en-US")]
@@ -250,7 +251,7 @@ enum Language {
     EnGb,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct CartItem {
     item_id: DbId,
     name: String,
@@ -258,21 +259,21 @@ struct CartItem {
     price: Decimal,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct RateLimit {
     failed_login_attempts: u64,
     #[serde(with = "time::serde::rfc3339")]
     last_attempt: OffsetDateTime,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct WorkflowState {
     step: u64,
     total_steps: u64,
     data: WorkflowData,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct WorkflowData {
     address: String,
 }
@@ -285,7 +286,7 @@ impl SessionData {
 
     fn sample() -> Self {
         SessionData {
-            user_id: 12345,
+            user_id: DbId(12345),
             authenticated: true,
             roles: vec!["admin".to_owned(), "editor".to_owned()],
             preferences: Preferences {
@@ -294,13 +295,13 @@ impl SessionData {
             },
             cart: vec![
                 CartItem {
-                    item_id: 101,
+                    item_id: DbId(101),
                     name: "Laptop".to_owned(),
                     quantity: 1,
                     price: Decimal::new(99999, 2),
                 },
                 CartItem {
-                    item_id: 202,
+                    item_id: DbId(202),
                     name: "Mouse".to_owned(),
                     quantity: 2,
                     price: Decimal::new(2550, 2),
