@@ -275,6 +275,7 @@ impl StdError for Error {
     }
 }
 
+#[cfg(not(miri))]
 #[cfg(test)]
 mod test {
     use std::iter;
