@@ -277,7 +277,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// ```
     #[track_caller]
     pub fn signed(self) -> SessionLayer<T, Store, SignedCookie> {
-        let key = (*self.cookie_controller).clone().into_key();
+        let key = (*self.cookie_controller).to_owned().into_key();
         SessionLayer {
             store: self.store,
             config: self.config,
@@ -309,7 +309,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// ```
     #[track_caller]
     pub fn private(self) -> SessionLayer<T, Store, PrivateCookie> {
-        let key = (*self.cookie_controller).clone().into_key();
+        let key = (*self.cookie_controller).to_owned().into_key();
         SessionLayer {
             store: self.store,
             config: self.config,
