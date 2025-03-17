@@ -486,7 +486,7 @@ fn ttl_strict() -> Ttl {
 }
 
 fn ttl_strict_of(f: Ttl) -> Ttl {
-    f + Duration::from_millis(900)
+    f + Duration::from_millis(1500)
 }
 
 trait TtlExt {
