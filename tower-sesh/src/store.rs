@@ -13,6 +13,10 @@ use tower_sesh_core::{
 #[doc(inline)]
 pub use tower_sesh_core::SessionStore;
 
+// TODO: Implement `MemoryStore` with `moka` instead of `dashmap`.
+// It supports per-entry expiration policy, which makes it more suitable
+// for use as an in-memory store.
+// See https://docs.rs/moka/0.12.10/moka/sync/struct.Cache.html#per-entry-expiration-policy
 #[cfg(feature = "memory-store")]
 pub struct MemoryStore<T> {
     map: DashMap<SessionKey, Record<T>>,
