@@ -38,7 +38,8 @@ use async_trait::async_trait;
 
 use crate::{time::Ttl, SessionKey};
 
-type Result<T, E = Error> = std::result::Result<T, E>;
+/// A specialized `Result` type for store operations.
+pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 // TODO: MUST mention that the data format used by a session store must be
 // self-describing, i.e. it implements `Deserializer::deserialize_any`. (This
