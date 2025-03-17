@@ -30,8 +30,8 @@ use crate::{
 // the store.
 pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
     store: Arc<Store>,
-    config: Arc<Config>, // This is put in an `Arc` to make clones cheap.
-    cookie_controller: C,
+    config: Arc<Config>,       // This is put in an `Arc` to make clones cheap.
+    cookie_controller: Arc<C>, // Ditto.
     _marker: PhantomData<fn() -> T>,
 }
 
@@ -246,7 +246,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
         Self {
             store,
             config: Arc::new(Config::default()),
-            cookie_controller: PrivateCookie::new(key),
+            cookie_controller: Arc::new(PrivateCookie::new(key)),
             _marker: PhantomData,
         }
     }
@@ -277,11 +277,11 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// ```
     #[track_caller]
     pub fn signed(self) -> SessionLayer<T, Store, SignedCookie> {
-        let key = self.cookie_controller.into_key();
+        let key = (*self.cookie_controller).clone().into_key();
         SessionLayer {
             store: self.store,
             config: self.config,
-            cookie_controller: SignedCookie::new(key),
+            cookie_controller: Arc::new(SignedCookie::new(key)),
             _marker: PhantomData,
         }
     }
@@ -309,11 +309,11 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// ```
     #[track_caller]
     pub fn private(self) -> SessionLayer<T, Store, PrivateCookie> {
-        let key = self.cookie_controller.into_key();
+        let key = (*self.cookie_controller).clone().into_key();
         SessionLayer {
             store: self.store,
             config: self.config,
-            cookie_controller: PrivateCookie::new(key),
+            cookie_controller: Arc::new(PrivateCookie::new(key)),
             _marker: PhantomData,
         }
     }
@@ -501,7 +501,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store, PlainCookie> {
         SessionLayer {
             store,
             config: Arc::new(Config::default()),
-            cookie_controller: PlainCookie,
+            cookie_controller: Arc::new(PlainCookie),
             _marker: PhantomData,
         }
     }
@@ -611,7 +611,7 @@ where
     S::Future: Send + 'static,
     ResBody: Send,
     T: Send + Sync + 'static,
-    C: Send + 'static,
+    C: Send + Sync + 'static,
 {
     type Response = S::Response;
     type Error = S::Error;
@@ -638,7 +638,7 @@ where
 
         let store = Arc::clone(&self.layer.store);
         let config = Arc::clone(&self.layer.config);
-        let cookie_controller = self.layer.cookie_controller.clone();
+        let cookie_controller = Arc::clone(&self.layer.cookie_controller);
 
         async move {
             let mut response = fut.await?;
