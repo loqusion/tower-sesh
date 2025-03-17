@@ -615,8 +615,8 @@ where
                         append_set_cookie(response.headers_mut(), &cookie_removal);
                     }
                     Ok(SyncAction::None) => {}
-                    Err(err) => {
-                        error!(err = %err.display_chain(), "error when syncing session to store");
+                    Err(_err) => {
+                        error!(err = %_err.display_chain(), "error when syncing session to store");
                     }
                 }
             }
@@ -633,8 +633,8 @@ fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) 
         Ok(header_value) => {
             headers.append(header::SET_COOKIE, header_value);
         }
-        Err(err) => {
-            error!(err = %err.display_chain(), cookie = %cookie.encoded(), "this is likely a bug");
+        Err(_err) => {
+            error!(err = %_err.display_chain(), cookie = %cookie.encoded(), "this is likely a bug");
         }
     }
 }
