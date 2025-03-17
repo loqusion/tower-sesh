@@ -464,19 +464,12 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         self
     }
 
-    /// Mutates `self.config` by calling the provided closure. This is
-    /// necessary because `config` is stored in an `Arc`, which does not allow
-    /// for mutation.
-    ///
-    /// This is pretty inefficient, so it should only be called inside builder
-    /// methods.
     fn mutate_config<F>(&mut self, f: F)
     where
         F: FnOnce(&mut Config),
     {
-        let mut config = (*self.config).clone();
-        f(&mut config);
-        self.config = Arc::new(config);
+        let config = Arc::make_mut(&mut self.config);
+        f(config);
     }
 }
 
