@@ -74,6 +74,9 @@ pub use session::Session;
 #[macro_use]
 mod macros;
 
+#[macro_use]
+extern crate tower_sesh_core;
+
 pub mod middleware;
 pub mod session;
 pub mod store;

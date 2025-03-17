@@ -14,12 +14,16 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
+log = ["tracing/log"]
 
 [dependencies]
 async-trait = { workspace = true }
 base64 = "0.22.1"
 rand = { workspace = true, features = ["thread_rng"] }
 time = { version = "0.3", features = ["local-offset"] }
+
+# optional dependencies
+tracing = { workspace = true, optional = true }
 
 [dev-dependencies]
 insta = "1.42.1"

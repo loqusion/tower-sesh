@@ -27,6 +27,15 @@ pub use crate::store::{Record, SessionStore};
 #[doc(inline)]
 pub use crate::time::Ttl;
 
+#[macro_use]
+mod macros;
+
+#[doc(hidden)]
+pub mod __private {
+    #[cfg(feature = "tracing")]
+    pub use ::tracing;
+}
+
 pub mod key;
 pub mod store;
 pub mod time;

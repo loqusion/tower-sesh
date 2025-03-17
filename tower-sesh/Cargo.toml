@@ -16,8 +16,9 @@ rust-version.workspace = true
 [features]
 default = ["axum", "memory-store", "tracing"]
 
-log = ["tracing/log"]
+log = ["tracing/log", "tower-sesh-core/log"]
 memory-store = ["dep:dashmap"]
+tracing = ["dep:tracing", "tower-sesh-core/tracing"]
 
 test-util = []
 
