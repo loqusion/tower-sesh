@@ -1,9 +1,8 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
-
 //! The Redis store for [`tower-sesh`].
 //!
 //! [`tower-sesh`]: https://docs.rs/tower-sesh/latest/tower_sesh/
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![warn(missing_debug_implementations)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(

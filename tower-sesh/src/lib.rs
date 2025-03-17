@@ -1,5 +1,3 @@
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
-
 //! A Tower middleware for strongly typed, efficient sessions.
 //!
 //! **🚧 UNDER CONSTRUCTION 🚧**
@@ -11,6 +9,7 @@
 //!
 //! [GitHub repository]: https://github.com/loqusion/tower-sesh
 
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![warn(missing_debug_implementations)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(
