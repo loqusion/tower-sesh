@@ -28,7 +28,6 @@ use crate::{
 /// TODO: Provide an example
 // NOTE: If an inner service returns an error, the session will not be synced to
 // the store.
-#[derive(Debug)]
 pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
     store: Arc<Store>,
     config: Config,
@@ -39,7 +38,6 @@ pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
 /// A middleware that provides [`Session`] as an extractor.
 ///
 /// [`Session`]: crate::session::Session
-#[derive(Debug)]
 pub struct SessionManager<S, T, Store: SessionStore<T>, C> {
     inner: S,
     layer: SessionLayer<T, Store, C>,
@@ -505,6 +503,20 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> Clone for SessionLayer<T, Sto
     }
 }
 
+impl<T, Store: SessionStore<T>, C> fmt::Debug for SessionLayer<T, Store, C>
+where
+    Store: fmt::Debug,
+    C: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("SessionLayer");
+        d.field("store", &*self.store);
+        d.field("config", &self.config);
+        d.field("cookie_security", &self.cookie_controller);
+        d.finish_non_exhaustive()
+    }
+}
+
 impl<S, T, Store: SessionStore<T>, C: CookieSecurity> Layer<S> for SessionLayer<T, Store, C> {
     type Service = SessionManager<S, T, Store, C>;
 
@@ -525,6 +537,20 @@ where
             inner: self.inner.clone(),
             layer: self.layer.clone(),
         }
+    }
+}
+
+impl<S, T, Store: SessionStore<T>, C> fmt::Debug for SessionManager<S, T, Store, C>
+where
+    S: fmt::Debug,
+    Store: fmt::Debug,
+    C: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("SessionManager");
+        d.field("inner", &self.inner);
+        d.field("layer", &self.layer);
+        d.finish()
     }
 }
 
