@@ -23,6 +23,18 @@ test-caching-store *FLAGS:
     RUSTFLAGS="--cfg tower_sesh_test_caching_store" REDIS_URL="redis://localhost:6379" \
         cargo nextest run --features test-util {{FLAGS}}
 
+test-miri-lib *FLAGS:
+    MIRIFLAGS='-Zmiri-disable-isolation -Zmiri-strict-provenance' \
+        cargo +nightly miri nextest run --workspace --lib --features test-util {{FLAGS}}
+
+test-miri-tests *FLAGS:
+    MIRIFLAGS='-Zmiri-disable-isolation -Zmiri-strict-provenance' \
+        cargo +nightly miri nextest run --package tower-sesh --tests --features test-util {{FLAGS}}
+
+test-miri-doc *FLAGS:
+    MIRIFLAGS='-Zmiri-disable-isolation -Zmiri-strict-provenance' \
+        cargo +nightly miri test --workspace --doc --all-features {{FLAGS}}
+
 doctest *FLAGS:
     cargo test --workspace --doc --all-features {{FLAGS}}
 
