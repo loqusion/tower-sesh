@@ -234,34 +234,34 @@ impl<T> Session<T> {
     #[inline]
     #[must_use]
     pub fn get(&self) -> OptionSessionGuard<'_, T> {
-        let lock = self.lock();
+        let guard = self.lock();
 
-        OptionSessionGuard::new(lock)
+        OptionSessionGuard::new(guard)
     }
 
     pub fn insert(&self, value: T) -> SessionGuard<'_, T> {
-        let mut lock = self.lock();
+        let mut guard = self.lock();
 
-        lock.data = Some(value);
-        lock.changed();
+        guard.data = Some(value);
+        guard.changed();
 
         // SAFETY: a `None` variant for `data` would have been replaced by a
         // `Some` variant in the code above.
-        unsafe { SessionGuard::new(lock) }
+        unsafe { SessionGuard::new(guard) }
     }
 
     #[inline]
     pub fn get_or_insert(&self, value: T) -> SessionGuard<'_, T> {
-        let mut lock = self.lock();
+        let mut guard = self.lock();
 
-        if lock.data.is_none() {
-            lock.data = Some(value);
-            lock.changed();
+        if guard.data.is_none() {
+            guard.data = Some(value);
+            guard.changed();
         }
 
         // SAFETY: a `None` variant for `data` would have been replaced by a
         // `Some` variant in the code above.
-        unsafe { SessionGuard::new(lock) }
+        unsafe { SessionGuard::new(guard) }
     }
 
     #[inline]
@@ -269,16 +269,16 @@ impl<T> Session<T> {
     where
         F: FnOnce() -> T,
     {
-        let mut lock = self.lock();
+        let mut guard = self.lock();
 
-        if lock.data.is_none() {
-            lock.data = Some(f());
-            lock.changed();
+        if guard.data.is_none() {
+            guard.data = Some(f());
+            guard.changed();
         }
 
         // SAFETY: a `None` variant for `data` would have been replaced by a
         // `Some` variant in the code above.
-        unsafe { SessionGuard::new(lock) }
+        unsafe { SessionGuard::new(guard) }
     }
 
     #[inline]
@@ -309,14 +309,14 @@ impl<T> Session<T> {
 
     #[inline]
     fn lock(&self) -> MutexGuard<'_, Inner<T>> {
-        let lock = self.inner.lock();
+        let guard = self.inner.lock();
 
         #[cfg(feature = "tracing")]
-        if lock.is_taken() {
+        if guard.is_taken() {
             error!("called `Session` method after it was synchronized to store");
         }
 
-        lock
+        guard
     }
 }
 
