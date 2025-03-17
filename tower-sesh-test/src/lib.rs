@@ -21,13 +21,9 @@ macro_rules! test_suite {
             @impl $store =>
             smoke
             create_does_collision_resolution
-            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_create
-            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_update_nonexisting
-            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_update_existing
-            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_update_ttl
             loading_a_missing_session_returns_none
             loading_an_expired_session_returns_none_create
@@ -497,7 +493,13 @@ fn ttl_strict() -> Ttl {
 }
 
 fn ttl_strict_of(f: Ttl) -> Ttl {
-    f + Duration::from_millis(1500)
+    // miri requires a more lenient TTL due to its slower execution speed
+    const STRICT_OFFSET: Duration = if cfg!(miri) {
+        Duration::from_secs(20)
+    } else {
+        Duration::from_millis(1500)
+    };
+    f + STRICT_OFFSET
 }
 
 trait TtlExt {
