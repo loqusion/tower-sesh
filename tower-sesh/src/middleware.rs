@@ -673,7 +673,7 @@ where
 
 #[inline]
 fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) {
-    match HeaderValue::from_str(&cookie.encoded().to_string()) {
+    match HeaderValue::try_from(cookie.encoded().to_string()) {
         Ok(header_value) => {
             headers.append(header::SET_COOKIE, header_value);
         }
