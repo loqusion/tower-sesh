@@ -388,8 +388,8 @@ where
 impl<'a, T: 'a> SessionGuard<'a, T> {
     /// # Safety
     ///
-    /// The caller of this method must ensure that `guard.data` is a
-    /// `Some` variant.
+    /// The caller of this method must uphold `SessionGuard`'s safety
+    /// invariants. See the comment above [`SessionGuard`].
     #[inline]
     #[track_caller]
     unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
@@ -403,8 +403,8 @@ impl<'a, T: 'a> Deref for SessionGuard<'a, T> {
 
     #[inline]
     fn deref(&self) -> &Self::Target {
-        // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
-        // to `None`.
+        // SAFETY: The safety invariants of `SessionGuard` must be upheld when
+        // `SessionGuard` is constructed.
         unsafe { self.0.data.as_ref().unwrap_unchecked() }
     }
 }
@@ -414,8 +414,8 @@ impl<'a, T: 'a> DerefMut for SessionGuard<'a, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.changed();
 
-        // SAFETY: `SessionGuard` holds the lock, so `data` can never be set
-        // to `None`.
+        // SAFETY: The safety invariants of `SessionGuard` must be upheld when
+        // `SessionGuard` is constructed.
         unsafe { self.0.data.as_mut().unwrap_unchecked() }
     }
 }
