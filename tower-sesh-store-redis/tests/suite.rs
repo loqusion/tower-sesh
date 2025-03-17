@@ -29,9 +29,20 @@ where
 }
 
 #[cfg(not(tower_sesh_test_caching_store))]
-tower_sesh_test::test_suite!(store().await);
+mod normal {
+    use super::store;
+
+    tower_sesh_test::test_suite!(store().await);
+}
+
 #[cfg(tower_sesh_test_caching_store)]
-tower_sesh_test::test_suite!(tower_sesh::store::CachingStore::from_cache_and_store(
-    tower_sesh::store::MemoryStore::new(),
-    store().await
-));
+mod with_caching_store {
+    use tower_sesh::store::{CachingStore, MemoryStore};
+
+    use super::store;
+
+    tower_sesh_test::test_suite!(CachingStore::from_cache_and_store(
+        MemoryStore::new(),
+        store().await
+    ));
+}
