@@ -208,8 +208,8 @@ fn err_store<T>() -> Arc<ErrStore<T>> {
     Arc::new(ErrStore::new(|| store::Error::message(ERROR_MESSAGE)))
 }
 
-#[cfg(not(miri))]
 #[tokio::test]
+#[cfg_attr(miri, ignore = "incompatible with miri")]
 async fn sandbox() {
     subscriber_init();
 

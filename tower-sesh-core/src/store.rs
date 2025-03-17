@@ -275,7 +275,6 @@ impl StdError for Error {
     }
 }
 
-#[cfg(not(miri))]
 #[cfg(test)]
 mod test {
     use std::iter;
@@ -350,6 +349,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "incompatible with miri")]
     fn test_error_display() {
         insta::assert_snapshot!(error_store(), @"session store error");
         insta::assert_snapshot!(
@@ -368,6 +368,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore = "incompatible with miri")]
     fn test_error_debug() {
         insta::assert_debug_snapshot!( error_store(), @r#"
         store::Error {

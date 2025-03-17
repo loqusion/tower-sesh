@@ -21,13 +21,13 @@ macro_rules! test_suite {
             @impl $store =>
             smoke
             create_does_collision_resolution
-            #[cfg(not(miri))]
+            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_create
-            #[cfg(not(miri))]
+            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_update_nonexisting
-            #[cfg(not(miri))]
+            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_update_existing
-            #[cfg(not(miri))]
+            #[cfg_attr(miri, ignore = "strict time requirements are incompatible with miri")]
             loading_session_after_update_ttl
             loading_a_missing_session_returns_none
             loading_an_expired_session_returns_none_create
