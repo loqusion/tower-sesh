@@ -23,6 +23,13 @@ pub fn now() -> Ttl {
     let t = Ttl::now_utc();
     match UtcOffset::local_offset_at(t) {
         Ok(offset) => t.to_offset(offset),
-        Err(_err) => t,
+        Err(_err) => {
+            warn!(
+                "failed to get system time zone; \
+                falling back to UTC \
+                (this may result in surprising bugs!)"
+            );
+            t
+        }
     }
 }
