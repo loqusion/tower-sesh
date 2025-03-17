@@ -11,6 +11,8 @@
 //!
 //! [GitHub repository]: https://github.com/loqusion/tower-sesh
 
+#![warn(missing_debug_implementations)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(
     no_crate_inject,
     attr(

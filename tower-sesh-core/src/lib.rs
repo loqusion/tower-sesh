@@ -12,6 +12,8 @@
 //!
 //! And then keep releases in sync with `tower-sesh-core`.
 
+#![warn(missing_debug_implementations)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(
     no_crate_inject,
     attr(

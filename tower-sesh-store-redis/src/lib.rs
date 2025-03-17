@@ -4,6 +4,8 @@
 //!
 //! [`tower-sesh`]: https://docs.rs/tower-sesh/latest/tower_sesh/
 
+#![warn(missing_debug_implementations)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(
     no_crate_inject,
     attr(
