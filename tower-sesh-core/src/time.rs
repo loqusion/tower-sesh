@@ -1,3 +1,5 @@
+//! Utilities and types related to time.
+
 use time::{OffsetDateTime, UtcOffset};
 
 /// An instant in time, represented as a date and time with a timezone offset.
