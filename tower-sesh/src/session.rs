@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     ops::{Deref, DerefMut},
     sync::Arc,
     time::Duration,
@@ -328,6 +329,25 @@ impl<T> Clone for Session<T> {
     }
 }
 
+impl<T> fmt::Debug for Session<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("Session");
+
+        let guard = self.inner.lock();
+
+        d.field("data", &guard.data);
+        d.field("expires_at", &guard.expires_at);
+        d.field("status", &guard.status);
+
+        drop(guard);
+
+        d.finish_non_exhaustive()
+    }
+}
+
 define_rejection! {
     #[status = INTERNAL_SERVER_ERROR]
     #[body = "Failed to load session"]
@@ -400,6 +420,26 @@ impl<'a, T: 'a> DerefMut for SessionGuard<'a, T> {
     }
 }
 
+impl<T> fmt::Debug for SessionGuard<'_, T>
+where
+    T: fmt::Debug,
+{
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&**self, f)
+    }
+}
+
+impl<T> fmt::Display for SessionGuard<'_, T>
+where
+    T: fmt::Display,
+{
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&**self, f)
+    }
+}
+
 impl<'a, T: 'a> OptionSessionGuard<'a, T> {
     #[inline]
     fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
@@ -422,6 +462,16 @@ impl<'a, T: 'a> DerefMut for OptionSessionGuard<'a, T> {
         self.0.changed();
 
         &mut self.0.data
+    }
+}
+
+impl<T> fmt::Debug for OptionSessionGuard<'_, T>
+where
+    T: fmt::Debug,
+{
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&**self, f)
     }
 }
 
