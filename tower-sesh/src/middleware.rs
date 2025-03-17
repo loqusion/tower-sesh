@@ -353,7 +353,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
             panic!("invalid `cookie_name` value: {}", err.display_chain());
         }
 
-        self.mutate_config(|config| config.cookie_name = name);
+        self.config_mut().cookie_name = name;
         self
     }
 
@@ -380,7 +380,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, key).domain("doc.rust-lang.org");
     /// ```
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
-        self.mutate_config(|config| config.domain = Some(domain.into()));
+        self.config_mut().domain = Some(domain.into());
         self
     }
 
@@ -396,7 +396,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#httponly-attribute
     pub fn http_only(mut self, enable: bool) -> Self {
-        self.mutate_config(|config| config.http_only = enable);
+        self.config_mut().http_only = enable;
         self
     }
 
@@ -422,7 +422,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, key).path("/std");
     /// ```
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
-        self.mutate_config(|config| config.path = Some(path.into()));
+        self.config_mut().path = Some(path.into());
         self
     }
 
@@ -444,7 +444,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, key).same_site(SameSite::Strict);
     /// ```
     pub fn same_site(mut self, same_site: SameSite) -> Self {
-        self.mutate_config(|config| config.same_site = same_site.into_cookie_same_site());
+        self.config_mut().same_site = same_site.into_cookie_same_site();
         self
     }
 
@@ -460,16 +460,12 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#secure-attribute
     pub fn secure(mut self, enable: bool) -> Self {
-        self.mutate_config(|config| config.secure = enable);
+        self.config_mut().secure = enable;
         self
     }
 
-    fn mutate_config<F>(&mut self, f: F)
-    where
-        F: FnOnce(&mut Config),
-    {
-        let config = Arc::make_mut(&mut self.config);
-        f(config);
+    fn config_mut(&mut self) -> &mut Config {
+        Arc::make_mut(&mut self.config)
     }
 }
 
