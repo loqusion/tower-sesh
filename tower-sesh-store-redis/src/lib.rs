@@ -27,7 +27,7 @@ use redis::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::{
-    store::{Error, SessionStoreImpl},
+    store::{Error, Result, SessionStoreImpl},
     time::SESSION_EXPIRY_SECONDS_DEFAULT,
     Record, SessionKey, SessionStore, Ttl,
 };
@@ -35,8 +35,6 @@ use tower_sesh_core::{
 pub use redis;
 
 pub mod connection;
-
-type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub struct RedisStore<T, C: GetConnection = ConnectionManagerWithRetry> {
     client: C,

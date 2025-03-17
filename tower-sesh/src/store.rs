@@ -5,15 +5,13 @@ use async_trait::async_trait;
 use dashmap::DashMap;
 use rand::{rngs::ThreadRng, Rng};
 use tower_sesh_core::{
-    store::{Error, SessionStoreImpl},
+    store::{Error, Result, SessionStoreImpl},
     time::now,
     Record, SessionKey, Ttl,
 };
 
 #[doc(inline)]
 pub use tower_sesh_core::SessionStore;
-
-type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[cfg(feature = "memory-store")]
 pub struct MemoryStore<T> {
