@@ -8,7 +8,7 @@
 //! ```
 //! use async_trait::async_trait;
 //! use tower_sesh_core::{store::SessionStoreImpl, SessionStore};
-//! # use tower_sesh_core::{store::{Error, Record}, SessionKey, Ttl};
+//! # use tower_sesh_core::{store::{Record, Result}, SessionKey, Ttl};
 //!
 //! struct StoreImpl<T> {
 //!     /* ... */
@@ -24,11 +24,11 @@
 //! # where T: 'static,
 //! {
 //!     /* ... */
-//! # async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey, Error> { unimplemented!() }
-//! # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>, Error> { unimplemented!() }
-//! # async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<(), Error> { unimplemented!() }
-//! # async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<(), Error> { unimplemented!() }
-//! # async fn delete(&self, session_key: &SessionKey) -> Result<(), Error> { unimplemented!() }
+//! # async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> { unimplemented!() }
+//! # async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> { unimplemented!() }
+//! # async fn update(&self, session_key: &SessionKey, data: &T, ttl: Ttl) -> Result<()> { unimplemented!() }
+//! # async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> { unimplemented!() }
+//! # async fn delete(&self, session_key: &SessionKey) -> Result<()> { unimplemented!() }
 //! }
 //! ```
 
