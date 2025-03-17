@@ -16,8 +16,8 @@ pub const SESSION_EXPIRY_SECONDS_DEFAULT: u32 = 2 * WEEK_IN_SECONDS;
 
 /// Returns the current date and time with the local system's UTC offset.
 ///
-/// If the system's UTC offset could not be determined, then UTC is used. If
-/// the `tracing` feature is enabled, a warning is logged.
+/// If the system's UTC offset could not be determined, then UTC is used. In
+/// addition, a warning is logged if the `tracing` feature is enabled.
 #[inline]
 pub fn now() -> Ttl {
     let t = Ttl::now_utc();
