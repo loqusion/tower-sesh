@@ -40,8 +40,15 @@ macro_rules! test_suite {
         }
     };
 
-    (@impl $store:expr => $($test:ident)+) => {
+    (
+        @impl $store:expr =>
         $(
+            $(#[$m:meta])*
+            $test:ident
+        )+
+    ) => {
+        $(
+            $(#[$m])*
             #[$crate::__private::tokio::test]
             async fn $test() {
                 $crate::__private::paste::paste! {
