@@ -173,6 +173,7 @@ pub struct Error {
 }
 
 /// Represents all the ways a [`SessionStore`] method can fail.
+#[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// Catchall error message
