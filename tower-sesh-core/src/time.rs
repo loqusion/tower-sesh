@@ -1,4 +1,4 @@
-use ::time::OffsetDateTime;
+use time::{OffsetDateTime, UtcOffset};
 
 /// An instant in time, represented as a date and time with a timezone offset.
 ///
@@ -20,5 +20,9 @@ pub const SESSION_EXPIRY_SECONDS_DEFAULT: u32 = 2 * WEEK_IN_SECONDS;
 /// [`now_utc`]: Ttl::now_utc
 #[inline]
 pub fn now() -> Ttl {
-    Ttl::now_local().unwrap_or_else(|_| Ttl::now_utc())
+    let t = Ttl::now_utc();
+    match UtcOffset::local_offset_at(t) {
+        Ok(offset) => t.to_offset(offset),
+        Err(_err) => t,
+    }
 }
