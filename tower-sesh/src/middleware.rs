@@ -30,7 +30,7 @@ use crate::{
 // the store.
 pub struct SessionLayer<T, Store: SessionStore<T>, C = PrivateCookie> {
     store: Arc<Store>,
-    config: Config,
+    config: Arc<Config>, // This is put in an `Arc` to make clones cheap.
     cookie_controller: C,
     _marker: PhantomData<fn() -> T>,
 }
@@ -245,7 +245,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store> {
         let key = key.into_cookie_key();
         Self {
             store,
-            config: Config::default(),
+            config: Arc::new(Config::default()),
             cookie_controller: PrivateCookie::new(key),
             _marker: PhantomData,
         }
@@ -353,7 +353,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
             panic!("invalid `cookie_name` value: {}", err.display_chain());
         }
 
-        self.config.cookie_name = name;
+        self.mutate_config(|config| config.cookie_name = name);
         self
     }
 
@@ -380,7 +380,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, key).domain("doc.rust-lang.org");
     /// ```
     pub fn domain(mut self, domain: impl Into<Cow<'static, str>>) -> Self {
-        self.config.domain = Some(domain.into());
+        self.mutate_config(|config| config.domain = Some(domain.into()));
         self
     }
 
@@ -396,7 +396,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#httponly-attribute
     pub fn http_only(mut self, enable: bool) -> Self {
-        self.config.http_only = enable;
+        self.mutate_config(|config| config.http_only = enable);
         self
     }
 
@@ -422,7 +422,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, key).path("/std");
     /// ```
     pub fn path(mut self, path: impl Into<Cow<'static, str>>) -> Self {
-        self.config.path = Some(path.into());
+        self.mutate_config(|config| config.path = Some(path.into()));
         self
     }
 
@@ -444,7 +444,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// let layer = SessionLayer::new(store, key).same_site(SameSite::Strict);
     /// ```
     pub fn same_site(mut self, same_site: SameSite) -> Self {
-        self.config.same_site = same_site.into_cookie_same_site();
+        self.mutate_config(|config| config.same_site = same_site.into_cookie_same_site());
         self
     }
 
@@ -460,8 +460,23 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     /// [OWASP recommends]:
     ///     https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#secure-attribute
     pub fn secure(mut self, enable: bool) -> Self {
-        self.config.secure = enable;
+        self.mutate_config(|config| config.secure = enable);
         self
+    }
+
+    /// Mutates `self.config` by calling the provided closure. This is
+    /// necessary because `config` is stored in an `Arc`, which does not allow
+    /// for mutation.
+    ///
+    /// This is pretty inefficient, so it should only be called inside builder
+    /// methods.
+    fn mutate_config<F>(&mut self, f: F)
+    where
+        F: FnOnce(&mut Config),
+    {
+        let mut config = (*self.config).clone();
+        f(&mut config);
+        self.config = Arc::new(config);
     }
 }
 
@@ -485,7 +500,7 @@ impl<T, Store: SessionStore<T>> SessionLayer<T, Store, PlainCookie> {
     pub fn plain(store: Arc<Store>) -> SessionLayer<T, Store, PlainCookie> {
         SessionLayer {
             store,
-            config: Config::default(),
+            config: Arc::new(Config::default()),
             cookie_controller: PlainCookie,
             _marker: PhantomData,
         }
@@ -564,27 +579,27 @@ impl<S, T, Store: SessionStore<T>, C: CookieSecurity> SessionManager<S, T, Store
 
 impl Config {
     // TODO: Add the `Expires` attribute.
-    fn cookie(self, session_key: SessionKey) -> Cookie<'static> {
-        let mut cookie = Cookie::build((self.cookie_name, session_key.encode()))
+    fn cookie(&self, session_key: SessionKey) -> Cookie<'static> {
+        let mut cookie = Cookie::build((&*self.cookie_name, session_key.encode()))
             .http_only(self.http_only)
             .same_site(self.same_site)
             .secure(self.secure);
 
-        if let Some(domain) = self.domain {
-            cookie = cookie.domain(domain);
+        if let Some(domain) = &self.domain {
+            cookie = cookie.domain(&**domain);
         }
-        if let Some(path) = self.path {
-            cookie = cookie.path(path);
+        if let Some(path) = &self.path {
+            cookie = cookie.path(&**path);
         }
 
-        cookie.build()
+        cookie.build().into_owned()
     }
 
     #[inline]
-    fn cookie_removal(self) -> Cookie<'static> {
-        let mut cookie = Cookie::new(self.cookie_name, "");
+    fn cookie_removal(&self) -> Cookie<'static> {
+        let mut cookie = Cookie::new(&*self.cookie_name, "");
         cookie.make_removal();
-        cookie
+        cookie.into_owned()
     }
 }
 
@@ -622,7 +637,7 @@ where
         let fut = self.inner.call(req);
 
         let store = Arc::clone(&self.layer.store);
-        let config = self.layer.config.clone();
+        let config = Arc::clone(&self.layer.config);
         let cookie_controller = self.layer.cookie_controller.clone();
 
         async move {
