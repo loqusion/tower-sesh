@@ -393,7 +393,9 @@ impl<'a, T: 'a> SessionGuard<'a, T> {
     #[inline]
     #[track_caller]
     unsafe fn new(guard: MutexGuard<'a, Inner<T>>) -> Self {
+        // This is ensured by the calling contexts.
         debug_assert!(guard.data.is_some());
+
         SessionGuard(guard)
     }
 }
