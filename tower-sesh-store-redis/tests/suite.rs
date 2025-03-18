@@ -1,6 +1,6 @@
 #![cfg(feature = "test-util")]
 
-use std::{env, sync::LazyLock, time::Duration};
+use std::{env, fmt, sync::LazyLock, time::Duration};
 
 use redis::aio::ConnectionManagerConfig;
 use serde::{de::DeserializeOwned, Serialize};
@@ -13,7 +13,7 @@ static REDIS_URL: LazyLock<&'static str> = LazyLock::new(|| {
         .leak()
 });
 
-async fn store<T, Rng>() -> impl SessionStore<T> + SessionStoreRng<Rng>
+async fn store<T, Rng>() -> impl SessionStore<T> + SessionStoreRng<Rng> + fmt::Debug
 where
     T: Serialize + DeserializeOwned + Send + Sync + 'static,
     Rng: rand::CryptoRng + Send + 'static,
