@@ -1,3 +1,5 @@
+mod support;
+
 mod memory_store {
     use tower_sesh::store::MemoryStore;
 
@@ -11,4 +13,10 @@ mod memory_store_caching_store {
         MemoryStore::new(),
         MemoryStore::new()
     ));
+}
+
+mod mock_store {
+    use super::support::MockStore;
+
+    tower_sesh_test::test_suite!(MockStore::new());
 }
