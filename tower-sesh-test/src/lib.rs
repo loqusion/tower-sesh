@@ -340,13 +340,13 @@ pub async fn test_loading_an_expired_session_returns_none_create(
     let rng = TestRng::seed_from_u64(31348441);
     store.rng(rng);
 
-    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_millis(50);
     let session_key = store
         .create(&SessionData::sample(), five_microseconds_from_now)
         .await
         .unwrap();
 
-    tokio::time::sleep(Duration::from_micros(10)).await;
+    tokio::time::sleep(Duration::from_millis(90)).await;
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
@@ -358,7 +358,7 @@ pub async fn test_loading_an_expired_session_returns_none_update_nonexisting(
     let mut rng = TestRng::seed_from_u64(880523847);
     let session_key = rng.random::<SessionKey>();
 
-    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_millis(50);
     store
         .update(
             &session_key,
@@ -368,7 +368,7 @@ pub async fn test_loading_an_expired_session_returns_none_update_nonexisting(
         .await
         .unwrap();
 
-    tokio::time::sleep(Duration::from_micros(10)).await;
+    tokio::time::sleep(Duration::from_millis(90)).await;
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
@@ -381,7 +381,7 @@ pub async fn test_loading_an_expired_session_returns_none_update_existing(
     store.rng(rng);
     let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
 
-    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_millis(50);
     store
         .update(
             &session_key,
@@ -391,7 +391,7 @@ pub async fn test_loading_an_expired_session_returns_none_update_existing(
         .await
         .unwrap();
 
-    tokio::time::sleep(Duration::from_micros(10)).await;
+    tokio::time::sleep(Duration::from_millis(90)).await;
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
@@ -404,13 +404,13 @@ pub async fn test_loading_an_expired_session_returns_none_update_ttl(
     store.rng(rng);
     let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
 
-    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_micros(5);
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_millis(50);
     store
         .update_ttl(&session_key, five_microseconds_from_now)
         .await
         .unwrap();
 
-    tokio::time::sleep(Duration::from_micros(10)).await;
+    tokio::time::sleep(Duration::from_millis(90)).await;
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
