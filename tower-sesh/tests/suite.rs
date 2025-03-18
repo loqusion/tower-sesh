@@ -15,6 +15,7 @@ mod memory_store_caching_store {
     ));
 }
 
+#[cfg(not(miri))]
 mod mock_store {
     use super::support::MockStore;
 
