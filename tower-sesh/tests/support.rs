@@ -412,19 +412,8 @@ where
                     data,
                     ttl,
                     result: CreateResult::Created { .. },
-                } => {
-                    let result = if latest_ttl.unwrap_or(*ttl) >= Ttl::now_local().unwrap() {
-                        LoadResult::Occupied {
-                            data: data.to_owned(),
-                            ttl: latest_ttl.unwrap_or(*ttl),
-                        }
-                    } else {
-                        LoadResult::Vacant
-                    };
-                    return result;
                 }
-                Operation::Load { .. } => continue,
-                Operation::Update {
+                | Operation::Update {
                     session_key: _,
                     data,
                     ttl,
@@ -439,18 +428,20 @@ where
                     };
                     return result;
                 }
+                Operation::Load { .. } => continue,
                 Operation::UpdateTtl {
                     session_key: _,
                     ttl,
-                } if latest_ttl.is_none() => {
-                    if *ttl >= Ttl::now_local().unwrap() {
-                        latest_ttl = Some(*ttl);
-                        continue;
-                    } else {
-                        return LoadResult::Vacant;
+                } => {
+                    if latest_ttl.is_none() {
+                        if *ttl >= Ttl::now_local().unwrap() {
+                            latest_ttl = Some(*ttl);
+                            continue;
+                        } else {
+                            return LoadResult::Vacant;
+                        }
                     }
                 }
-                Operation::UpdateTtl { .. } => continue,
                 Operation::Delete { session_key: _ } => {
                     return LoadResult::Vacant;
                 }
