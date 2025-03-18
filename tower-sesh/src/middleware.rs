@@ -558,14 +558,6 @@ where
     }
 }
 
-impl<S, T, Store: SessionStore<T>, C: CookieSecurity> SessionManager<S, T, Store, C> {
-    fn session_cookie<'c>(&self, jar: &'c CookieJar) -> Option<Cookie<'c>> {
-        self.layer
-            .cookie_controller
-            .get(jar, &self.layer.config.cookie_name)
-    }
-}
-
 impl Config {
     // TODO: Add the `Expires` attribute.
     fn cookie(&self, session_key: SessionKey) -> Cookie<'static> {
@@ -614,7 +606,11 @@ where
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let session_handle = {
             let jar = CookieJar::from_headers_single(req.headers(), &self.layer.config.cookie_name);
-            let cookie = self.session_cookie(&jar).map(Cookie::into_owned);
+            let cookie = self
+                .layer
+                .cookie_controller
+                .get(&jar, &self.layer.config.cookie_name)
+                .map(Cookie::into_owned);
             session::lazy::insert(
                 req.extensions_mut(),
                 cookie,
