@@ -63,95 +63,6 @@ struct MockStoreInner<T> {
     rng: Option<Box<dyn rand::CryptoRng + Send + 'static>>,
 }
 
-impl<T> MockStoreInner<T>
-where
-    T: Clone,
-{
-    fn new() -> Self {
-        MockStoreInner {
-            operations: Vec::new(),
-            operations_map: HashMap::new(),
-            rng: None,
-        }
-    }
-
-    fn random_key(&mut self) -> SessionKey {
-        match &mut self.rng {
-            Some(rng) => rng.random(),
-            None => rand::rngs::ThreadRng::default().random(),
-        }
-    }
-
-    fn load_result(&self, session_key: &SessionKey) -> LoadResult<T> {
-        // If the latest operation was `update_ttl`, this will contain the
-        // up-to-date TTL.
-        let mut latest_ttl: Option<Ttl> = None;
-
-        for operation in self
-            .operations_map
-            .get(session_key)
-            .iter()
-            .flat_map(|v| v.iter())
-            .rev()
-        {
-            match operation.upgrade().unwrap().as_ref() {
-                Operation::Create {
-                    data,
-                    ttl,
-                    result: CreateResult::Created { .. },
-                } => {
-                    let result = if *ttl >= Ttl::now_local().unwrap() {
-                        LoadResult::Occupied {
-                            data: data.to_owned(),
-                            ttl: latest_ttl.unwrap_or(*ttl),
-                        }
-                    } else {
-                        LoadResult::Vacant
-                    };
-                    return result;
-                }
-                Operation::Load { .. } => continue,
-                Operation::Update {
-                    session_key: _,
-                    data,
-                    ttl,
-                } => {
-                    let result = if *ttl >= Ttl::now_local().unwrap() {
-                        LoadResult::Occupied {
-                            data: data.to_owned(),
-                            ttl: latest_ttl.unwrap_or(*ttl),
-                        }
-                    } else {
-                        LoadResult::Vacant
-                    };
-                    return result;
-                }
-                Operation::UpdateTtl {
-                    session_key: _,
-                    ttl,
-                } => {
-                    if *ttl >= Ttl::now_local().unwrap() {
-                        latest_ttl.get_or_insert(*ttl);
-                        continue;
-                    } else {
-                        return LoadResult::Vacant;
-                    }
-                }
-                Operation::Delete { session_key: _ } => {
-                    return LoadResult::Vacant;
-                }
-                Operation::Create {
-                    data: _,
-                    ttl: _,
-                    result: CreateResult::MaxIterationsReached,
-                } => unreachable!(),
-            }
-        }
-
-        LoadResult::Vacant
-    }
-}
-
 #[derive(Debug)]
 enum Operation<T> {
     Create {
@@ -346,5 +257,94 @@ where
 {
     fn rng(&mut self, rng: Rng) {
         self.inner.lock().rng = Some(Box::new(rng));
+    }
+}
+
+impl<T> MockStoreInner<T>
+where
+    T: Clone,
+{
+    fn new() -> Self {
+        MockStoreInner {
+            operations: Vec::new(),
+            operations_map: HashMap::new(),
+            rng: None,
+        }
+    }
+
+    fn random_key(&mut self) -> SessionKey {
+        match &mut self.rng {
+            Some(rng) => rng.random(),
+            None => rand::rngs::ThreadRng::default().random(),
+        }
+    }
+
+    fn load_result(&self, session_key: &SessionKey) -> LoadResult<T> {
+        // If the latest operation was `update_ttl`, this will contain the
+        // up-to-date TTL.
+        let mut latest_ttl: Option<Ttl> = None;
+
+        for operation in self
+            .operations_map
+            .get(session_key)
+            .iter()
+            .flat_map(|v| v.iter())
+            .rev()
+        {
+            match operation.upgrade().unwrap().as_ref() {
+                Operation::Create {
+                    data,
+                    ttl,
+                    result: CreateResult::Created { .. },
+                } => {
+                    let result = if *ttl >= Ttl::now_local().unwrap() {
+                        LoadResult::Occupied {
+                            data: data.to_owned(),
+                            ttl: latest_ttl.unwrap_or(*ttl),
+                        }
+                    } else {
+                        LoadResult::Vacant
+                    };
+                    return result;
+                }
+                Operation::Load { .. } => continue,
+                Operation::Update {
+                    session_key: _,
+                    data,
+                    ttl,
+                } => {
+                    let result = if *ttl >= Ttl::now_local().unwrap() {
+                        LoadResult::Occupied {
+                            data: data.to_owned(),
+                            ttl: latest_ttl.unwrap_or(*ttl),
+                        }
+                    } else {
+                        LoadResult::Vacant
+                    };
+                    return result;
+                }
+                Operation::UpdateTtl {
+                    session_key: _,
+                    ttl,
+                } => {
+                    if *ttl >= Ttl::now_local().unwrap() {
+                        latest_ttl.get_or_insert(*ttl);
+                        continue;
+                    } else {
+                        return LoadResult::Vacant;
+                    }
+                }
+                Operation::Delete { session_key: _ } => {
+                    return LoadResult::Vacant;
+                }
+                Operation::Create {
+                    data: _,
+                    ttl: _,
+                    result: CreateResult::MaxIterationsReached,
+                } => unreachable!(),
+            }
+        }
+
+        LoadResult::Vacant
     }
 }
