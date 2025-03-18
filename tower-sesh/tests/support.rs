@@ -282,6 +282,7 @@ where
     async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
         let mut guard = self.inner.lock();
 
+        // This is necessary to avoid reviving an expired session.
         guard.revalidate_last_operation_which_modified_ttl(session_key);
 
         let operation = Arc::new(Operation::UpdateTtl {
