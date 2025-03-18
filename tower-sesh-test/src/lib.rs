@@ -38,6 +38,7 @@ macro_rules! test_suite {
             ttl_with_999_999_999_nanoseconds_update_existing
             ttl_with_999_999_999_nanoseconds_update_ttl
             update_ttl_extends_session_that_would_otherwise_expire
+            // FIXME: Remove this `ignore` when `MemoryStore` is fixed
             #[ignore = "this test fails with `MemoryStore`"]
             update_ttl_does_not_revive_expired_session
         }
