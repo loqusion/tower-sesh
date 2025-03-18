@@ -60,6 +60,163 @@ macro_rules! test_suite {
     };
 }
 
+fn ttl() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    ttl_of(now)
+}
+
+fn ttl_of(f: Ttl) -> Ttl {
+    f + Duration::from_secs(10 * 60)
+}
+
+fn ttl_strict() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    ttl_strict_of(now)
+}
+
+fn ttl_strict_of(f: Ttl) -> Ttl {
+    // miri requires a more lenient TTL due to its slower execution speed
+    const STRICT_OFFSET: Duration = if cfg!(miri) {
+        Duration::from_secs(20)
+    } else {
+        // NOTE: This threshold may cause spurious test failures on some
+        // systems. If that is the case, try increasing this value.
+        Duration::from_millis(1500)
+    };
+    f + STRICT_OFFSET
+}
+
+trait TtlExt {
+    type Normalized;
+
+    fn normalize(self) -> Self::Normalized;
+}
+
+impl TtlExt for Ttl {
+    type Normalized = UtcDateTime;
+
+    fn normalize(self) -> Self::Normalized {
+        self.replace_nanosecond(0).unwrap().to_utc()
+    }
+}
+
+#[doc(hidden)]
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct SessionData {
+    user_id: DbId,
+    authenticated: bool,
+    roles: Vec<String>,
+    preferences: Preferences,
+    cart: Vec<CartItem>,
+    csrf_token: String,
+    flash_messages: Vec<String>,
+    rate_limit: RateLimit,
+    workflow_state: WorkflowState,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct DbId(u64);
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct Preferences {
+    theme: Theme,
+    language: Language,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+enum Theme {
+    Light,
+    Dark,
+}
+
+/// The two languages
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+enum Language {
+    #[serde(alias = "en-US")]
+    EnUs,
+    #[serde(alias = "en-GB")]
+    EnGb,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct CartItem {
+    item_id: DbId,
+    name: String,
+    quantity: u64,
+    price: Decimal,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct RateLimit {
+    failed_login_attempts: u64,
+    #[serde(with = "time::serde::rfc3339")]
+    last_attempt: OffsetDateTime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct WorkflowState {
+    step: u64,
+    total_steps: u64,
+    data: WorkflowData,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct WorkflowData {
+    address: String,
+}
+
+impl SessionData {
+    fn sample() -> Self {
+        SessionData::sample_with(12345)
+    }
+
+    fn sample_with(user_id: u64) -> Self {
+        SessionData {
+            user_id: DbId(user_id),
+            authenticated: true,
+            roles: vec!["admin".to_owned(), "editor".to_owned()],
+            preferences: Preferences {
+                theme: Theme::Dark,
+                language: Language::EnUs,
+            },
+            cart: vec![
+                CartItem {
+                    item_id: DbId(101),
+                    name: "Laptop".to_owned(),
+                    quantity: 1,
+                    price: Decimal::new(99999, 2),
+                },
+                CartItem {
+                    item_id: DbId(202),
+                    name: "Mouse".to_owned(),
+                    quantity: 2,
+                    price: Decimal::new(2550, 2),
+                },
+            ],
+            csrf_token: "abc123xyz".to_owned(),
+            flash_messages: vec![
+                "Welcome back!".to_owned(),
+                "Your order has been placed successfully.".to_owned(),
+            ],
+            rate_limit: RateLimit {
+                failed_login_attempts: 1,
+                last_attempt: OffsetDateTime::new_utc(
+                    Date::from_calendar_date(2025, Month::February, 28).unwrap(),
+                    Time::from_hms(0, 34, 56).unwrap(),
+                ),
+            },
+            workflow_state: WorkflowState {
+                step: 2,
+                total_steps: 5,
+                data: WorkflowData {
+                    address: "123 Main St, NY".to_owned(),
+                },
+            },
+        }
+    }
+}
+
 pub async fn test_smoke(_store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>) {}
 
 pub async fn test_create_does_collision_resolution(
@@ -385,161 +542,4 @@ pub async fn test_update_ttl_extends_session_that_would_otherwise_expire(
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.data, data);
     assert_eq!(record.ttl.normalize(), updated_ttl.normalize());
-}
-
-#[doc(hidden)]
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct SessionData {
-    user_id: DbId,
-    authenticated: bool,
-    roles: Vec<String>,
-    preferences: Preferences,
-    cart: Vec<CartItem>,
-    csrf_token: String,
-    flash_messages: Vec<String>,
-    rate_limit: RateLimit,
-    workflow_state: WorkflowState,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct DbId(u64);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct Preferences {
-    theme: Theme,
-    language: Language,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-enum Theme {
-    Light,
-    Dark,
-}
-
-/// The two languages
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-enum Language {
-    #[serde(alias = "en-US")]
-    EnUs,
-    #[serde(alias = "en-GB")]
-    EnGb,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct CartItem {
-    item_id: DbId,
-    name: String,
-    quantity: u64,
-    price: Decimal,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct RateLimit {
-    failed_login_attempts: u64,
-    #[serde(with = "time::serde::rfc3339")]
-    last_attempt: OffsetDateTime,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct WorkflowState {
-    step: u64,
-    total_steps: u64,
-    data: WorkflowData,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct WorkflowData {
-    address: String,
-}
-
-impl SessionData {
-    fn sample() -> Self {
-        SessionData::sample_with(12345)
-    }
-
-    fn sample_with(user_id: u64) -> Self {
-        SessionData {
-            user_id: DbId(user_id),
-            authenticated: true,
-            roles: vec!["admin".to_owned(), "editor".to_owned()],
-            preferences: Preferences {
-                theme: Theme::Dark,
-                language: Language::EnUs,
-            },
-            cart: vec![
-                CartItem {
-                    item_id: DbId(101),
-                    name: "Laptop".to_owned(),
-                    quantity: 1,
-                    price: Decimal::new(99999, 2),
-                },
-                CartItem {
-                    item_id: DbId(202),
-                    name: "Mouse".to_owned(),
-                    quantity: 2,
-                    price: Decimal::new(2550, 2),
-                },
-            ],
-            csrf_token: "abc123xyz".to_owned(),
-            flash_messages: vec![
-                "Welcome back!".to_owned(),
-                "Your order has been placed successfully.".to_owned(),
-            ],
-            rate_limit: RateLimit {
-                failed_login_attempts: 1,
-                last_attempt: OffsetDateTime::new_utc(
-                    Date::from_calendar_date(2025, Month::February, 28).unwrap(),
-                    Time::from_hms(0, 34, 56).unwrap(),
-                ),
-            },
-            workflow_state: WorkflowState {
-                step: 2,
-                total_steps: 5,
-                data: WorkflowData {
-                    address: "123 Main St, NY".to_owned(),
-                },
-            },
-        }
-    }
-}
-
-fn ttl() -> Ttl {
-    let now = Ttl::now_local().unwrap();
-    ttl_of(now)
-}
-
-fn ttl_of(f: Ttl) -> Ttl {
-    f + Duration::from_secs(10 * 60)
-}
-
-fn ttl_strict() -> Ttl {
-    let now = Ttl::now_local().unwrap();
-    ttl_strict_of(now)
-}
-
-fn ttl_strict_of(f: Ttl) -> Ttl {
-    // miri requires a more lenient TTL due to its slower execution speed
-    const STRICT_OFFSET: Duration = if cfg!(miri) {
-        Duration::from_secs(20)
-    } else {
-        // NOTE: This threshold may cause spurious test failures on some
-        // systems. If that is the case, try increasing this value.
-        Duration::from_millis(1500)
-    };
-    f + STRICT_OFFSET
-}
-
-trait TtlExt {
-    type Normalized;
-
-    fn normalize(self) -> Self::Normalized;
-}
-
-impl TtlExt for Ttl {
-    type Normalized = UtcDateTime;
-
-    fn normalize(self) -> Self::Normalized {
-        self.replace_nanosecond(0).unwrap().to_utc()
-    }
 }
