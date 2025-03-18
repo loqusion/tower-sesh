@@ -12,8 +12,8 @@ use tower_sesh_core::{
 use tracing::Level;
 use tracing_mock::{expect, subscriber};
 
-mod common;
-use common::ErrStore;
+mod support;
+use support::ErrStore;
 
 const ERROR_MESSAGE: &str = "`ErrStore` always returns an error";
 

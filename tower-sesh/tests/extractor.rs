@@ -12,8 +12,8 @@ use tower_sesh_core::{
     SessionKey,
 };
 
-mod common;
-use common::ErrStore;
+mod support;
+use support::ErrStore;
 
 #[tokio::test]
 #[should_panic = "missing request extension"]
