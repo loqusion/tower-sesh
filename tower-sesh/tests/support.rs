@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use async_trait::async_trait;
 use tower_sesh_core::{
-    store::{self, SessionStoreImpl},
+    store::{self, Result, SessionStoreImpl},
     Record, SessionKey, SessionStore, Ttl,
 };
 
@@ -30,28 +30,23 @@ impl<T> SessionStoreImpl<T> for ErrStore<T>
 where
     T: Send + Sync + 'static,
 {
-    async fn create(&self, _data: &T, _ttl: Ttl) -> Result<SessionKey, store::Error> {
+    async fn create(&self, _data: &T, _ttl: Ttl) -> Result<SessionKey> {
         Err((self.error_fn)())
     }
 
-    async fn load(&self, _session_key: &SessionKey) -> Result<Option<Record<T>>, store::Error> {
+    async fn load(&self, _session_key: &SessionKey) -> Result<Option<Record<T>>> {
         Err((self.error_fn)())
     }
 
-    async fn update(
-        &self,
-        _session_key: &SessionKey,
-        _data: &T,
-        _ttl: Ttl,
-    ) -> Result<(), store::Error> {
+    async fn update(&self, _session_key: &SessionKey, _data: &T, _ttl: Ttl) -> Result<()> {
         Err((self.error_fn)())
     }
 
-    async fn update_ttl(&self, _session_key: &SessionKey, _ttl: Ttl) -> Result<(), store::Error> {
+    async fn update_ttl(&self, _session_key: &SessionKey, _ttl: Ttl) -> Result<()> {
         Err((self.error_fn)())
     }
 
-    async fn delete(&self, _session_key: &SessionKey) -> Result<(), store::Error> {
+    async fn delete(&self, _session_key: &SessionKey) -> Result<()> {
         Err((self.error_fn)())
     }
 }
