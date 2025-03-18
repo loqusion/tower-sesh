@@ -370,7 +370,7 @@ mod test {
     #[test]
     #[cfg_attr(miri, ignore = "incompatible with miri")]
     fn test_error_debug() {
-        insta::assert_debug_snapshot!( error_store(), @r#"
+        insta::assert_debug_snapshot!(error_store(), @r#"
         store::Error {
             kind: "Store",
             source: "Reconnecting failed: Connection refused (os error 111)",
