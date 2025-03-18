@@ -523,6 +523,8 @@ fn ttl_strict_of(f: Ttl) -> Ttl {
     const STRICT_OFFSET: Duration = if cfg!(miri) {
         Duration::from_secs(20)
     } else {
+        // NOTE: This threshold may cause spurious test failures on some
+        // systems. If that is the case, try increasing this value.
         Duration::from_millis(1500)
     };
     f + STRICT_OFFSET
