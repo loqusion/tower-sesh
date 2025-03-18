@@ -60,7 +60,7 @@ pub struct MockStore<T> {
 
 struct MockStoreInner<T> {
     operations: Vec<Arc<Operation<T>>>,
-    operations_map: HashMap<SessionKey, Vec<std::sync::Weak<Operation<T>>>>,
+    operations_map: HashMap<SessionKey, Vec<OperationMapEntry<T>>>,
     rng: Option<Box<dyn rand::CryptoRng + Send + 'static>>,
 }
 
@@ -76,6 +76,55 @@ where
 
         d.finish()
     }
+}
+
+struct OperationMapEntry<T> {
+    operation: std::sync::Weak<Operation<T>>,
+    state: EntryState,
+}
+
+impl<T> OperationMapEntry<T> {
+    fn new(operation: std::sync::Weak<Operation<T>>) -> Self {
+        OperationMapEntry {
+            operation,
+            state: EntryState::Valid,
+        }
+    }
+}
+
+impl<T> fmt::Debug for OperationMapEntry<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("OperationMapEntry");
+
+        d.field("operation", &WeakOperationDebug(&self.operation));
+        d.field("state", &self.state);
+
+        d.finish()
+    }
+}
+
+struct WeakOperationDebug<'a, T>(&'a std::sync::Weak<Operation<T>>);
+
+impl<T> fmt::Debug for WeakOperationDebug<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(upgraded) = self.0.upgrade() {
+            match upgraded.as_ref() {
+                Operation::Create { .. } => f.write_str("Operation::Create { .. }"),
+                Operation::Load { .. } => f.write_str("Operation::Load { .. }"),
+                Operation::Update { .. } => f.write_str("Operation::Update { .. }"),
+                Operation::UpdateTtl { .. } => f.write_str("Operation::UpdateTtl { .. }"),
+                Operation::Delete { .. } => f.write_str("Operation::Delete { .. }"),
+            }
+        } else {
+            f.write_str("(Weak)")
+        }
+    }
+}
+
+#[derive(Debug)]
+enum EntryState {
+    Expired,
+    Valid,
 }
 
 #[derive(Debug)]
@@ -170,7 +219,7 @@ where
                         },
                     });
                     let operations = guard.operations_map.entry(session_key.clone()).or_default();
-                    operations.push(Arc::downgrade(&operation));
+                    operations.push(OperationMapEntry::new(Arc::downgrade(&operation)));
                     guard.operations.push(operation);
 
                     return Ok(session_key);
@@ -205,7 +254,7 @@ where
             .operations_map
             .entry(session_key.to_owned())
             .or_default();
-        operations.push(Arc::downgrade(&operation));
+        operations.push(OperationMapEntry::new(Arc::downgrade(&operation)));
         guard.operations.push(operation);
 
         Ok(record)
@@ -224,7 +273,7 @@ where
             .operations_map
             .entry(session_key.to_owned())
             .or_default();
-        operations.push(Arc::downgrade(&operation));
+        operations.push(OperationMapEntry::new(Arc::downgrade(&operation)));
         guard.operations.push(operation);
 
         Ok(())
@@ -232,6 +281,8 @@ where
 
     async fn update_ttl(&self, session_key: &SessionKey, ttl: Ttl) -> Result<()> {
         let mut guard = self.inner.lock();
+
+        guard.revalidate_last_operation_which_modified_ttl(session_key);
 
         let operation = Arc::new(Operation::UpdateTtl {
             session_key: session_key.to_owned(),
@@ -242,7 +293,7 @@ where
             .operations_map
             .entry(session_key.to_owned())
             .or_default();
-        operations.push(Arc::downgrade(&operation));
+        operations.push(OperationMapEntry::new(Arc::downgrade(&operation)));
         guard.operations.push(operation);
 
         Ok(())
@@ -259,7 +310,7 @@ where
             .operations_map
             .entry(session_key.to_owned())
             .or_default();
-        operations.push(Arc::downgrade(&operation));
+        operations.push(OperationMapEntry::new(Arc::downgrade(&operation)));
         guard.operations.push(operation);
 
         Ok(())
@@ -294,25 +345,75 @@ where
         }
     }
 
+    fn revalidate_last_operation_which_modified_ttl(&mut self, session_key: &SessionKey) {
+        let Some(operations) = self.operations_map.get_mut(session_key) else {
+            return;
+        };
+
+        for (operation, state) in operations
+            .iter_mut()
+            .map(|entry| (&entry.operation, &mut entry.state))
+            .rev()
+        {
+            if matches!(state, EntryState::Expired) {
+                return;
+            }
+
+            match operation.upgrade().unwrap().as_ref() {
+                Operation::Create {
+                    data: _,
+                    ttl,
+                    result: CreateResult::Created { .. },
+                }
+                | Operation::Update {
+                    session_key: _,
+                    data: _,
+                    ttl,
+                }
+                | Operation::UpdateTtl {
+                    session_key: _,
+                    ttl,
+                } => {
+                    if *ttl >= Ttl::now_local().unwrap() {
+                    } else {
+                        *state = EntryState::Expired;
+                    }
+                    return;
+                }
+                Operation::Delete { session_key: _ } => return,
+                Operation::Load { .. }
+                | Operation::Create {
+                    result: CreateResult::MaxIterationsReached,
+                    ..
+                } => continue,
+            }
+        }
+    }
+
     fn load_result(&self, session_key: &SessionKey) -> LoadResult<T> {
         // If the latest operation was `update_ttl`, this will contain the
         // up-to-date TTL.
         let mut latest_ttl: Option<Ttl> = None;
 
-        for operation in self
+        for (operation, state) in self
             .operations_map
             .get(session_key)
             .iter()
             .flat_map(|v| v.iter())
+            .map(|entry| (&entry.operation, &entry.state))
             .rev()
         {
+            if matches!(state, EntryState::Expired) {
+                return LoadResult::Vacant;
+            }
+
             match operation.upgrade().unwrap().as_ref() {
                 Operation::Create {
                     data,
                     ttl,
                     result: CreateResult::Created { .. },
                 } => {
-                    let result = if *ttl >= Ttl::now_local().unwrap() {
+                    let result = if latest_ttl.unwrap_or(*ttl) >= Ttl::now_local().unwrap() {
                         LoadResult::Occupied {
                             data: data.to_owned(),
                             ttl: latest_ttl.unwrap_or(*ttl),
@@ -328,7 +429,7 @@ where
                     data,
                     ttl,
                 } => {
-                    let result = if *ttl >= Ttl::now_local().unwrap() {
+                    let result = if latest_ttl.unwrap_or(*ttl) >= Ttl::now_local().unwrap() {
                         LoadResult::Occupied {
                             data: data.to_owned(),
                             ttl: latest_ttl.unwrap_or(*ttl),
@@ -341,14 +442,15 @@ where
                 Operation::UpdateTtl {
                     session_key: _,
                     ttl,
-                } => {
+                } if latest_ttl.is_none() => {
                     if *ttl >= Ttl::now_local().unwrap() {
-                        latest_ttl.get_or_insert(*ttl);
+                        latest_ttl = Some(*ttl);
                         continue;
                     } else {
                         return LoadResult::Vacant;
                     }
                 }
+                Operation::UpdateTtl { .. } => continue,
                 Operation::Delete { session_key: _ } => {
                     return LoadResult::Vacant;
                 }
