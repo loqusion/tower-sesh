@@ -640,7 +640,9 @@ where
                         let mut jar = CookieJar::new();
                         cookie_controller.add(&mut jar, config.cookie(session_key));
 
-                        let cookie = jar.delta().next().expect("there should be a cookie");
+                        let cookie = jar
+                            .get(&config.cookie_name)
+                            .expect("this cookie should exist");
                         append_set_cookie(response.headers_mut(), cookie);
                     }
                     Ok(SyncAction::Remove) => {
