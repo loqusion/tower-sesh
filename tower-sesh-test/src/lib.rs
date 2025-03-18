@@ -37,6 +37,7 @@ macro_rules! test_suite {
             ttl_with_999_999_999_nanoseconds_update_nonexisting
             ttl_with_999_999_999_nanoseconds_update_existing
             ttl_with_999_999_999_nanoseconds_update_ttl
+            update_ttl_extends_session_that_would_otherwise_expire
         }
     };
 
@@ -359,6 +360,28 @@ pub async fn test_ttl_with_999_999_999_nanoseconds_update_ttl(
     store.update_ttl(&session_key, ttl).await.unwrap();
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.ttl.normalize(), ttl.normalize());
+}
+
+pub async fn test_update_ttl_extends_session_that_would_otherwise_expire(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(1171023902);
+    store.rng(rng);
+
+    let before = Ttl::now_local().unwrap();
+    let strict_ttl = ttl_strict_of(before);
+    let strict_duration = (strict_ttl - before).unsigned_abs();
+    let data = SessionData::sample_with(1171023902);
+    let session_key = store.create(&data, strict_ttl).await.unwrap();
+
+    let updated_ttl = ttl();
+    store.update_ttl(&session_key, updated_ttl).await.unwrap();
+
+    tokio::time::sleep(strict_duration + Duration::from_millis(100)).await;
+
+    let record = store.load(&session_key).await.unwrap().unwrap();
+    assert_eq!(record.data, data);
+    assert_eq!(record.ttl.normalize(), updated_ttl.normalize());
 }
 
 #[doc(hidden)]
