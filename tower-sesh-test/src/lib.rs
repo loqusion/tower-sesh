@@ -370,14 +370,17 @@ pub async fn test_update_ttl_extends_session_that_would_otherwise_expire(
 
     let before = Ttl::now_local().unwrap();
     let strict_ttl = ttl_strict_of(before);
-    let strict_duration = (strict_ttl - before).unsigned_abs();
     let data = SessionData::sample_with(1171023902);
     let session_key = store.create(&data, strict_ttl).await.unwrap();
 
     let updated_ttl = ttl();
     store.update_ttl(&session_key, updated_ttl).await.unwrap();
 
-    tokio::time::sleep(strict_duration + Duration::from_millis(100)).await;
+    let sleep_until_duration = strict_ttl - Ttl::now_local().unwrap();
+    if sleep_until_duration.is_positive() {
+        let sleep_until_duration = sleep_until_duration.unsigned_abs();
+        tokio::time::sleep(sleep_until_duration + Duration::from_millis(10)).await;
+    }
 
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.data, data);
