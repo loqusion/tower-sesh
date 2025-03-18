@@ -38,6 +38,8 @@ macro_rules! test_suite {
             ttl_with_999_999_999_nanoseconds_update_existing
             ttl_with_999_999_999_nanoseconds_update_ttl
             update_ttl_extends_session_that_would_otherwise_expire
+            #[ignore = "this test fails with `MemoryStore`"]
+            update_ttl_does_not_revive_expired_session
         }
     };
 
@@ -542,4 +544,23 @@ pub async fn test_update_ttl_extends_session_that_would_otherwise_expire(
     let record = store.load(&session_key).await.unwrap().unwrap();
     assert_eq!(record.data, data);
     assert_eq!(record.ttl.normalize(), updated_ttl.normalize());
+}
+
+pub async fn test_update_ttl_does_not_revive_expired_session(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(2495922455);
+    store.rng(rng);
+
+    let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_millis(50);
+    let session_key = store
+        .create(&SessionData::sample(), five_microseconds_from_now)
+        .await
+        .unwrap();
+
+    tokio::time::sleep(Duration::from_millis(90)).await;
+
+    store.update_ttl(&session_key, ttl()).await.unwrap();
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
 }
