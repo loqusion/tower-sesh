@@ -1,4 +1,4 @@
-use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, fmt, marker::PhantomData, sync::Arc};
 
 use async_trait::async_trait;
 use parking_lot::Mutex;
@@ -53,6 +53,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct MockStore<T> {
     inner: Arc<Mutex<MockStoreInner<T>>>,
 }
@@ -61,6 +62,20 @@ struct MockStoreInner<T> {
     operations: Vec<Arc<Operation<T>>>,
     operations_map: HashMap<SessionKey, Vec<std::sync::Weak<Operation<T>>>>,
     rng: Option<Box<dyn rand::CryptoRng + Send + 'static>>,
+}
+
+impl<T> fmt::Debug for MockStoreInner<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("MockStoreInner");
+
+        d.field("operations", &self.operations);
+        d.field("operations_map", &self.operations_map);
+
+        d.finish()
+    }
 }
 
 #[derive(Debug)]
