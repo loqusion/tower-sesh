@@ -1,5 +1,5 @@
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicUsize, Ordering::SeqCst},
     Arc,
 };
 
@@ -27,13 +27,12 @@ async fn session_extractor_without_layer() {
 
 #[tokio::test]
 async fn ignores_deserialization_error() {
-    let did_handler = Arc::new(AtomicBool::new(false));
+    static HANDLER_RUN_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-    let did_handler_clone = Arc::clone(&did_handler);
-    let handler = |session: Session<()>| async move {
-        did_handler_clone.store(true, Ordering::SeqCst);
+    async fn handler(session: Session<()>) {
         assert!(session.get().is_none());
-    };
+        HANDLER_RUN_COUNT.fetch_add(1, SeqCst);
+    }
 
     let app = Router::new()
         .route("/", routing::get(handler))
@@ -50,7 +49,7 @@ async fn ignores_deserialization_error() {
     let res = app.oneshot(req).await.unwrap();
 
     assert_eq!(res.status(), StatusCode::OK);
-    assert!(did_handler.load(Ordering::SeqCst));
+    assert_eq!(HANDLER_RUN_COUNT.load(SeqCst), 1);
 }
 
 fn serde_err_store<T>() -> Arc<ErrStore<T>> {
