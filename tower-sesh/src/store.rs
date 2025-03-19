@@ -195,7 +195,7 @@ where
             Ok(None) | Err(_) => {
                 let record = self.store.load(session_key).await?;
 
-                if let Some(record) = record.as_ref() {
+                if let Some(record) = &record {
                     let _ = self
                         .cache
                         .update(session_key, &record.data, record.ttl)
