@@ -490,8 +490,6 @@ pub(crate) mod lazy {
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 
-    use crate::middleware::SessionConfig;
-
     use super::Session;
 
     #[track_caller]
@@ -499,7 +497,6 @@ pub(crate) mod lazy {
         extensions: &mut Extensions,
         cookie: Option<Cookie<'static>>,
         store: &Arc<impl SessionStore<T>>,
-        session_config: SessionConfig,
     ) -> LazySessionHandle<T>
     where
         T: 'static + Send,
@@ -510,7 +507,7 @@ pub(crate) mod lazy {
         );
 
         let lazy_session = match cookie {
-            Some(cookie) => LazySession::new(cookie, Arc::clone(store), session_config),
+            Some(cookie) => LazySession::new(cookie, Arc::clone(store)),
             None => LazySession::empty(),
         };
         let handle = lazy_session.handle();
@@ -539,7 +536,6 @@ pub(crate) mod lazy {
             cookie: Cookie<'static>,
             store: Arc<dyn SessionStore<T> + 'static>,
             session_cell: Arc<OnceCell<Option<Session<T>>>>,
-            config: SessionConfig,
         },
     }
 
@@ -558,12 +554,10 @@ pub(crate) mod lazy {
                     cookie,
                     store,
                     session_cell,
-                    config,
                 } => LazySession::Load {
                     cookie: cookie.clone(),
                     store: Arc::clone(store),
                     session_cell: Arc::clone(session_cell),
-                    config: config.clone(),
                 },
             }
         }
@@ -574,16 +568,11 @@ pub(crate) mod lazy {
         T: 'static,
     {
         #[inline]
-        fn new(
-            cookie: Cookie<'static>,
-            store: Arc<impl SessionStore<T>>,
-            config: SessionConfig,
-        ) -> LazySession<T> {
+        fn new(cookie: Cookie<'static>, store: Arc<impl SessionStore<T>>) -> LazySession<T> {
             LazySession::Load {
                 cookie,
                 store,
                 session_cell: Arc::new(OnceCell::new()),
-                config,
             }
         }
 
@@ -605,9 +594,8 @@ pub(crate) mod lazy {
                     cookie,
                     store,
                     session_cell,
-                    config,
                 } => session_cell
-                    .get_or_init(init_session(cookie, store.as_ref(), config))
+                    .get_or_init(init_session(cookie, store.as_ref()))
                     .await
                     .as_ref(),
             }
@@ -628,7 +616,6 @@ pub(crate) mod lazy {
     async fn init_session<T>(
         cookie: &Cookie<'static>,
         store: &dyn SessionStore<T>,
-        _config: &SessionConfig,
     ) -> Option<Session<T>>
     where
         T: 'static,

@@ -50,11 +50,7 @@ struct Config {
     path: Option<Cow<'static, str>>,
     same_site: cookie::SameSite,
     secure: bool,
-    session_config: SessionConfig,
 }
-
-#[derive(Clone, Debug)]
-pub(crate) struct SessionConfig {}
 
 impl Config {
     /// Chosen to avoid session ID name fingerprinting.
@@ -98,15 +94,7 @@ impl Default for Config {
             path: None,
             same_site: cookie::SameSite::Strict,
             secure: true,
-            session_config: SessionConfig::default(),
         }
-    }
-}
-
-impl Default for SessionConfig {
-    #[inline]
-    fn default() -> Self {
-        SessionConfig {}
     }
 }
 
@@ -485,12 +473,7 @@ where
                 &self.layer.config.cookie_name,
                 self.layer.cookie_controller.as_ref(),
             );
-            session::lazy::insert(
-                req.extensions_mut(),
-                cookie,
-                &self.layer.store,
-                self.layer.config.session_config.clone(),
-            )
+            session::lazy::insert(req.extensions_mut(), cookie, &self.layer.store)
         };
 
         let fut = self.inner.call(req);
