@@ -540,7 +540,7 @@ fn session_cookie_from_request_headers(
     for cookie in cookies_from_request(headers) {
         if cookie.name() == name {
             let mut jar = CookieJar::new();
-            jar.add_original(cookie);
+            jar.add_original(cookie.into_owned());
 
             // `cookie_controller` handles decryption/authentication if the
             // user has it enabled
@@ -555,13 +555,13 @@ fn session_cookie_from_request_headers(
     None
 }
 
-fn cookies_from_request(headers: &HeaderMap) -> impl Iterator<Item = Cookie<'static>> + '_ {
+fn cookies_from_request(headers: &HeaderMap) -> impl Iterator<Item = Cookie<'_>> {
     headers
         .get_all(header::COOKIE)
         .into_iter()
-        .filter_map(|value| value.to_str().ok())
-        .flat_map(|value| value.split(';'))
-        .filter_map(|cookie| Cookie::parse_encoded(cookie.to_owned()).ok())
+        .filter_map(|header_value| header_value.to_str().ok())
+        .flat_map(|cookie_list_str| cookie_list_str.split(';'))
+        .filter_map(|cookie_str| Cookie::parse_encoded(cookie_str).ok())
 }
 
 #[inline]
