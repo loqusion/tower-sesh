@@ -16,7 +16,6 @@ use tower_sesh_core::{util::Report, SessionKey, SessionStore};
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
     session::{self, SyncAction},
-    util::CookieJarExt,
 };
 
 /// A layer that provides [`Session`] as an extractor.
@@ -481,12 +480,11 @@ where
 
     fn call(&mut self, mut req: Request<ReqBody>) -> Self::Future {
         let session_handle = {
-            let jar = CookieJar::from_headers_single(req.headers(), &self.layer.config.cookie_name);
-            let cookie = self
-                .layer
-                .cookie_controller
-                .get(&jar, &self.layer.config.cookie_name)
-                .map(Cookie::into_owned);
+            let cookie = session_cookie_from_request_headers(
+                req.headers(),
+                &self.layer.config.cookie_name,
+                self.layer.cookie_controller.as_ref(),
+            );
             session::lazy::insert(
                 req.extensions_mut(),
                 cookie,
@@ -532,6 +530,38 @@ where
         }
         .boxed()
     }
+}
+
+fn session_cookie_from_request_headers(
+    headers: &HeaderMap,
+    name: &str,
+    cookie_controller: &impl CookieSecurity,
+) -> Option<Cookie<'static>> {
+    for cookie in cookies_from_request(headers) {
+        if cookie.name() == name {
+            let mut jar = CookieJar::new();
+            jar.add_original(cookie);
+
+            // `cookie_controller` handles decryption/authentication if the
+            // user has it enabled
+            let cookie = cookie_controller
+                .get(&jar, name)
+                .expect("cookie added to jar should have the correct name");
+
+            return Some(cookie.into_owned());
+        }
+    }
+
+    None
+}
+
+fn cookies_from_request(headers: &HeaderMap) -> impl Iterator<Item = Cookie<'static>> + '_ {
+    headers
+        .get_all(header::COOKIE)
+        .into_iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|value| value.split(';'))
+        .filter_map(|cookie| Cookie::parse_encoded(cookie.to_owned()).ok())
 }
 
 #[inline]
