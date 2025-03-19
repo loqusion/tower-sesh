@@ -486,7 +486,7 @@ pub(crate) mod lazy {
     use http::Extensions;
     use tower_sesh_core::{store::ErrorKind, SessionKey, SessionStore};
 
-    use crate::{middleware::SessionConfig, util::ErrorExt};
+    use crate::middleware::SessionConfig;
 
     use super::Session;
 
@@ -640,7 +640,10 @@ pub(crate) mod lazy {
             Err(err) => match err.kind() {
                 ErrorKind::Serde(_) => Some(Session::corrupted(session_key)),
                 _ => {
-                    error!(err = %err.display_chain(), "error loading session");
+                    error!(
+                        err = %tower_sesh_core::util::Report::new(err),
+                        "error loading session"
+                    );
                     None
                 }
             },

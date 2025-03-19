@@ -11,12 +11,12 @@ use cookie::{Cookie, CookieJar};
 use futures_util::{future::BoxFuture, FutureExt};
 use http::{header, HeaderMap, HeaderValue, Request, Response};
 use tower::{Layer, Service};
-use tower_sesh_core::{SessionKey, SessionStore};
+use tower_sesh_core::{util::Report, SessionKey, SessionStore};
 
 use crate::{
     config::{CookieSecurity, PlainCookie, PrivateCookie, SignedCookie},
     session::{self, SyncAction},
-    util::{CookieJarExt, ErrorExt},
+    util::CookieJarExt,
 };
 
 /// A layer that provides [`Session`] as an extractor.
@@ -350,7 +350,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
         let name = name.into();
 
         if let Err(err) = HeaderValue::from_str(&format!("{}=value", name)) {
-            panic!("invalid `cookie_name` value: {}", err.display_chain());
+            panic!("invalid `cookie_name` value: {}", Report::new(err));
         }
 
         self.config_mut().cookie_name = name;
@@ -647,7 +647,7 @@ where
                     }
                     Ok(SyncAction::None) => {}
                     Err(_err) => {
-                        error!(err = %_err.display_chain(), "error when syncing session to store");
+                        error!(err = %Report::new(_err), "error when syncing session to store");
                     }
                 }
             }
@@ -665,7 +665,7 @@ fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) 
             headers.append(header::SET_COOKIE, header_value);
         }
         Err(_err) => {
-            error!(err = %_err.display_chain(), cookie = %cookie.encoded(), "this is likely a bug");
+            error!(err = %Report::new(_err), cookie = %cookie.encoded(), "this is likely a bug");
         }
     }
 }

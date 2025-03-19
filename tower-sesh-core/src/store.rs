@@ -277,40 +277,11 @@ impl StdError for Error {
 
 #[cfg(test)]
 mod test {
-    use std::iter;
-
     use serde::Deserialize;
 
+    use crate::util::Report;
+
     use super::*;
-
-    trait ErrorExt {
-        fn display_chain(&self) -> DisplayChain<'_>;
-    }
-
-    impl<E> ErrorExt for E
-    where
-        E: StdError + 'static,
-    {
-        fn display_chain(&self) -> DisplayChain<'_> {
-            DisplayChain { inner: self }
-        }
-    }
-
-    struct DisplayChain<'a> {
-        inner: &'a (dyn StdError + 'static),
-    }
-
-    impl fmt::Display for DisplayChain<'_> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(f, "{}", self.inner)?;
-
-            for error in iter::successors(Some(self.inner), |err| (*err).source()).skip(1) {
-                write!(f, ": {}", error)?;
-            }
-
-            Ok(())
-        }
-    }
 
     #[test]
     fn test_store_dyn_compatible() {
@@ -353,12 +324,12 @@ mod test {
     fn test_error_display() {
         insta::assert_snapshot!(error_store(), @"session store error");
         insta::assert_snapshot!(
-            error_store().display_chain(),
+            Report::new(error_store()),
             @"session store error: Reconnecting failed: Connection refused (os error 111)"
         );
         insta::assert_snapshot!(error_serde(), @"session serialization error");
         insta::assert_snapshot!(
-            error_serde().display_chain(),
+            Report::new(error_serde()),
             @"session serialization error: EOF while parsing a string at line 1 column 17"
         );
         insta::assert_snapshot!(
