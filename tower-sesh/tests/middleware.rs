@@ -1,4 +1,4 @@
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
 use cookie::{Cookie, CookieJar};
@@ -236,14 +236,9 @@ async fn preserves_existing_set_cookie() {
     let req = Request::builder().uri("/").body(Body::empty()).unwrap();
     let res = app.oneshot(req).await.unwrap();
 
-    let mut names = HashSet::new();
-    for value in res.headers().get_all(header::SET_COOKIE) {
-        let cookie = Cookie::parse_encoded(value.to_str().unwrap()).unwrap();
-        names.insert(cookie.name().to_owned());
-    }
-
-    assert!(names.contains("hello"));
-    assert!(names.contains("id"));
+    let jar = jar_from_response(&res).unwrap();
+    assert_eq!(jar.get("hello").unwrap().value(), "world");
+    assert!(jar.get("id").is_some());
 }
 
 #[tokio::test]
