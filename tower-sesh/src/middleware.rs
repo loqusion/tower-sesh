@@ -373,7 +373,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 impl<T, Store: SessionStore<T>> SessionLayer<T, Store, PlainCookie> {
     /// Creates a new `SessionLayer` that doesn't sign or encrypt cookies.
     ///
-    /// **WARNING**: Using `plain` is not recommended, as it opens the door to
+    /// **WARNING:** Using `plain` is not recommended, as it opens the door to
     /// vulnerabilities such as session fixation and brute-force attacks.
     ///
     /// # Examples
