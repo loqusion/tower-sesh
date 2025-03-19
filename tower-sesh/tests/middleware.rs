@@ -1,4 +1,10 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicUsize, Ordering::SeqCst},
+        Arc,
+    },
+    time::Duration,
+};
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
 use cookie::{Cookie, CookieJar};
@@ -243,8 +249,11 @@ async fn preserves_existing_set_cookie() {
 
 #[tokio::test]
 async fn extracts_cookie_from_many_in_header() {
+    static HANDLER_RUN_COUNT: AtomicUsize = AtomicUsize::new(0);
+
     async fn handler(session: Session<()>) -> impl IntoResponse {
         assert!(session.get().is_some());
+        HANDLER_RUN_COUNT.fetch_add(1, SeqCst);
     }
 
     let store = Arc::new(MemoryStore::<()>::new());
@@ -282,4 +291,6 @@ async fn extracts_cookie_from_many_in_header() {
             .unwrap();
         app.clone().oneshot(req).await.unwrap();
     }
+
+    assert_eq!(HANDLER_RUN_COUNT.load(SeqCst), 3);
 }
