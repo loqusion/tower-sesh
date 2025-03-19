@@ -16,7 +16,7 @@ fn jar_from_response<B>(
         .try_fold(CookieJar::new(), |mut jar, header_value| {
             let s = header_value.to_str()?;
             let cookie = Cookie::parse_encoded(s)?;
-            jar.add_original(cookie.into_owned());
+            jar.add(cookie.into_owned());
             Ok(jar)
         })
 }
