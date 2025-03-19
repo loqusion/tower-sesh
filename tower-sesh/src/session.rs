@@ -23,38 +23,6 @@ pub struct Session<T> {
     inner: Arc<Mutex<Inner<T>>>,
 }
 
-/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
-/// data `T` can be accessed through this guard via its [`Deref`] and
-/// [`DerefMut`] implementations.
-///
-/// The lock is automatically released whenever the guard is dropped.
-///
-/// This structure is created by methods defined on [`Session`], such as
-/// [`insert`].
-///
-/// [`insert`]: Session::insert
-//
-// # Invariants
-//
-// 1. When constructing `SessionGuard`, the `data` contained within
-//    `SessionInner` must contain a `Some` variant. This invariant must be met
-//    while the mutex lock is held.
-// 2. After the previous invariant is met, and until the `SessionGuard` is
-//    dropped, the lock must never be released and `data` must never be replaced
-//    with `None`.
-pub struct SessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
-
-/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
-/// data `Option<T>` can be accessed through this guard via its [`Deref`] and
-/// [`DerefMut`] implementations.
-///
-/// The lock is automatically released whenever the guard is dropped.
-///
-/// This structure is created by the [`get`] method on [`Session`].
-///
-/// [`get`]: Session::get
-pub struct OptionSessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
-
 pub(crate) struct Inner<T> {
     session_key: Option<SessionKey>,
     data: Option<T>,
@@ -91,6 +59,179 @@ enum Status {
     Taken,
 }
 use Status::*;
+
+/// Which action was performed by `Session::sync`.
+pub(crate) enum SyncAction {
+    /// The session was created, updated, or renewed with the session key.
+    Set(SessionKey),
+
+    /// The session was removed.
+    Remove,
+
+    /// The session was unmodified. No action was performed.
+    None,
+}
+
+impl<T> Session<T> {
+    #[inline]
+    #[must_use]
+    pub fn get(&self) -> OptionSessionGuard<'_, T> {
+        let guard = self.lock();
+
+        OptionSessionGuard::new(guard)
+    }
+
+    pub fn insert(&self, value: T) -> SessionGuard<'_, T> {
+        let mut guard = self.lock();
+
+        guard.data = Some(value);
+        guard.changed();
+
+        // SAFETY: a `None` variant for `data` would have been replaced by a
+        // `Some` variant in the code above.
+        unsafe { SessionGuard::new(guard) }
+    }
+
+    #[inline]
+    pub fn get_or_insert(&self, value: T) -> SessionGuard<'_, T> {
+        let mut guard = self.lock();
+
+        if guard.data.is_none() {
+            guard.data = Some(value);
+            guard.changed();
+        }
+
+        // SAFETY: a `None` variant for `data` would have been replaced by a
+        // `Some` variant in the code above.
+        unsafe { SessionGuard::new(guard) }
+    }
+
+    #[inline]
+    pub fn get_or_insert_with<F>(&self, f: F) -> SessionGuard<'_, T>
+    where
+        F: FnOnce() -> T,
+    {
+        let mut guard = self.lock();
+
+        if guard.data.is_none() {
+            guard.data = Some(f());
+            guard.changed();
+        }
+
+        // SAFETY: a `None` variant for `data` would have been replaced by a
+        // `Some` variant in the code above.
+        unsafe { SessionGuard::new(guard) }
+    }
+
+    #[inline]
+    pub fn get_or_insert_default(&self) -> SessionGuard<'_, T>
+    where
+        T: Default,
+    {
+        self.get_or_insert_with(T::default)
+    }
+
+    #[inline]
+    pub fn renew(&self) {
+        self.lock().renewed();
+    }
+
+    #[inline]
+    pub fn purge(&self) {
+        self.lock().purged();
+    }
+
+    #[inline]
+    fn lock(&self) -> MutexGuard<'_, Inner<T>> {
+        let guard = self.inner.lock();
+
+        #[cfg(feature = "tracing")]
+        if guard.is_taken() {
+            error!("called `Session` method after it was synchronized to store");
+        }
+
+        guard
+    }
+}
+
+impl<T> Session<T> {
+    /// Similar to [`Option::take`], the fields are taken out of the [`Inner`]
+    /// struct and returned, leaving a "taken" state in its place.
+    #[inline]
+    #[must_use]
+    pub(crate) fn take(&self) -> Inner<T> {
+        self.inner.lock().take()
+    }
+}
+
+impl<T> Session<T> {
+    #[inline]
+    fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
+        let inner = Inner {
+            session_key: Some(session_key),
+            data: Some(record.data),
+            expires_at: Some(record.ttl),
+            status: Unchanged,
+        };
+        Session::from_inner(inner)
+    }
+
+    #[inline]
+    fn empty() -> Session<T> {
+        let inner = Inner {
+            session_key: None,
+            data: None,
+            expires_at: None,
+            status: Unchanged,
+        };
+        Session::from_inner(inner)
+    }
+
+    fn corrupted(session_key: SessionKey) -> Session<T> {
+        let inner = Inner {
+            session_key: Some(session_key),
+            data: None,
+            expires_at: None,
+            status: Unchanged,
+        };
+        Session::from_inner(inner)
+    }
+
+    #[inline]
+    fn from_inner(inner: Inner<T>) -> Session<T> {
+        Session {
+            inner: Arc::new(Mutex::new(inner)),
+        }
+    }
+}
+
+impl<T> Clone for Session<T> {
+    #[inline]
+    fn clone(&self) -> Self {
+        Session {
+            inner: Arc::clone(&self.inner),
+        }
+    }
+}
+
+impl<T> fmt::Debug for Session<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("Session");
+
+        let guard = self.inner.lock();
+
+        d.field("data", &guard.data);
+        d.field("expires_at", &guard.expires_at);
+        d.field("status", &guard.status);
+
+        drop(guard);
+
+        d.finish_non_exhaustive()
+    }
+}
 
 impl<T> Inner<T> {
     #[inline]
@@ -179,175 +320,6 @@ impl<T> Inner<T> {
     }
 }
 
-/// Which action was performed by `Session::sync`.
-pub(crate) enum SyncAction {
-    /// The session was created, updated, or renewed with the session key.
-    Set(SessionKey),
-
-    /// The session was removed.
-    Remove,
-
-    /// The session was unmodified. No action was performed.
-    None,
-}
-
-impl<T> Session<T> {
-    #[inline]
-    fn from_inner(inner: Inner<T>) -> Session<T> {
-        Session {
-            inner: Arc::new(Mutex::new(inner)),
-        }
-    }
-
-    #[inline]
-    fn new(session_key: SessionKey, record: Record<T>) -> Session<T> {
-        let inner = Inner {
-            session_key: Some(session_key),
-            data: Some(record.data),
-            expires_at: Some(record.ttl),
-            status: Unchanged,
-        };
-        Session::from_inner(inner)
-    }
-
-    #[inline]
-    fn empty() -> Session<T> {
-        let inner = Inner {
-            session_key: None,
-            data: None,
-            expires_at: None,
-            status: Unchanged,
-        };
-        Session::from_inner(inner)
-    }
-
-    fn corrupted(session_key: SessionKey) -> Session<T> {
-        let inner = Inner {
-            session_key: Some(session_key),
-            data: None,
-            expires_at: None,
-            status: Unchanged,
-        };
-        Session::from_inner(inner)
-    }
-
-    #[inline]
-    #[must_use]
-    pub fn get(&self) -> OptionSessionGuard<'_, T> {
-        let guard = self.lock();
-
-        OptionSessionGuard::new(guard)
-    }
-
-    pub fn insert(&self, value: T) -> SessionGuard<'_, T> {
-        let mut guard = self.lock();
-
-        guard.data = Some(value);
-        guard.changed();
-
-        // SAFETY: a `None` variant for `data` would have been replaced by a
-        // `Some` variant in the code above.
-        unsafe { SessionGuard::new(guard) }
-    }
-
-    #[inline]
-    pub fn get_or_insert(&self, value: T) -> SessionGuard<'_, T> {
-        let mut guard = self.lock();
-
-        if guard.data.is_none() {
-            guard.data = Some(value);
-            guard.changed();
-        }
-
-        // SAFETY: a `None` variant for `data` would have been replaced by a
-        // `Some` variant in the code above.
-        unsafe { SessionGuard::new(guard) }
-    }
-
-    #[inline]
-    pub fn get_or_insert_with<F>(&self, f: F) -> SessionGuard<'_, T>
-    where
-        F: FnOnce() -> T,
-    {
-        let mut guard = self.lock();
-
-        if guard.data.is_none() {
-            guard.data = Some(f());
-            guard.changed();
-        }
-
-        // SAFETY: a `None` variant for `data` would have been replaced by a
-        // `Some` variant in the code above.
-        unsafe { SessionGuard::new(guard) }
-    }
-
-    #[inline]
-    pub fn get_or_insert_default(&self) -> SessionGuard<'_, T>
-    where
-        T: Default,
-    {
-        self.get_or_insert_with(T::default)
-    }
-
-    #[inline]
-    pub fn renew(&self) {
-        self.lock().renewed();
-    }
-
-    #[inline]
-    pub fn purge(&self) {
-        self.lock().purged();
-    }
-
-    /// Similar to [`Option::take`], the fields are taken out of the [`Inner`]
-    /// struct and returned, leaving a "taken" state in its place.
-    #[inline]
-    #[must_use]
-    pub(crate) fn take(&self) -> Inner<T> {
-        self.inner.lock().take()
-    }
-
-    #[inline]
-    fn lock(&self) -> MutexGuard<'_, Inner<T>> {
-        let guard = self.inner.lock();
-
-        #[cfg(feature = "tracing")]
-        if guard.is_taken() {
-            error!("called `Session` method after it was synchronized to store");
-        }
-
-        guard
-    }
-}
-
-impl<T> Clone for Session<T> {
-    #[inline]
-    fn clone(&self) -> Self {
-        Session {
-            inner: Arc::clone(&self.inner),
-        }
-    }
-}
-
-impl<T> fmt::Debug for Session<T>
-where
-    T: fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("Session");
-
-        let guard = self.inner.lock();
-
-        d.field("data", &guard.data);
-        d.field("expires_at", &guard.expires_at);
-        d.field("status", &guard.status);
-
-        drop(guard);
-
-        d.finish_non_exhaustive()
-    }
-}
-
 define_rejection! {
     #[status = INTERNAL_SERVER_ERROR]
     #[body = "Failed to load session"]
@@ -384,6 +356,27 @@ where
         }
     }
 }
+
+/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
+/// data `T` can be accessed through this guard via its [`Deref`] and
+/// [`DerefMut`] implementations.
+///
+/// The lock is automatically released whenever the guard is dropped.
+///
+/// This structure is created by methods defined on [`Session`], such as
+/// [`insert`].
+///
+/// [`insert`]: Session::insert
+//
+// # Invariants
+//
+// 1. When constructing `SessionGuard`, the `data` contained within
+//    `SessionInner` must contain a `Some` variant. This invariant must be met
+//    while the mutex lock is held.
+// 2. After the previous invariant is met, and until the `SessionGuard` is
+//    dropped, the lock must never be released and `data` must never be replaced
+//    with `None`.
+pub struct SessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 
 impl<'a, T: 'a> SessionGuard<'a, T> {
     /// # Safety
@@ -441,6 +434,17 @@ where
         fmt::Display::fmt(&**self, f)
     }
 }
+
+/// A RAII mutex guard holding a lock to a mutex contained in `Session<T>`. The
+/// data `Option<T>` can be accessed through this guard via its [`Deref`] and
+/// [`DerefMut`] implementations.
+///
+/// The lock is automatically released whenever the guard is dropped.
+///
+/// This structure is created by the [`get`] method on [`Session`].
+///
+/// [`get`]: Session::get
+pub struct OptionSessionGuard<'a, T: 'a>(MutexGuard<'a, Inner<T>>);
 
 impl<'a, T: 'a> OptionSessionGuard<'a, T> {
     #[inline]

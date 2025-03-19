@@ -43,130 +43,6 @@ pub struct SessionManager<S, T, Store: SessionStore<T>, C> {
     layer: SessionLayer<T, Store, C>,
 }
 
-const KEY_LEN: usize = 64;
-
-/// A 64-byte cryptographic key used by [`SessionLayer`] to sign or encrypt
-/// cookies.
-///
-/// TODO: Come back after high-level documentation is written
-///
-/// # Examples
-///
-/// A key can be constructed from a slice or vector containing 64 bytes:
-///
-/// ```
-/// use tower_sesh::middleware::Key;
-///
-/// let mut vec: Vec<u8> = vec![0; 64];
-/// rand::fill(&mut vec[..]); // Fill with random bytes
-/// let key = Key::try_from(vec).unwrap();
-/// ```
-#[derive(Clone)]
-pub struct Key([u8; KEY_LEN]);
-
-impl Key {
-    #[track_caller]
-    fn into_cookie_key(self) -> cookie::Key {
-        match cookie::Key::try_from(self.0.as_slice()) {
-            Ok(key) => key,
-            Err(err) => panic!("failed to convert key to `cookie::Key`: {err}"),
-        }
-    }
-}
-
-impl fmt::Debug for Key {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Key(..)")
-    }
-}
-
-impl From<[u8; KEY_LEN]> for Key {
-    fn from(value: [u8; KEY_LEN]) -> Self {
-        Key(value)
-    }
-}
-
-impl TryFrom<&[u8]> for Key {
-    type Error = KeyError;
-
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        <[u8; KEY_LEN]>::try_from(value)
-            .map(Key::from)
-            .map_err(|_| KeyError)
-    }
-}
-
-impl TryFrom<Vec<u8>> for Key {
-    type Error = KeyError;
-
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        Key::try_from(value.as_slice())
-    }
-}
-
-impl TryFrom<&Vec<u8>> for Key {
-    type Error = KeyError;
-
-    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
-        Key::try_from(value.as_slice())
-    }
-}
-
-/// The error type returned when a conversion from a byte slice to a [`Key`]
-/// fails.
-#[derive(Clone, Debug)]
-#[non_exhaustive]
-pub struct KeyError;
-
-impl Error for KeyError {}
-
-impl fmt::Display for KeyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("key must be 64 bytes in length")
-    }
-}
-
-/// The [`SameSite`] cookie attribute, which controls whether or not a cookie is
-/// sent with cross-site requests.
-///
-/// A cookie with a `SameSite` attribute is imposed restrictions on when it is
-/// sent to the origin server in a cross-site request:
-///
-/// - `Strict`: The cookie is never sent in cross-site requests.
-/// - `Lax`: The cookie is sent in cross-site top-level navigations.
-/// - `None`: The cookie is sent in all cross-site requests if the `Secure`
-///   flag is also set; otherwise, the cookie is ignored.
-///
-/// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
-/// definition are subject to change.
-///
-/// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
-/// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
-// NOTE: `Copy` should not be implemented in case web standards change in the future.
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[non_exhaustive]
-pub enum SameSite {
-    /// The cookie is never sent in cross-site requests.
-    Strict,
-
-    /// The cookie is sent in cross-site top-level navigations.
-    Lax,
-
-    /// The cookie is sent in all cross-site requests if the `Secure` flag is
-    /// also set; otherwise, the cookie is ignored.
-    None,
-}
-
-impl SameSite {
-    fn into_cookie_same_site(self) -> cookie::SameSite {
-        match self {
-            SameSite::Strict => cookie::SameSite::Strict,
-            SameSite::Lax => cookie::SameSite::Lax,
-            SameSite::None => cookie::SameSite::None,
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 struct Config {
     cookie_name: Cow<'static, str>,
@@ -181,8 +57,34 @@ struct Config {
 #[derive(Clone, Debug)]
 pub(crate) struct SessionConfig {}
 
-// Chosen to avoid session ID name fingerprinting.
-const DEFAULT_COOKIE_NAME: &str = "id";
+impl Config {
+    /// Chosen to avoid session ID name fingerprinting.
+    const DEFAULT_COOKIE_NAME: &str = "id";
+
+    // TODO: Add the `Expires` attribute.
+    fn cookie(&self, session_key: SessionKey) -> Cookie<'static> {
+        let mut cookie = Cookie::build((&*self.cookie_name, session_key.encode()))
+            .http_only(self.http_only)
+            .same_site(self.same_site)
+            .secure(self.secure);
+
+        if let Some(domain) = &self.domain {
+            cookie = cookie.domain(&**domain);
+        }
+        if let Some(path) = &self.path {
+            cookie = cookie.path(&**path);
+        }
+
+        cookie.build().into_owned()
+    }
+
+    #[inline]
+    fn cookie_removal(&self) -> Cookie<'static> {
+        let mut cookie = Cookie::new(&*self.cookie_name, "");
+        cookie.make_removal();
+        cookie.into_owned()
+    }
+}
 
 impl Default for Config {
     /// Defaults are based on [OWASP recommendations].
@@ -191,7 +93,7 @@ impl Default for Config {
     #[inline]
     fn default() -> Self {
         Config {
-            cookie_name: Cow::Borrowed(DEFAULT_COOKIE_NAME),
+            cookie_name: Cow::Borrowed(Config::DEFAULT_COOKIE_NAME),
             domain: None,
             http_only: true,
             path: None,
@@ -558,32 +460,6 @@ where
     }
 }
 
-impl Config {
-    // TODO: Add the `Expires` attribute.
-    fn cookie(&self, session_key: SessionKey) -> Cookie<'static> {
-        let mut cookie = Cookie::build((&*self.cookie_name, session_key.encode()))
-            .http_only(self.http_only)
-            .same_site(self.same_site)
-            .secure(self.secure);
-
-        if let Some(domain) = &self.domain {
-            cookie = cookie.domain(&**domain);
-        }
-        if let Some(path) = &self.path {
-            cookie = cookie.path(&**path);
-        }
-
-        cookie.build().into_owned()
-    }
-
-    #[inline]
-    fn cookie_removal(&self) -> Cookie<'static> {
-        let mut cookie = Cookie::new(&*self.cookie_name, "");
-        cookie.make_removal();
-        cookie.into_owned()
-    }
-}
-
 impl<ReqBody, ResBody, S, T, Store: SessionStore<T>, C: CookieSecurity> Service<Request<ReqBody>>
     for SessionManager<S, T, Store, C>
 where
@@ -670,29 +546,153 @@ fn append_set_cookie(headers: &mut HeaderMap<HeaderValue>, cookie: &Cookie<'_>) 
     }
 }
 
-#[cfg(test)]
-mod test {
-    use std::iter;
+/// A 64-byte cryptographic key used by [`SessionLayer`] to sign or encrypt
+/// cookies.
+///
+/// TODO: Come back after high-level documentation is written
+///
+/// # Examples
+///
+/// A key can be constructed from a slice or vector containing 64 bytes:
+///
+/// ```
+/// use tower_sesh::middleware::Key;
+///
+/// let mut vec: Vec<u8> = vec![0; 64];
+/// rand::fill(&mut vec[..]); // Fill with random bytes
+/// let key = Key::try_from(vec).unwrap();
+/// ```
+#[derive(Clone)]
+pub struct Key([u8; Key::LEN]);
 
-    use quickcheck::{quickcheck, Arbitrary};
+impl Key {
+    /// The size of a key, in bytes.
+    pub const LEN: usize = 64;
 
-    use super::*;
-
-    impl Arbitrary for Key {
-        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
-            let inner = {
-                let mut buf = [0u8; KEY_LEN];
-                for (i, num) in iter::repeat_with(|| <u8 as Arbitrary>::arbitrary(g))
-                    .take(KEY_LEN)
-                    .enumerate()
-                {
-                    buf[i] = num;
-                }
-                buf
-            };
-            Key::from(inner)
+    #[track_caller]
+    fn into_cookie_key(self) -> cookie::Key {
+        match cookie::Key::try_from(self.0.as_slice()) {
+            Ok(key) => key,
+            Err(err) => panic!("failed to convert key to `cookie::Key`: {err}"),
         }
     }
+}
+
+impl fmt::Debug for Key {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("Key(..)")
+    }
+}
+
+impl From<[u8; Key::LEN]> for Key {
+    fn from(value: [u8; Key::LEN]) -> Self {
+        Key(value)
+    }
+}
+
+impl TryFrom<&[u8]> for Key {
+    type Error = KeyError;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        <[u8; Key::LEN]>::try_from(value)
+            .map(Key::from)
+            .map_err(|_| KeyError)
+    }
+}
+
+impl TryFrom<Vec<u8>> for Key {
+    type Error = KeyError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Key::try_from(value.as_slice())
+    }
+}
+
+impl TryFrom<&Vec<u8>> for Key {
+    type Error = KeyError;
+
+    fn try_from(value: &Vec<u8>) -> Result<Self, Self::Error> {
+        Key::try_from(value.as_slice())
+    }
+}
+
+#[cfg(test)]
+impl quickcheck::Arbitrary for Key {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let inner = {
+            let mut buf = [0u8; Key::LEN];
+            for (i, num) in std::iter::repeat_with(|| <u8 as quickcheck::Arbitrary>::arbitrary(g))
+                .take(Key::LEN)
+                .enumerate()
+            {
+                buf[i] = num;
+            }
+            buf
+        };
+        Key::from(inner)
+    }
+}
+
+/// The error type returned when a conversion from a byte slice to a [`Key`]
+/// fails.
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub struct KeyError;
+
+impl Error for KeyError {}
+
+impl fmt::Display for KeyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("key must be 64 bytes in length")
+    }
+}
+
+/// The [`SameSite`] cookie attribute, which controls whether or not a cookie is
+/// sent with cross-site requests.
+///
+/// A cookie with a `SameSite` attribute is imposed restrictions on when it is
+/// sent to the origin server in a cross-site request:
+///
+/// - `Strict`: The cookie is never sent in cross-site requests.
+/// - `Lax`: The cookie is sent in cross-site top-level navigations.
+/// - `None`: The cookie is sent in all cross-site requests if the `Secure`
+///   flag is also set; otherwise, the cookie is ignored.
+///
+/// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
+/// definition are subject to change.
+///
+/// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+/// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
+// NOTE: `Copy` should not be implemented in case web standards change in the future.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SameSite {
+    /// The cookie is never sent in cross-site requests.
+    Strict,
+
+    /// The cookie is sent in cross-site top-level navigations.
+    Lax,
+
+    /// The cookie is sent in all cross-site requests if the `Secure` flag is
+    /// also set; otherwise, the cookie is ignored.
+    None,
+}
+
+impl SameSite {
+    fn into_cookie_same_site(self) -> cookie::SameSite {
+        match self {
+            SameSite::Strict => cookie::SameSite::Strict,
+            SameSite::Lax => cookie::SameSite::Lax,
+            SameSite::None => cookie::SameSite::None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use quickcheck::quickcheck;
+
+    use super::*;
 
     quickcheck! {
         fn key_debug_redacts_content(key: Key) -> bool {
