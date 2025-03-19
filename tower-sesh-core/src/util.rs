@@ -1,3 +1,5 @@
+//! Utilities.
+
 use std::{error::Error, fmt, iter};
 
 /// An error reporter that prints an error and its sources.
