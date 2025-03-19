@@ -253,7 +253,6 @@ impl<T> Inner<T> {
         self.status = Purged;
     }
 
-    #[cfg(feature = "tracing")]
     #[inline]
     fn is_taken(&self) -> bool {
         matches!(self.status, Taken)

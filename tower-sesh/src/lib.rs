@@ -10,6 +10,10 @@
 //! [GitHub repository]: https://github.com/loqusion/tower-sesh
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(
+    not(all(feature = "axum", feature = "tracing")),
+    allow(dead_code, unused_imports)
+)]
 #![warn(missing_debug_implementations)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![doc(test(
