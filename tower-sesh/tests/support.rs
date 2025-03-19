@@ -10,7 +10,11 @@ use tower_sesh_core::{
     Record, SessionKey, SessionStore, Ttl,
 };
 
-/// A `SessionStore` that only returns errors.
+////////////////////////////////////////////////////////////////////////////////
+// `ErrStore` and its methods
+////////////////////////////////////////////////////////////////////////////////
+
+/// An implementation of `SessionStore` that returns an error in all its methods.
 pub struct ErrStore<T> {
     error_fn: Box<dyn Fn() -> store::Error + Send + Sync + 'static>,
     _marker: PhantomData<fn() -> T>,
@@ -55,78 +59,26 @@ where
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// `MockStore`
+////////////////////////////////////////////////////////////////////////////////
+
+/// An implementation of the `SessionStore` trait that tracks all session store
+/// operations.
 #[derive(Debug)]
 pub struct MockStore<T> {
     inner: Arc<Mutex<MockStoreInner<T>>>,
 }
 
 struct MockStoreInner<T> {
+    /// A chain of all operations performed by the store.
     operations: Vec<Arc<Operation<T>>>,
+
+    /// A map between a session key and the chain of operations corresponding
+    /// to that session key.
     operations_map: HashMap<SessionKey, Vec<OperationMapEntry<T>>>,
+
     rng: Option<Box<dyn rand::CryptoRng + Send + 'static>>,
-}
-
-impl<T> fmt::Debug for MockStoreInner<T>
-where
-    T: fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("MockStoreInner");
-
-        d.field("operations", &self.operations);
-        d.field("operations_map", &self.operations_map);
-
-        d.finish()
-    }
-}
-
-struct OperationMapEntry<T> {
-    operation: std::sync::Weak<Operation<T>>,
-    state: EntryState,
-}
-
-impl<T> OperationMapEntry<T> {
-    fn new(operation: std::sync::Weak<Operation<T>>) -> Self {
-        OperationMapEntry {
-            operation,
-            state: EntryState::Valid,
-        }
-    }
-}
-
-impl<T> fmt::Debug for OperationMapEntry<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("OperationMapEntry");
-
-        d.field("operation", &WeakOperationDebug(&self.operation));
-        d.field("state", &self.state);
-
-        d.finish()
-    }
-}
-
-struct WeakOperationDebug<'a, T>(&'a std::sync::Weak<Operation<T>>);
-
-impl<T> fmt::Debug for WeakOperationDebug<'_, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(upgraded) = self.0.upgrade() {
-            match upgraded.as_ref() {
-                Operation::Create { .. } => f.write_str("Operation::Create { .. }"),
-                Operation::Load { .. } => f.write_str("Operation::Load { .. }"),
-                Operation::Update { .. } => f.write_str("Operation::Update { .. }"),
-                Operation::UpdateTtl { .. } => f.write_str("Operation::UpdateTtl { .. }"),
-                Operation::Delete { .. } => f.write_str("Operation::Delete { .. }"),
-            }
-        } else {
-            f.write_str("(Weak)")
-        }
-    }
-}
-
-#[derive(Debug)]
-enum EntryState {
-    Expired,
-    Valid,
 }
 
 #[derive(Debug)]
@@ -164,6 +116,17 @@ enum CreateResult {
 enum LoadResult<T> {
     Vacant,
     Occupied { data: T, ttl: Ttl },
+}
+
+struct OperationMapEntry<T> {
+    operation: std::sync::Weak<Operation<T>>,
+    state: EntryState,
+}
+
+#[derive(Debug)]
+enum EntryState {
+    Expired,
+    Valid,
 }
 
 impl<T> MockStore<T>
@@ -348,51 +311,6 @@ where
         }
     }
 
-    fn revalidate_last_operation_which_modified_ttl(&mut self, session_key: &SessionKey) {
-        let Some(operations) = self.operations_map.get_mut(session_key) else {
-            return;
-        };
-
-        for (operation, state) in operations
-            .iter_mut()
-            .map(|entry| (&entry.operation, &mut entry.state))
-            .rev()
-        {
-            if matches!(state, EntryState::Expired) {
-                return;
-            }
-
-            match operation.upgrade().unwrap().as_ref() {
-                Operation::Create {
-                    data: _,
-                    ttl,
-                    result: CreateResult::Created { .. },
-                }
-                | Operation::Update {
-                    session_key: _,
-                    data: _,
-                    ttl,
-                }
-                | Operation::UpdateTtl {
-                    session_key: _,
-                    ttl,
-                } => {
-                    if *ttl >= Ttl::now_local().unwrap() {
-                    } else {
-                        *state = EntryState::Expired;
-                    }
-                    return;
-                }
-                Operation::Delete { session_key: _ } => return,
-                Operation::Load { .. }
-                | Operation::Create {
-                    result: CreateResult::MaxIterationsReached,
-                    ..
-                } => continue,
-            }
-        }
-    }
-
     fn load_result(&self, session_key: &SessionKey) -> LoadResult<T> {
         // If the latest operation was `update_ttl`, this will contain the
         // up-to-date TTL.
@@ -457,5 +375,102 @@ where
         }
 
         LoadResult::Vacant
+    }
+
+    fn revalidate_last_operation_which_modified_ttl(&mut self, session_key: &SessionKey) {
+        let Some(operations) = self.operations_map.get_mut(session_key) else {
+            return;
+        };
+
+        for (operation, state) in operations
+            .iter_mut()
+            .map(|entry| (&entry.operation, &mut entry.state))
+            .rev()
+        {
+            if matches!(state, EntryState::Expired) {
+                return;
+            }
+
+            match operation.upgrade().unwrap().as_ref() {
+                Operation::Create {
+                    data: _,
+                    ttl,
+                    result: CreateResult::Created { .. },
+                }
+                | Operation::Update {
+                    session_key: _,
+                    data: _,
+                    ttl,
+                }
+                | Operation::UpdateTtl {
+                    session_key: _,
+                    ttl,
+                } => {
+                    if *ttl >= Ttl::now_local().unwrap() {
+                    } else {
+                        *state = EntryState::Expired;
+                    }
+                    return;
+                }
+                Operation::Delete { session_key: _ } => return,
+                Operation::Load { .. }
+                | Operation::Create {
+                    result: CreateResult::MaxIterationsReached,
+                    ..
+                } => continue,
+            }
+        }
+    }
+}
+
+impl<T> fmt::Debug for MockStoreInner<T>
+where
+    T: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("MockStoreInner");
+
+        d.field("operations", &self.operations);
+        d.field("operations_map", &self.operations_map);
+
+        d.finish()
+    }
+}
+
+impl<T> OperationMapEntry<T> {
+    fn new(operation: std::sync::Weak<Operation<T>>) -> Self {
+        OperationMapEntry {
+            operation,
+            state: EntryState::Valid,
+        }
+    }
+}
+
+impl<T> fmt::Debug for OperationMapEntry<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut d = f.debug_struct("OperationMapEntry");
+
+        d.field("operation", &WeakOperationDebug(&self.operation));
+        d.field("state", &self.state);
+
+        d.finish()
+    }
+}
+
+struct WeakOperationDebug<'a, T>(&'a std::sync::Weak<Operation<T>>);
+
+impl<T> fmt::Debug for WeakOperationDebug<'_, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(upgraded) = self.0.upgrade() {
+            match upgraded.as_ref() {
+                Operation::Create { .. } => f.write_str("Operation::Create { .. }"),
+                Operation::Load { .. } => f.write_str("Operation::Load { .. }"),
+                Operation::Update { .. } => f.write_str("Operation::Update { .. }"),
+                Operation::UpdateTtl { .. } => f.write_str("Operation::UpdateTtl { .. }"),
+                Operation::Delete { .. } => f.write_str("Operation::Delete { .. }"),
+            }
+        } else {
+            f.write_str("(Weak)")
+        }
     }
 }
