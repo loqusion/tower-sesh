@@ -3,10 +3,10 @@ use std::{fmt, marker::PhantomData};
 use async_trait::async_trait;
 #[cfg(feature = "memory-store")]
 use dashmap::DashMap;
+#[cfg(feature = "memory-store")]
 use rand::{rngs::ThreadRng, Rng};
 use tower_sesh_core::{
-    store::{Error, Result, SessionStoreImpl},
-    time::now,
+    store::{Result, SessionStoreImpl},
     Record, SessionKey, Ttl,
 };
 
@@ -97,7 +97,7 @@ where
             }
         }
 
-        Err(Error::max_iterations_reached())
+        Err(tower_sesh_core::store::Error::max_iterations_reached())
     }
 
     async fn load(&self, session_key: &SessionKey) -> Result<Option<Record<T>>> {
@@ -106,7 +106,7 @@ where
             .get(session_key)
             .as_deref()
             .cloned()
-            .filter(|record| record.ttl >= now());
+            .filter(|record| record.ttl >= tower_sesh_core::time::now());
         Ok(record)
     }
 
