@@ -402,11 +402,11 @@ where
     C: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("SessionLayer");
-        d.field("store", &*self.store);
-        d.field("config", &self.config);
-        d.field("cookie_security", &self.cookie_controller);
-        d.finish_non_exhaustive()
+        f.debug_struct("SessionLayer")
+            .field("store", &self.store)
+            .field("config", &self.config)
+            .field("cookie_security", &self.cookie_controller)
+            .finish_non_exhaustive()
     }
 }
 
@@ -440,10 +440,10 @@ where
     C: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("SessionManager");
-        d.field("inner", &self.inner);
-        d.field("layer", &self.layer);
-        d.finish()
+        f.debug_struct("SessionManager")
+            .field("inner", &self.inner)
+            .field("layer", &self.layer)
+            .finish()
     }
 }
 

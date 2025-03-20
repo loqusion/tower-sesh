@@ -124,13 +124,13 @@ impl private::Sealed for ConnectionManagerWithRetry {}
 pub struct GetConnectionError(RedisError);
 
 impl fmt::Debug for GetConnectionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("GetConnectionError").field(&self.0).finish()
     }
 }
 
 impl fmt::Display for GetConnectionError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("failed to acquire redis connection")
     }
 }

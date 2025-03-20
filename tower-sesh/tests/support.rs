@@ -428,12 +428,10 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("MockStoreInner");
-
-        d.field("operations", &self.operations);
-        d.field("operations_map", &self.operations_map);
-
-        d.finish()
+        f.debug_struct("MockStoreInner")
+            .field("operations", &self.operations)
+            .field("operations_map", &self.operations_map)
+            .finish()
     }
 }
 
@@ -448,12 +446,10 @@ impl<T> OperationMapEntry<T> {
 
 impl<T> fmt::Debug for OperationMapEntry<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("OperationMapEntry");
-
-        d.field("operation", &WeakOperationDebug(&self.operation));
-        d.field("state", &self.state);
-
-        d.finish()
+        f.debug_struct("OperationMapEntry")
+            .field("operation", &WeakOperationDebug(&self.operation))
+            .field("state", &self.state)
+            .finish()
     }
 }
 

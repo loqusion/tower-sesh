@@ -194,7 +194,7 @@ fn debug_value(message: impl Into<String>) -> tracing::field::DebugValue<Box<dyn
     }
 
     impl fmt::Debug for Message {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.write_str(&self.message)
         }
     }

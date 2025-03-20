@@ -66,7 +66,7 @@ impl<T> MemoryStore<T> {
 
 #[cfg(feature = "memory-store")]
 impl<T> fmt::Debug for MemoryStore<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("MemoryStore { .. }")
     }
 }

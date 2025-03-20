@@ -168,7 +168,7 @@ impl<T, C: GetConnection> fmt::Debug for RedisStore<T, C>
 where
     C: fmt::Debug,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RedisStore")
             .field("client", &self.client)
             .field("config", &self.config)
