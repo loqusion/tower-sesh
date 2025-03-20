@@ -225,7 +225,7 @@ where
                 .field("data", &guard.data)
                 .field("expires_at", &guard.expires_at)
                 .field("status", &guard.status)
-                .finish_non_exhaustive(),
+                .finish(),
             None => f.write_str("Session(<locked>)"),
         }
     }
