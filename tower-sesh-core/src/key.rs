@@ -165,11 +165,9 @@ mod test {
             let decoded = SessionKey::decode(&encoded).unwrap();
             id == decoded
         }
-    }
 
-    #[test]
-    fn debug_redacts_content() {
-        let s = rand::random::<SessionKey>();
-        assert_eq!(format!("{:?}", s), "SessionKey(..)");
+        fn debug_redacts_content(key: SessionKey) -> bool {
+            format!("{:?}", key) == "SessionKey(..)"
+        }
     }
 }
