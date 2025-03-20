@@ -653,11 +653,7 @@ pub(crate) mod lazy {
 
     pub(crate) struct Error;
 
-    impl StdError for Error {
-        fn source(&self) -> Option<&(dyn StdError + 'static)> {
-            None
-        }
-    }
+    impl StdError for Error {}
 
     impl fmt::Display for Error {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
