@@ -219,17 +219,15 @@ where
     T: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut d = f.debug_struct("Session");
-
-        let guard = self.inner.lock();
-
-        d.field("data", &guard.data);
-        d.field("expires_at", &guard.expires_at);
-        d.field("status", &guard.status);
-
-        drop(guard);
-
-        d.finish_non_exhaustive()
+        match self.inner.try_lock() {
+            Some(guard) => f
+                .debug_struct("Session")
+                .field("data", &guard.data)
+                .field("expires_at", &guard.expires_at)
+                .field("status", &guard.status)
+                .finish_non_exhaustive(),
+            None => f.write_str("Session(<locked>)"),
+        }
     }
 }
 
