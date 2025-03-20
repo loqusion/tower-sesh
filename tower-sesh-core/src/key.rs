@@ -15,7 +15,7 @@ use rand::distr::{Distribution, StandardUniform};
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub struct SessionKey(NonZeroU128);
 
-/// Debug implementation does not leak secret
+/// Debug implementation does not leak secret.
 impl fmt::Debug for SessionKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("SessionKey(..)")
