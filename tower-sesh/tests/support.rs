@@ -172,7 +172,7 @@ where
 
         const MAX_ITERATIONS: usize = 8;
         for _ in 0..MAX_ITERATIONS {
-            let session_key = guard.random_key();
+            let session_key = guard.random::<SessionKey>();
             let result = guard.load_result(&session_key);
             match result {
                 LoadResult::Vacant => {
@@ -304,7 +304,10 @@ where
         }
     }
 
-    fn random_key(&mut self) -> SessionKey {
+    fn random<U>(&mut self) -> U
+    where
+        rand::distr::StandardUniform: rand::distr::Distribution<U>,
+    {
         match &mut self.rng {
             Some(rng) => rng.random(),
             None => rand::rngs::ThreadRng::default().random(),

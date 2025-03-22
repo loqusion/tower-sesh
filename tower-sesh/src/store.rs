@@ -50,12 +50,18 @@ impl<T> MemoryStore<T> {
 
     #[cfg(not(feature = "test-util"))]
     #[inline]
-    fn random_key(&self) -> SessionKey {
+    fn random<U>(&self) -> U
+    where
+        rand::distr::StandardUniform: rand::distr::Distribution<U>,
+    {
         ThreadRng::default().random()
     }
 
     #[cfg(feature = "test-util")]
-    fn random_key(&self) -> SessionKey {
+    fn random<U>(&self) -> U
+    where
+        rand::distr::StandardUniform: rand::distr::Distribution<U>,
+    {
         if let Some(rng) = &self.rng {
             rng.lock().random()
         } else {
@@ -87,7 +93,7 @@ where
         // (This is statistically improbable for a sufficiently large session key)
         const MAX_ITERATIONS: usize = 8;
         for _ in 0..MAX_ITERATIONS {
-            let session_key = self.random_key();
+            let session_key = self.random::<SessionKey>();
             match self.map.entry(session_key.clone()) {
                 dashmap::Entry::Vacant(entry) => {
                     entry.insert(record);

@@ -114,7 +114,7 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 /// use std::sync::Mutex;
 /// use rand::{rngs::ThreadRng, CryptoRng, Rng, SeedableRng};
 /// use rand_chacha::ChaCha20Rng;
-/// use tower_sesh_core::{store::SessionStoreRng, SessionKey};
+/// use tower_sesh_core::{store::SessionStoreRng};
 ///
 /// pub struct Store {
 ///     #[cfg(feature = "test-util")]
@@ -146,18 +146,29 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 ///
 /// impl Store {
 ///     #[cfg(feature = "test-util")]
-///     fn random_key(&self) -> SessionKey {
+///     # fn _unused() { unimplemented!() }
+///     fn random<U>(&self) -> U
+///     where
+///         rand::distr::StandardUniform: rand::distr::Distribution<U>,
+///     {
 ///         // Slower, for testing only
 ///         if let Some(rng) = &self.rng {
-///             rng.lock().random()
+///             rng.lock().unwrap().random()
 ///         } else {
 ///             ThreadRng::default().random()
 ///         }
 ///     }
+/// # }
 ///
+/// # struct Hidden;
+/// # impl Hidden {
 ///     #[cfg(not(feature = "test-util"))]
-///     fn random_key(&self) -> SessionKey {
-///         // Faster (no branching)
+///     # fn _unused() { unimplemented!() }
+///     fn random<U>(&self) -> U
+///     where
+///         rand::distr::StandardUniform: rand::distr::Distribution<U>,
+///     {
+///         // Faster (no branching or locking)
 ///         ThreadRng::default().random()
 ///     }
 /// }
@@ -203,13 +214,13 @@ pub struct Error {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Catchall error message
+    /// Catchall error message.
     Message(Box<str>),
 
-    /// Error occurred while interacting with the underlying storage mechanism.
+    /// Error occurred from the underlying storage mechanism.
     Store(Box<dyn StdError + Send + Sync>),
 
-    /// Error occurred while serializing/deserializing.
+    /// Error occurred from serializing/deserializing.
     Serde(Box<dyn StdError + Send + Sync>),
 }
 
