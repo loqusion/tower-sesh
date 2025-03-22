@@ -68,7 +68,7 @@ macro_rules! define_rejection {
         }
 
         #[cfg(feature = "axum")]
-        impl ::std::error::Error for $name {}
+        impl ::core::error::Error for $name {}
 
         #[cfg(feature = "axum")]
         impl ::core::default::Default for $name {
@@ -136,8 +136,8 @@ macro_rules! define_rejection {
         }
 
         #[cfg(feature = "axum")]
-        impl ::std::error::Error for $name {
-            fn source(&self) -> ::core::option::Option<&(dyn ::std::error::Error + 'static)> {
+        impl ::core::error::Error for $name {
+            fn source(&self) -> ::core::option::Option<&(dyn ::core::error::Error + 'static)> {
                 ::core::option::Option::Some(&self.0)
             }
         }
