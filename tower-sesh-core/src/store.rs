@@ -93,14 +93,22 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
     async fn delete(&self, session_key: &SessionKey) -> Result<()>;
 }
 
-/// A trait allowing a session store to override the PRNG used to randomly
-/// generate session keys.
+/// A trait allowing a session store to override its source of randomness, for
+/// use in testing.
+///
+/// Every [`SessionStore`] implementation requires a source of randomness to
+/// generate session keys, but it should also use the passed RNG for _any_
+/// randomness it requires.
+///
+/// To meet [`SessionStore`]'s `Send` and `Sync` requirements while allowing
+/// interior mutability, an implementor can use a locking data structure such
+/// as [`std::sync::Mutex`] (or [`parking_lot::Mutex`]). However, this results
+/// in performance degradation, so use conditional compilation to ensure it is
+/// not used outside of testing.
+///
+/// [`parking_lot::Mutex`]: https://docs.rs/parking_lot/latest/parking_lot/type.Mutex.html
 ///
 /// # Example
-///
-/// The trait implementation in this example is only suitable for testing
-/// purposes: synchronizing an RNG with a mutex results in performance
-/// degradation.
 ///
 /// ```rust
 /// use std::sync::Mutex;
