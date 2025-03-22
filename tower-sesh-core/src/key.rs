@@ -225,6 +225,11 @@ mod test {
             format!("{:?}", key) == "SessionKey(..)"
         }
 
+        fn encoded_is_correct_length(key: SessionKey) -> bool {
+            let encoded = key.encode();
+            encoded.len() == SessionKey::ENCODED_LEN
+        }
+
         fn encode_decode(key: SessionKey) -> bool {
             let encoded = key.encode();
             let decoded = SessionKey::decode(&encoded).unwrap();
