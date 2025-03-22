@@ -118,8 +118,8 @@ macro_rules! doc {
         ///
         ///     test_suite! {
         ///         store: CachingStore::from_cache_and_store(
-        ///             redis_store().await,
         ///             MemoryStore::new(),
+        ///             redis_store().await,
         ///         ),
         ///     }
         /// }
