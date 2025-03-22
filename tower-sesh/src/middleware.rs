@@ -57,7 +57,7 @@ impl Config {
     const DEFAULT_COOKIE_NAME: &str = "id";
 
     // TODO: Add the `Expires` attribute.
-    fn cookie(&self, session_key: SessionKey) -> Cookie<'static> {
+    fn cookie(&self, session_key: SessionKey) -> Cookie<'_> {
         let mut cookie = Cookie::build((&*self.cookie_name, session_key.encode()))
             .http_only(self.http_only)
             .same_site(self.same_site)
@@ -70,14 +70,14 @@ impl Config {
             cookie = cookie.path(&**path);
         }
 
-        cookie.build().into_owned()
+        cookie.build()
     }
 
     #[inline]
-    fn cookie_removal(&self) -> Cookie<'static> {
+    fn cookie_removal(&self) -> Cookie<'_> {
         let mut cookie = Cookie::new(&*self.cookie_name, "");
         cookie.make_removal();
-        cookie.into_owned()
+        cookie
     }
 }
 
@@ -491,7 +491,8 @@ where
                 match sync_result {
                     Ok(SyncAction::Set(session_key)) => {
                         let mut jar = CookieJar::new();
-                        cookie_controller.add(&mut jar, config.cookie(session_key));
+                        let cookie = config.cookie(session_key);
+                        cookie_controller.add(&mut jar, cookie.into_owned());
 
                         let cookie = jar
                             .get(&config.cookie_name)
