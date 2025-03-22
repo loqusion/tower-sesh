@@ -31,12 +31,8 @@ macro_rules! doc {
         /// # use tower_sesh::store::MemoryStore;
         /// # use tower_sesh_test::test_suite;
         /// #
-        /// # fn store<T>() -> MemoryStore<T>
-        /// # where T: Clone + Send + Sync + 'static,
-        /// # { unimplemented!() }
-        /// #
         /// test_suite! {
-        ///     store: store(),
+        ///     store: MemoryStore::new(),
         /// }
         /// ```
         ///
@@ -45,18 +41,14 @@ macro_rules! doc {
         /// ```no_run
         /// # use tower_sesh::store::MemoryStore;
         /// #
-        /// # fn store<T>() -> MemoryStore<T>
-        /// # where T: Clone + Send + Sync + 'static,
-        /// # { unimplemented!() }
-        /// #
         /// #[tokio::test]
         /// async fn create_does_collision_resolution() {
-        ///     tower_sesh_test::test_create_does_collision_resolution(store());
+        ///     tower_sesh_test::test_create_does_collision_resolution(MemoryStore::new());
         /// }
         ///
         /// #[tokio::test]
         /// async fn loading_session_after_create() {
-        ///     tower_sesh_test::test_loading_session_after_create(store());
+        ///     tower_sesh_test::test_loading_session_after_create(MemoryStore::new());
         /// }
         ///
         /// // ...rest of test suite...
