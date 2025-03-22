@@ -214,13 +214,13 @@ pub struct Error {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum ErrorKind {
-    /// Catchall error message
+    /// Catchall error message.
     Message(Box<str>),
 
-    /// Error occurred while interacting with the underlying storage mechanism.
+    /// Error occurred from the underlying storage mechanism.
     Store(Box<dyn StdError + Send + Sync>),
 
-    /// Error occurred while serializing/deserializing.
+    /// Error occurred from serializing/deserializing.
     Serde(Box<dyn StdError + Send + Sync>),
 }
 
