@@ -90,7 +90,6 @@ macro_rules! doc {
         /// A store initializer can also contain `.await`:
         ///
         /// ```no_run
-        /// use std::{env, sync::LazyLock};
         /// use serde::{de::DeserializeOwned, Serialize};
         /// use tower_sesh_core::{store::SessionStoreRng, SessionStore};
         ///
