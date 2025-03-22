@@ -146,16 +146,21 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 ///
 /// impl Store {
 ///     #[cfg(feature = "test-util")]
+///     # fn _unused() { unimplemented!() }
 ///     fn random_key(&self) -> SessionKey {
 ///         // Slower, for testing only
 ///         if let Some(rng) = &self.rng {
-///             rng.lock().random()
+///             rng.lock().unwrap().random()
 ///         } else {
 ///             ThreadRng::default().random()
 ///         }
 ///     }
+/// # }
 ///
+/// # struct Hidden;
+/// # impl Hidden {
 ///     #[cfg(not(feature = "test-util"))]
+///     # fn _unused() { unimplemented!() }
 ///     fn random_key(&self) -> SessionKey {
 ///         // Faster (no branching)
 ///         ThreadRng::default().random()
