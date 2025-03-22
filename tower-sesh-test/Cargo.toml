@@ -17,6 +17,7 @@ time = { version = "0.3.39", features = ["formatting", "parsing", "serde"] }
 tokio = "1.43.0"
 tower-sesh = { path = "../tower-sesh", features = ["test-util"] }
 tower-sesh-core = { path = "../tower-sesh-core" }
+tower-sesh-store-redis = { path = "../tower-sesh-store-redis" }
 
 [lints]
 workspace = true
