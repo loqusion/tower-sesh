@@ -26,6 +26,7 @@ time = { version = "0.3", features = ["local-offset"] }
 tracing = { workspace = true, optional = true }
 
 [dev-dependencies]
+http = "1"
 insta = "1.42.1"
 quickcheck = "1.0.3"
 rand_chacha = "0.9.0"
