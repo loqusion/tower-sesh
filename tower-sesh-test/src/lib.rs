@@ -135,38 +135,41 @@ doc! {macro_rules! test_suite {
 doc! {macro_rules! test_suite {
     ($store:expr) => {
         $crate::test_suite! {
-            @impl $store =>
-            smoke
-            create_does_collision_resolution
-            loading_session_after_create
-            loading_session_after_update_nonexisting
-            loading_session_after_update_existing
-            loading_session_after_update_ttl
-            loading_a_missing_session_returns_none
-            loading_an_expired_session_returns_none_create
-            loading_an_expired_session_returns_none_update_nonexisting
-            loading_an_expired_session_returns_none_update_existing
-            loading_an_expired_session_returns_none_update_ttl
-            delete_after_create
-            delete_after_update
-            delete_does_not_error_for_missing_entry
-            ttl_with_999_999_999_nanoseconds_create
-            ttl_with_999_999_999_nanoseconds_update_nonexisting
-            ttl_with_999_999_999_nanoseconds_update_existing
-            ttl_with_999_999_999_nanoseconds_update_ttl
-            update_ttl_extends_session_that_would_otherwise_expire
-            // FIXME: Remove this `ignore` when `MemoryStore` is fixed
-            #[ignore = "this test fails with `MemoryStore`"]
-            update_ttl_does_not_revive_expired_session
+            @impl $store => {
+                smoke
+                create_does_collision_resolution
+                loading_session_after_create
+                loading_session_after_update_nonexisting
+                loading_session_after_update_existing
+                loading_session_after_update_ttl
+                loading_a_missing_session_returns_none
+                loading_an_expired_session_returns_none_create
+                loading_an_expired_session_returns_none_update_nonexisting
+                loading_an_expired_session_returns_none_update_existing
+                loading_an_expired_session_returns_none_update_ttl
+                delete_after_create
+                delete_after_update
+                delete_does_not_error_for_missing_entry
+                ttl_with_999_999_999_nanoseconds_create
+                ttl_with_999_999_999_nanoseconds_update_nonexisting
+                ttl_with_999_999_999_nanoseconds_update_existing
+                ttl_with_999_999_999_nanoseconds_update_ttl
+                update_ttl_extends_session_that_would_otherwise_expire
+                // FIXME: Remove this `ignore` when `MemoryStore` is fixed
+                #[ignore = "this test fails with `MemoryStore`"]
+                update_ttl_does_not_revive_expired_session
+            }
         }
     };
 
     (
         @impl $store:expr =>
-        $(
-            $(#[$m:meta])*
-            $test:ident
-        )+
+        {
+            $(
+                $(#[$m:meta])*
+                $test:ident
+            )+
+        }
     ) => {
         $(
             $(#[$m])*
