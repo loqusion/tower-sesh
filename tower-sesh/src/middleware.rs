@@ -238,7 +238,7 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
     pub fn cookie_name(mut self, name: impl Into<Cow<'static, str>>) -> Self {
         let name = name.into();
 
-        if let Err(err) = HeaderValue::from_str(&format!("{}=value", name)) {
+        if let Err(err) = HeaderValue::try_from(format!("{}=value", name)) {
             panic!("invalid `cookie_name` value: {}", Report::new(err));
         }
 
