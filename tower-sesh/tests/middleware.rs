@@ -27,6 +27,20 @@ fn jar_from_response<B>(
         })
 }
 
+fn header_value_from_cookie_key_values<'a, S>(
+    key_value_iter: impl Iterator<Item = &'a (S, S)>,
+) -> Result<HeaderValue, header::InvalidHeaderValue>
+where
+    &'a S: Into<String> + 'a,
+{
+    let value = key_value_iter
+        .map::<(String, String), _>(|(k, v)| (k.into(), v.into()))
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect::<Vec<_>>()
+        .join("; ");
+    HeaderValue::try_from(value)
+}
+
 #[tokio::test]
 async fn option_cookie_name() {
     async fn handler(session: Session<()>) {
@@ -248,7 +262,52 @@ async fn preserves_existing_set_cookie() {
 }
 
 #[tokio::test]
-async fn extracts_cookie_from_many_in_header() {
+async fn extracts_cookie_from_many_in_single_header() {
+    static HANDLER_RUN_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+    async fn handler(session: Session<()>) -> impl IntoResponse {
+        assert!(session.get().is_some());
+        HANDLER_RUN_COUNT.fetch_add(1, SeqCst);
+    }
+
+    let store = Arc::new(MemoryStore::<()>::new());
+    let key = SessionKey::try_from(1).unwrap();
+    store.update(&key, &(), ttl()).await.unwrap();
+
+    let app = Router::new()
+        .route("/", routing::get(handler))
+        .layer(SessionLayer::plain(store).cookie_name("id"));
+
+    let sample_cookies = [
+        ("hello".to_owned(), "world".to_owned()),
+        ("foo".to_owned(), "bar".to_owned()),
+    ];
+    let session_cookie = ("id".to_owned(), key.encode());
+
+    for cookie_header in [
+        [&session_cookie, &sample_cookies[0], &sample_cookies[1]],
+        [&sample_cookies[0], &session_cookie, &sample_cookies[1]],
+        [&sample_cookies[0], &sample_cookies[1], &session_cookie],
+    ]
+    .into_iter()
+    .map(IntoIterator::into_iter)
+    .map(header_value_from_cookie_key_values)
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap()
+    {
+        let req = Request::builder()
+            .uri("/")
+            .header(header::COOKIE, cookie_header)
+            .body(Body::empty())
+            .unwrap();
+        app.clone().oneshot(req).await.unwrap();
+    }
+
+    assert_eq!(HANDLER_RUN_COUNT.load(SeqCst), 3);
+}
+
+#[tokio::test]
+async fn extracts_cookie_from_many_headers() {
     static HANDLER_RUN_COUNT: AtomicUsize = AtomicUsize::new(0);
 
     async fn handler(session: Session<()>) -> impl IntoResponse {
