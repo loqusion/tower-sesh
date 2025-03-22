@@ -14,8 +14,125 @@ pub mod __private {
     pub use tokio;
 }
 
-#[macro_export]
-macro_rules! test_suite {
+macro_rules! doc {
+    ($test_suite:item) => {
+        /// The `tower-sesh` test suite, which is run for every store implementation.
+        ///
+        /// This macro takes a single expression as an argument, which is used to
+        /// initialize a separate store instance for every test function. The type of
+        /// the expression must implement [`SessionStore`][session-store] and
+        /// [`SessionStoreRng`].
+        ///
+        /// [session-store]: tower_sesh_core::store#implementing-sessionstore
+        ///
+        /// For example, the following macro invocation:
+        ///
+        /// ```no_run
+        /// # use tower_sesh::store::MemoryStore;
+        /// # use tower_sesh_test::test_suite;
+        /// #
+        /// # fn store<T>() -> MemoryStore<T>
+        /// # where T: Clone + Send + Sync + 'static,
+        /// # { unimplemented!() }
+        /// #
+        /// test_suite!(store());
+        /// ```
+        ///
+        /// Expands to something like this:
+        ///
+        /// ```no_run
+        /// # use tower_sesh::store::MemoryStore;
+        /// #
+        /// # fn store<T>() -> MemoryStore<T>
+        /// # where T: Clone + Send + Sync + 'static,
+        /// # { unimplemented!() }
+        /// #
+        /// #[tokio::test]
+        /// async fn create_does_collision_resolution() {
+        ///     tower_sesh_test::test_create_does_collision_resolution(store());
+        /// }
+        ///
+        /// #[tokio::test]
+        /// async fn loading_session_after_create() {
+        ///     tower_sesh_test::test_loading_session_after_create(store());
+        /// }
+        ///
+        /// // ...rest of test suite...
+        /// ```
+        ///
+        /// Though each test runs with its own separate store instance, each store
+        /// instance may in fact perform operations concurrently on the same database.
+        /// For example, in [`tower-sesh-store-redis`]'s test suite, each `RedisStore`
+        /// connects to the same Redis server. This won't result in flakiness, since
+        /// each test generates unique session keys deterministically.
+        ///
+        /// [`tower-sesh-store-redis`]: https://docs.rs/tower-sesh-store-redis
+        ///
+        /// # Examples
+        ///
+        /// ```no_run
+        /// mod memory_store {
+        ///     use tower_sesh::store::MemoryStore;
+        ///     use tower_sesh_test::test_suite;
+        ///
+        ///     test_suite!(MemoryStore::new());
+        /// }
+        ///
+        /// mod memory_store_caching_store {
+        ///     use tower_sesh::store::{CachingStore, MemoryStore};
+        ///     use tower_sesh_test::test_suite;
+        ///
+        ///     test_suite!(CachingStore::from_cache_and_store(
+        ///         MemoryStore::new(),
+        ///         MemoryStore::new(),
+        ///     ));
+        /// }
+        /// ```
+        ///
+        /// A store initializer can also contain `.await`:
+        ///
+        /// ```no_run
+        /// use std::{env, sync::LazyLock};
+        /// use serde::{de::DeserializeOwned, Serialize};
+        /// use tower_sesh_core::{store::SessionStoreRng, SessionStore};
+        ///
+        /// async fn redis_store<T, Rng>() -> impl SessionStore<T> + SessionStoreRng<Rng>
+        /// where
+        ///     T: Serialize + DeserializeOwned + Send + Sync + 'static,
+        ///     Rng: rand::CryptoRng + Send + 'static,
+        /// {
+        ///     // ...
+        ///     # unimplemented!() as tower_sesh_store_redis::RedisStore<T>
+        /// }
+        ///
+        /// mod normal {
+        ///     use tower_sesh_test::test_suite;
+        ///
+        ///     test_suite!(redis_store().await);
+        /// }
+        ///
+        /// mod with_caching_store {
+        ///     use tower_sesh::store::{CachingStore, MemoryStore};
+        ///     use tower_sesh_test::test_suite;
+        ///
+        ///     test_suite!(CachingStore::from_cache_and_store(
+        ///         redis_store().await,
+        ///         MemoryStore::new(),
+        ///     ));
+        /// }
+        /// ```
+        #[macro_export]
+        $test_suite
+    };
+}
+
+#[cfg(doc)]
+doc! {macro_rules! test_suite {
+    ($store:expr) => { unimplemented!() }
+}}
+
+#[cfg(not(doc))]
+doc! {macro_rules! test_suite {
     ($store:expr) => {
         $crate::test_suite! {
             @impl $store =>
@@ -61,7 +178,7 @@ macro_rules! test_suite {
             }
         )+
     };
-}
+}}
 
 fn ttl() -> Ttl {
     let now = Ttl::now_local().unwrap();
