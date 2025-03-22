@@ -140,8 +140,12 @@ impl From<base64::DecodeSliceError> for DecodeSessionKeyError {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use std::iter;
+
+    use cookie::{Cookie, CookieJar};
     use quickcheck::{quickcheck, Arbitrary};
+
+    use super::*;
 
     #[test]
     fn parse_error_zero() {
@@ -159,20 +163,130 @@ mod test {
         }
     }
 
+    #[derive(Clone, Debug, PartialEq)]
+    struct CookieKey(cookie::Key);
+
+    impl From<CookieKey> for cookie::Key {
+        fn from(value: CookieKey) -> Self {
+            value.0
+        }
+    }
+
+    impl Arbitrary for CookieKey {
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            let inner = {
+                let mut buf = [0u8; 64];
+                for (i, num) in iter::repeat_with(|| <u8 as Arbitrary>::arbitrary(g))
+                    .take(64)
+                    .enumerate()
+                {
+                    buf[i] = num;
+                }
+                buf
+            };
+            CookieKey(cookie::Key::from(&inner))
+        }
+    }
+
+    const COOKIE_NAME: &str = "id";
+
+    fn cookie_from_key(key: SessionKey) -> Cookie<'static> {
+        Cookie::build((COOKIE_NAME, key.encode()))
+            .http_only(true)
+            .same_site(cookie::SameSite::Strict)
+            .secure(true)
+            .build()
+            .into_owned()
+    }
+
+    fn cookie_from_key_encrypted(
+        session_key: SessionKey,
+        master_key: cookie::Key,
+    ) -> Cookie<'static> {
+        let cookie = cookie_from_key(session_key);
+        let mut jar = CookieJar::new();
+        jar.private_mut(&master_key).add(cookie);
+        jar.get(COOKIE_NAME)
+            .expect("cookie should have been added to jar")
+            .to_owned()
+    }
+
+    fn cookie_from_key_signed(session_key: SessionKey, master_key: cookie::Key) -> Cookie<'static> {
+        let cookie = cookie_from_key(session_key);
+        let mut jar = CookieJar::new();
+        jar.signed_mut(&master_key).add(cookie);
+        jar.get(COOKIE_NAME)
+            .expect("cookie should have been added to jar")
+            .to_owned()
+    }
+
     quickcheck! {
+        fn debug_redacts_content(key: SessionKey) -> bool {
+            format!("{:?}", key) == "SessionKey(..)"
+        }
+
         fn encode_decode(key: SessionKey) -> bool {
             let encoded = key.encode();
             let decoded = SessionKey::decode(&encoded).unwrap();
             key == decoded
         }
 
-        fn parsable_as_header_value(key: SessionKey) -> Result<(), http::header::InvalidHeaderValue> {
-            let encoded = key.encode();
-            http::HeaderValue::try_from(encoded).and(Ok(()))
+        fn parsable_in_cookie_header_value_plain_stripped(
+            key: SessionKey
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let cookie = cookie_from_key(key);
+            http::HeaderValue::try_from(cookie.stripped().to_string())
+                .and(Ok(()))
+                .map_err(Into::into)
         }
 
-        fn debug_redacts_content(key: SessionKey) -> bool {
-            format!("{:?}", key) == "SessionKey(..)"
+        fn parsable_in_cookie_header_value_plain_encoded(
+            key: SessionKey
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let cookie = cookie_from_key(key);
+            http::HeaderValue::try_from(cookie.encoded().to_string())
+                .and(Ok(()))
+                .map_err(Into::into)
+        }
+
+        fn parsable_in_cookie_header_value_encrypted_stripped(
+            input: (SessionKey, CookieKey)
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let (session_key, master_key) = input;
+            let cookie = cookie_from_key_encrypted(session_key, master_key.into());
+            http::HeaderValue::try_from(cookie.stripped().to_string())
+                .and(Ok(()))
+                .map_err(Into::into)
+        }
+
+        fn parsable_in_cookie_header_value_encrypted_encoded(
+            input: (SessionKey, CookieKey)
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let (session_key, master_key) = input;
+            let cookie = cookie_from_key_encrypted(session_key, master_key.into());
+            http::HeaderValue::try_from(cookie.encoded().to_string())
+                .and(Ok(()))
+                .map_err(Into::into)
+        }
+
+        fn parsable_in_cookie_header_value_signed_stripped(
+            input: (SessionKey, CookieKey)
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let (session_key, master_key) = input;
+            let cookie = cookie_from_key_signed(session_key, master_key.into());
+            http::HeaderValue::try_from(cookie.stripped().to_string())
+                .and(Ok(()))
+                .map_err(Into::into)
+        }
+
+        fn parsable_in_cookie_header_value_signed_encoded(
+            input: (SessionKey, CookieKey)
+        ) -> Result<(), Box<dyn std::error::Error>> {
+            let (session_key, master_key) = input;
+            let cookie = cookie_from_key_signed(session_key, master_key.into());
+            http::HeaderValue::try_from(cookie.encoded().to_string())
+                .and(Ok(()))
+                .map_err(Into::into)
         }
     }
 }
