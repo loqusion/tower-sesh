@@ -104,9 +104,9 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 ///
 /// ```rust
 /// use std::sync::Mutex;
-/// use rand::{CryptoRng, SeedableRng};
+/// use rand::{rngs::ThreadRng, CryptoRng, Rng, SeedableRng};
 /// use rand_chacha::ChaCha20Rng;
-/// use tower_sesh_core::store::SessionStoreRng;
+/// use tower_sesh_core::{store::SessionStoreRng, SessionKey};
 ///
 /// pub struct Store {
 ///     #[cfg(feature = "test-util")]
@@ -133,6 +133,24 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 /// {
 ///     fn rng(&mut self, rng: Rng) {
 ///         self.rng = Some(Box::new(Mutex::new(rng)));
+///     }
+/// }
+///
+/// impl Store {
+///     #[cfg(feature = "test-util")]
+///     fn random_key(&self) -> SessionKey {
+///         // Slower, for testing only
+///         if let Some(rng) = &self.rng {
+///             rng.lock().random()
+///         } else {
+///             ThreadRng::default().random()
+///         }
+///     }
+///
+///     #[cfg(not(feature = "test-util"))]
+///     fn random_key(&self) -> SessionKey {
+///         // Faster (no branching)
+///         ThreadRng::default().random()
 ///     }
 /// }
 ///
