@@ -54,6 +54,8 @@ macro_rules! doc {
         /// // ...rest of test suite...
         /// ```
         ///
+        /// # Note on test determinism
+        ///
         /// Though each test runs with its own separate store instance, each store
         /// instance may in fact perform operations concurrently on the same database.
         /// For example, in [`tower-sesh-store-redis`]'s test suite, each `RedisStore`
