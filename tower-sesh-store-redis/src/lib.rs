@@ -190,7 +190,10 @@ impl<T, C: GetConnection> RedisStore<T, C> {
     }
 
     #[cfg(feature = "test-util")]
-    fn random_key(&self) -> SessionKey {
+    fn random<U>(&self) -> U
+    where
+        rand::distr::StandardUniform: rand::distr::Distribution<U>,
+    {
         if let Some(rng) = &self.rng {
             rng.lock().random()
         } else {
@@ -200,7 +203,10 @@ impl<T, C: GetConnection> RedisStore<T, C> {
 
     #[cfg(not(feature = "test-util"))]
     #[inline]
-    fn random_key(&self) -> SessionKey {
+    fn random<U>(&self) -> U
+    where
+        rand::distr::StandardUniform: rand::distr::Distribution<U>,
+    {
         ThreadRng::default().random()
     }
 }
@@ -237,7 +243,7 @@ where
         // (This is statistically improbable for a sufficiently large session key)
         const MAX_RETRIES: usize = 8;
         for _ in 0..MAX_RETRIES {
-            let session_key = self.random_key();
+            let session_key = self.random::<SessionKey>();
             let key = self.redis_key(&session_key);
 
             let v: redis::Value = conn
