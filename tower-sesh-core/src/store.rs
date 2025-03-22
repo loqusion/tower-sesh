@@ -168,7 +168,7 @@ pub trait SessionStoreImpl<T>: 'static + Send + Sync {
 ///     where
 ///         rand::distr::StandardUniform: rand::distr::Distribution<U>,
 ///     {
-///         // Faster (no branching)
+///         // Faster (no branching or locking)
 ///         ThreadRng::default().random()
 ///     }
 /// }
