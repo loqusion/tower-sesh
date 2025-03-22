@@ -11,7 +11,7 @@ use cookie::{Cookie, CookieJar};
 use http::{header, HeaderValue, Request, Response};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
-use tower_sesh_core::{store::SessionStoreImpl, time::now, SessionKey};
+use tower_sesh_core::{store::SessionStoreImpl, SessionKey, Ttl};
 
 fn jar_from_response<B>(
     res: &Response<B>,
@@ -263,10 +263,7 @@ async fn extracts_cookie_from_many_in_header() {
         .layer(SessionLayer::plain(Arc::clone(&store)).cookie_name("id"));
 
     let key = SessionKey::try_from(1).unwrap();
-    store
-        .update(&key, &(), now() + Duration::from_secs(30))
-        .await
-        .unwrap();
+    store.update(&key, &(), ttl()).await.unwrap();
 
     let sample_cookies = [Cookie::new("hello", "world"), Cookie::new("foo", "bar")];
     let session_cookie = Cookie::new("id", key.encode());
@@ -293,4 +290,9 @@ async fn extracts_cookie_from_many_in_header() {
     }
 
     assert_eq!(HANDLER_RUN_COUNT.load(SeqCst), 3);
+}
+
+fn ttl() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    now + Duration::from_secs(10 * 60)
 }
