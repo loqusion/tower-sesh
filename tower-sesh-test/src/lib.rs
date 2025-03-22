@@ -18,10 +18,10 @@ macro_rules! doc {
     ($test_suite:item) => {
         /// The `tower-sesh` test suite, which is run for every store implementation.
         ///
-        /// This macro takes a single expression as an argument, which is used to
-        /// initialize a separate store instance for every test function. The type of
-        /// the expression must implement [`SessionStore`][session-store] and
-        /// [`SessionStoreRng`].
+        /// This macro takes a single expression after `store: ` as an argument,
+        /// which is used to initialize a separate store instance for every test
+        /// function. The type of the expression must implement
+        /// [`SessionStore`][session-store] and [`SessionStoreRng`].
         ///
         /// [session-store]: tower_sesh_core::store#implementing-sessionstore
         ///
@@ -35,7 +35,9 @@ macro_rules! doc {
         /// # where T: Clone + Send + Sync + 'static,
         /// # { unimplemented!() }
         /// #
-        /// test_suite!(store());
+        /// test_suite! {
+        ///     store: store(),
+        /// }
         /// ```
         ///
         /// Expands to something like this:
@@ -75,17 +77,21 @@ macro_rules! doc {
         ///     use tower_sesh::store::MemoryStore;
         ///     use tower_sesh_test::test_suite;
         ///
-        ///     test_suite!(MemoryStore::new());
+        ///     test_suite! {
+        ///         store: MemoryStore::new(),
+        ///     }
         /// }
         ///
         /// mod memory_store_caching_store {
         ///     use tower_sesh::store::{CachingStore, MemoryStore};
         ///     use tower_sesh_test::test_suite;
         ///
-        ///     test_suite!(CachingStore::from_cache_and_store(
-        ///         MemoryStore::new(),
-        ///         MemoryStore::new(),
-        ///     ));
+        ///     test_suite! {
+        ///         store: CachingStore::from_cache_and_store(
+        ///             MemoryStore::new(),
+        ///             MemoryStore::new(),
+        ///         ),
+        ///     }
         /// }
         /// ```
         ///
@@ -108,17 +114,21 @@ macro_rules! doc {
         /// mod normal {
         ///     use tower_sesh_test::test_suite;
         ///
-        ///     test_suite!(redis_store().await);
+        ///     test_suite! {
+        ///         store: redis_store().await,
+        ///     }
         /// }
         ///
         /// mod with_caching_store {
         ///     use tower_sesh::store::{CachingStore, MemoryStore};
         ///     use tower_sesh_test::test_suite;
         ///
-        ///     test_suite!(CachingStore::from_cache_and_store(
-        ///         redis_store().await,
-        ///         MemoryStore::new(),
-        ///     ));
+        ///     test_suite! {
+        ///         store: CachingStore::from_cache_and_store(
+        ///             redis_store().await,
+        ///             MemoryStore::new(),
+        ///         ),
+        ///     }
         /// }
         /// ```
         #[macro_export]
@@ -128,12 +138,12 @@ macro_rules! doc {
 
 #[cfg(doc)]
 doc! {macro_rules! test_suite {
-    ($store:expr) => { unimplemented!() }
+    (store: $store:expr $(,)?) => { unimplemented!() }
 }}
 
 #[cfg(not(doc))]
 doc! {macro_rules! test_suite {
-    ($store:expr) => {
+    (store : $store:expr $(,)?) => {
         $crate::test_suite! {
             @impl $store => {
                 smoke
