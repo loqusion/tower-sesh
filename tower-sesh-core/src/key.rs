@@ -160,10 +160,10 @@ mod test {
     }
 
     quickcheck! {
-        fn encode_decode(id: SessionKey) -> bool {
-            let encoded = id.encode();
+        fn encode_decode(key: SessionKey) -> bool {
+            let encoded = key.encode();
             let decoded = SessionKey::decode(&encoded).unwrap();
-            id == decoded
+            key == decoded
         }
 
         fn parsable_as_header_value(key: SessionKey) -> Result<(), http::header::InvalidHeaderValue> {
