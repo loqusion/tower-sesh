@@ -166,6 +166,11 @@ mod test {
             id == decoded
         }
 
+        fn parsable_as_header_value(key: SessionKey) -> Result<(), http::header::InvalidHeaderValue> {
+            let encoded = key.encode();
+            http::HeaderValue::try_from(encoded).and(Ok(()))
+        }
+
         fn debug_redacts_content(key: SessionKey) -> bool {
             format!("{:?}", key) == "SessionKey(..)"
         }
