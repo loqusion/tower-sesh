@@ -398,10 +398,11 @@ pub async fn test_loading_session_after_create(
 }
 
 pub async fn test_loading_session_after_update_nonexisting(
-    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(2848227658);
     let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
@@ -448,10 +449,11 @@ pub async fn test_loading_session_after_update_ttl(
 }
 
 pub async fn test_loading_a_missing_session_returns_none(
-    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(999412874);
     let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
@@ -476,10 +478,11 @@ pub async fn test_loading_an_expired_session_returns_none_create(
 }
 
 pub async fn test_loading_an_expired_session_returns_none_update_nonexisting(
-    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(880523847);
     let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
 
     let five_microseconds_from_now = Ttl::now_local().unwrap() + Duration::from_millis(50);
     store
@@ -553,10 +556,11 @@ pub async fn test_delete_after_create(
 }
 
 pub async fn test_delete_after_update(
-    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(200708635);
     let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
 
     store
         .update(&session_key, &SessionData::sample(), ttl())
@@ -569,10 +573,11 @@ pub async fn test_delete_after_update(
 }
 
 pub async fn test_delete_does_not_error_for_missing_entry(
-    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(136113526);
     let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
@@ -599,10 +604,11 @@ pub async fn test_ttl_with_999_999_999_nanoseconds_create(
 }
 
 pub async fn test_ttl_with_999_999_999_nanoseconds_update_nonexisting(
-    store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
 ) {
     let mut rng = TestRng::seed_from_u64(1551031452);
     let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
 
     let ttl = ttl_edge_case();
     store
