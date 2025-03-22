@@ -324,25 +324,30 @@ async fn extracts_cookie_from_many_headers() {
     let key = SessionKey::try_from(1).unwrap();
     store.update(&key, &(), ttl()).await.unwrap();
 
-    let sample_cookies = [Cookie::new("hello", "world"), Cookie::new("foo", "bar")];
-    let session_cookie = Cookie::new("id", key.encode());
+    let sample_cookies = [
+        ("hello".to_owned(), "world".to_owned()),
+        ("foo".to_owned(), "bar".to_owned()),
+    ];
+    let session_cookie = ("id".to_owned(), key.encode());
 
-    for cookies in [
+    for header_values in [
         [&session_cookie, &sample_cookies[0], &sample_cookies[1]],
         [&sample_cookies[0], &session_cookie, &sample_cookies[1]],
         [&sample_cookies[0], &sample_cookies[1], &session_cookie],
-    ] {
-        let mut header_values = cookies
-            .iter()
-            .map(|cookie| cookie.encoded().to_string().parse::<HeaderValue>())
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-            .into_iter();
+    ]
+    .into_iter()
+    .map(|[(k1, v1), (k2, v2), (k3, v3)]| {
+        (
+            format!("{k1}={v1}"),
+            format!("{k2}={v2}"),
+            format!("{k3}={v3}"),
+        )
+    }) {
         let req = Request::builder()
             .uri("/")
-            .header(header::COOKIE, header_values.next().unwrap())
-            .header(header::COOKIE, header_values.next().unwrap())
-            .header(header::COOKIE, header_values.next().unwrap())
+            .header(header::COOKIE, header_values.0)
+            .header(header::COOKIE, header_values.1)
+            .header(header::COOKIE, header_values.2)
             .body(Body::empty())
             .unwrap();
         app.clone().oneshot(req).await.unwrap();
