@@ -191,8 +191,8 @@ fn ttl() -> Ttl {
     ttl_of(now)
 }
 
-fn ttl_of(f: Ttl) -> Ttl {
-    f + Duration::from_secs(10 * 60)
+fn ttl_of(ttl: Ttl) -> Ttl {
+    ttl + Duration::from_secs(10 * 60)
 }
 
 fn ttl_strict() -> Ttl {
@@ -200,7 +200,7 @@ fn ttl_strict() -> Ttl {
     ttl_strict_of(now)
 }
 
-fn ttl_strict_of(f: Ttl) -> Ttl {
+fn ttl_strict_of(ttl: Ttl) -> Ttl {
     // miri requires a more lenient TTL due to its slower execution speed
     const STRICT_OFFSET: Duration = if cfg!(miri) {
         Duration::from_secs(20)
@@ -209,7 +209,7 @@ fn ttl_strict_of(f: Ttl) -> Ttl {
         // systems. If that is the case, try increasing this value.
         Duration::from_millis(1500)
     };
-    f + STRICT_OFFSET
+    ttl + STRICT_OFFSET
 }
 
 trait TtlExt {
