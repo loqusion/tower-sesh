@@ -198,11 +198,6 @@ impl<T> Record<T> {
     pub fn new(data: T, ttl: Ttl) -> Record<T> {
         Record { data, ttl }
     }
-
-    #[inline]
-    pub fn unix_timestamp(&self) -> i64 {
-        self.ttl.unix_timestamp()
-    }
 }
 
 /// An error returned by [`SessionStore`] methods.

@@ -7,7 +7,6 @@ use cookie::{Cookie, CookieJar, Key};
 pub trait CookieSecurity: Clone + private::Sealed {
     fn get<'c>(&self, jar: &'c CookieJar, name: &str) -> Option<Cookie<'c>>;
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>);
-    fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>);
 
     /// Returns a reference to a cryptographic key. This function may panic if
     /// the implementing type does not own a key.
@@ -55,11 +54,6 @@ impl CookieSecurity for SignedCookie {
     }
 
     #[inline]
-    fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
-        jar.signed_mut(&self.key).remove(cookie)
-    }
-
-    #[inline]
     fn key(&self) -> &Key {
         &self.key
     }
@@ -78,11 +72,6 @@ impl CookieSecurity for PrivateCookie {
     }
 
     #[inline]
-    fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
-        jar.private_mut(&self.key).remove(cookie)
-    }
-
-    #[inline]
     fn key(&self) -> &Key {
         &self.key
     }
@@ -98,11 +87,6 @@ impl CookieSecurity for PlainCookie {
     #[inline]
     fn add(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
         jar.add(cookie)
-    }
-
-    #[inline]
-    fn remove(&self, jar: &mut CookieJar, cookie: Cookie<'static>) {
-        jar.remove(cookie)
     }
 
     #[inline]
