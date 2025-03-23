@@ -14,12 +14,12 @@ edition.workspace = true
 rust-version.workspace = true
 
 [features]
-default = ["tokio-comp"]
+default = ["rt_tokio"]
 
 test-util = []
 
-async-std-comp = ["redis/async-std-comp"]
-tokio-comp = ["redis/tokio-comp"]
+rt_tokio = ["redis/tokio-comp"]
+rt_async-std = ["redis/async-std-comp"]
 
 [dependencies]
 async-trait = { workspace = true }

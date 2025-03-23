@@ -13,8 +13,8 @@
     )
 ))]
 
-#[cfg(not(any(feature = "tokio-comp", feature = "async-std-comp")))]
-compile_error!("Either the `tokio-comp` or `async-std-comp` feature must be enabled.");
+#[cfg(not(any(feature = "rt_tokio", feature = "rt_async-std")))]
+compile_error!("Either the `rt_tokio` or `rt_async-std` feature must be enabled.");
 
 use std::{borrow::Cow, fmt, marker::PhantomData};
 
