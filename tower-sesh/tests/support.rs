@@ -1,14 +1,75 @@
 #![allow(dead_code)]
 
-use std::{collections::HashMap, fmt, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, fmt, iter, marker::PhantomData, num::NonZeroU128, sync::Arc};
 
 use async_trait::async_trait;
 use parking_lot::Mutex;
+use quickcheck::Arbitrary;
 use rand::Rng;
 use tower_sesh_core::{
     store::{self, Result, SessionStoreImpl},
     Record, SessionKey, SessionStore, Ttl,
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// `Arbitrary` implementations
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct ArbitrarySessionKey(pub SessionKey);
+
+impl Arbitrary for ArbitrarySessionKey {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let inner = SessionKey::from(NonZeroU128::arbitrary(g));
+        Self(inner)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct InvalidSessionKeyCookie(pub String);
+
+impl Arbitrary for InvalidSessionKeyCookie {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        const INVALID_CHARACTERS: &str = r##"!"#$%^'()*+,./:;<=>?@[\]^`{|}~"##;
+
+        fn arbitrary_invalid_char(g: &mut quickcheck::Gen) -> char {
+            let n = g.choose(INVALID_CHARACTERS.as_bytes()).unwrap();
+            char::from(*n)
+        }
+
+        fn replace_with_invalid(mut valid: String, g: &mut quickcheck::Gen) -> String {
+            let length = valid.len();
+            let number_of_replaced_characters = usize::arbitrary(g) % length;
+
+            for (idx, invalid_char) in iter::repeat_with(|| {
+                let idx = usize::arbitrary(g) % length;
+                (idx, arbitrary_invalid_char(g).to_string())
+            })
+            .take(number_of_replaced_characters)
+            {
+                valid.replace_range(idx..=idx, &invalid_char);
+            }
+
+            valid
+        }
+
+        let should_be_almost_valid = bool::arbitrary(g);
+        if should_be_almost_valid {
+            let session_key = ArbitrarySessionKey::arbitrary(g).0;
+            let encoded_session_key = session_key.encode();
+            let inner = replace_with_invalid(encoded_session_key, g);
+
+            InvalidSessionKeyCookie(inner)
+        } else {
+            let number_of_characters = usize::arbitrary(g) % SessionKey::ENCODED_LEN;
+            let inner = iter::repeat_with(|| arbitrary_invalid_char(g))
+                .take(number_of_characters)
+                .collect::<String>();
+
+            InvalidSessionKeyCookie(inner)
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // `ErrStore` and its methods
