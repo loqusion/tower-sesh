@@ -24,6 +24,7 @@ jobs:
     needs:
       - check
       - fmt
+      - docs
     steps:
       - run: exit 0
 
@@ -45,6 +46,20 @@ jobs:
       - name: cargo fmt --check
         run: |
           cargo fmt --all --check
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+      - name: cargo doc
+        run: |
+          cargo doc --lib --no-deps --all-features --document-private-items
+        env:
+          RUSTDOCFLAGS: "--cfg docsrs -Dwarnings --cfg tower_sesh_docs_local"
 
   style:
     name: cargo fmt
