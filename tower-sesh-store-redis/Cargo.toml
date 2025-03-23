@@ -26,7 +26,7 @@ async-trait = { workspace = true }
 futures-util = { workspace = true }
 parking_lot = "0.12.3"
 rand = { workspace = true }
-redis = { version = "0.27.6", default-features = false, features = ["aio", "connection-manager", "keep-alive"] }
+redis = { version = "0.29", default-features = false, features = ["aio", "connection-manager", "keep-alive"] }
 rmp-serde = "1.3.0"
 serde = { workspace = true }
 tower-sesh-core = { version = "=0.1.0-alpha.3", path = "../tower-sesh-core" }

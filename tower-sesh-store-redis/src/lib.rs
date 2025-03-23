@@ -219,8 +219,10 @@ macro_rules! ensure_redis_timestamp {
     };
 }
 
-impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where
-    T: 'static + Send + Sync + Serialize + DeserializeOwned
+impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C>
+where
+    T: 'static + Send + Sync + Serialize + DeserializeOwned,
+    C::Connection: Sync,
 {
 }
 
@@ -228,6 +230,7 @@ impl<T, C: GetConnection> SessionStore<T> for RedisStore<T, C> where
 impl<T, C: GetConnection> SessionStoreImpl<T> for RedisStore<T, C>
 where
     T: 'static + Send + Sync + Serialize + DeserializeOwned,
+    C::Connection: Sync,
 {
     async fn create(&self, data: &T, ttl: Ttl) -> Result<SessionKey> {
         let mut conn = self.connection().await?;
