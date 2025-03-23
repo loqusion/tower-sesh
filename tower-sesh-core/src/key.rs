@@ -163,6 +163,32 @@ mod test {
         }
     }
 
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct Base64Char(char);
+
+    impl Arbitrary for Base64Char {
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            let c = *g
+                .choose(base64::alphabet::URL_SAFE.as_str().as_bytes())
+                .unwrap();
+            Base64Char(char::from(c))
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq)]
+    struct EncodedSessionKeyTooSmall(String);
+
+    impl Arbitrary for EncodedSessionKeyTooSmall {
+        fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+            const BASE64_ENCODED_LEN_MULTIPLE: usize = 4;
+            let length = (usize::arbitrary(g)
+                % (SessionKey::ENCODED_LEN / BASE64_ENCODED_LEN_MULTIPLE))
+                * BASE64_ENCODED_LEN_MULTIPLE;
+            let s = (0..length).map(|_| Base64Char::arbitrary(g).0).collect();
+            Self(s)
+        }
+    }
+
     #[derive(Clone, Debug, PartialEq)]
     struct CookieKey(cookie::Key);
 
@@ -234,6 +260,18 @@ mod test {
             let encoded = key.encode();
             let decoded = SessionKey::decode(&encoded).unwrap();
             key == decoded
+        }
+
+        fn parse_error_decode_invalid_length(encoded: EncodedSessionKeyTooSmall) -> bool {
+            let decode_err = SessionKey::decode(encoded.0);
+            decode_err.is_err_and(|err| match err {
+                DecodeSessionKeyError::Base64(base64::DecodeSliceError::DecodeError(
+                    base64::DecodeError::InvalidLength(_),
+                )) => {
+                    true
+                },
+                err => panic!("error: {err:?}")
+            })
         }
 
         fn parsable_in_cookie_header_value_plain_stripped(
