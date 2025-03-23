@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Check
-        run: cargo check --workspace --tests --benches
+        run: cargo check --workspace --all-targets
 
   style:
     name: cargo fmt
