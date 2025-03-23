@@ -311,7 +311,7 @@ impl<T> Inner<T> {
                 Ok(SyncAction::None)
             }
             (Taken, _, _) => {
-                unreachable!("`Session::sync` called in `Taken` state. This is a bug.")
+                unreachable!("`sync` called in `Taken` state. This is a bug.")
             }
         }
     }
