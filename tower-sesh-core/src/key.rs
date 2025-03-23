@@ -255,9 +255,9 @@ mod test {
         }
 
         fn parsable_in_cookie_header_value_encrypted_stripped(
-            input: (SessionKey, CookieKey)
+            session_key: SessionKey,
+            master_key: CookieKey
         ) -> Result<(), Box<dyn std::error::Error>> {
-            let (session_key, master_key) = input;
             let cookie = cookie_from_key_encrypted(session_key, master_key.into());
             http::HeaderValue::try_from(cookie.stripped().to_string())
                 .and(Ok(()))
@@ -265,9 +265,9 @@ mod test {
         }
 
         fn parsable_in_cookie_header_value_encrypted_encoded(
-            input: (SessionKey, CookieKey)
+            session_key: SessionKey,
+            master_key: CookieKey
         ) -> Result<(), Box<dyn std::error::Error>> {
-            let (session_key, master_key) = input;
             let cookie = cookie_from_key_encrypted(session_key, master_key.into());
             http::HeaderValue::try_from(cookie.encoded().to_string())
                 .and(Ok(()))
@@ -275,9 +275,9 @@ mod test {
         }
 
         fn parsable_in_cookie_header_value_signed_stripped(
-            input: (SessionKey, CookieKey)
+            session_key: SessionKey,
+            master_key: CookieKey
         ) -> Result<(), Box<dyn std::error::Error>> {
-            let (session_key, master_key) = input;
             let cookie = cookie_from_key_signed(session_key, master_key.into());
             http::HeaderValue::try_from(cookie.stripped().to_string())
                 .and(Ok(()))
@@ -285,9 +285,9 @@ mod test {
         }
 
         fn parsable_in_cookie_header_value_signed_encoded(
-            input: (SessionKey, CookieKey)
+            session_key: SessionKey,
+            master_key: CookieKey
         ) -> Result<(), Box<dyn std::error::Error>> {
-            let (session_key, master_key) = input;
             let cookie = cookie_from_key_signed(session_key, master_key.into());
             http::HeaderValue::try_from(cookie.encoded().to_string())
                 .and(Ok(()))
