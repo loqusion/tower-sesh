@@ -317,9 +317,12 @@ impl<T, Store: SessionStore<T>, C: CookieSecurity> SessionLayer<T, Store, C> {
 
     /// Sets the [`SameSite`] attribute in the `Set-Cookie` response header.
     ///
+    /// For recommendations on setting this attribute, see this [IETF draft].
+    ///
     /// Default is [`SameSite::Strict`].
     ///
     /// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+    /// [IETF draft]: https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-20#name-samesite-cookies
     ///
     /// # Examples
     ///
@@ -675,8 +678,12 @@ impl fmt::Display for KeyError {
 /// **Note:** This cookie attribute is an [HTTP draft]! Its meaning and
 /// definition are subject to change.
 ///
+/// See also: [Security Considerations].
+///
 /// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
 /// [HTTP draft]: https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-20#name-the-samesite-attribute
+/// [Security Considerations]:
+///     https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-20#name-samesite-cookies
 // NOTE: `Copy` should not be implemented in case web standards change in the future.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
