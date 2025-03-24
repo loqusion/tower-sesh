@@ -13,6 +13,11 @@ use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
 use tower_sesh_core::{store::SessionStoreImpl, SessionKey, Ttl};
 
+fn ttl() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    now + Duration::from_secs(10 * 60)
+}
+
 fn jar_from_response<B>(
     res: &Response<B>,
 ) -> Result<CookieJar, Box<dyn std::error::Error + Send + Sync + 'static>> {
@@ -41,6 +46,18 @@ where
     HeaderValue::try_from(value)
 }
 
+#[test]
+#[should_panic = "not implemented"]
+fn plain_to_private() {
+    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).private();
+}
+
+#[test]
+#[should_panic = "not implemented"]
+fn plain_to_signed() {
+    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).signed();
+}
+
 #[tokio::test]
 async fn option_cookie_name() {
     async fn handler(session: Session<()>) {
@@ -57,6 +74,12 @@ async fn option_cookie_name() {
     let jar = jar_from_response(&res).unwrap();
     assert!(jar.get("hello").is_some());
     assert!(jar.iter().collect::<Vec<_>>().len() == 1);
+}
+
+#[test]
+#[should_panic = "invalid `cookie_name` value"]
+fn invalid_cookie_name() {
+    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).cookie_name("\n");
 }
 
 #[tokio::test]
@@ -213,24 +236,6 @@ async fn multiple_session_layers() {
     let _res = app.oneshot(req).await.unwrap();
 }
 
-#[test]
-#[should_panic = "invalid `cookie_name` value"]
-fn invalid_cookie_name() {
-    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).cookie_name("\n");
-}
-
-#[test]
-#[should_panic = "not implemented"]
-fn plain_to_private() {
-    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).private();
-}
-
-#[test]
-#[should_panic = "not implemented"]
-fn plain_to_signed() {
-    SessionLayer::plain(Arc::new(MemoryStore::<()>::new())).signed();
-}
-
 #[tokio::test]
 async fn preserves_existing_set_cookie() {
     async fn handler(session: Session<()>) -> impl IntoResponse {
@@ -354,9 +359,4 @@ async fn extracts_cookie_from_many_headers() {
     }
 
     assert_eq!(HANDLER_RUN_COUNT.load(SeqCst), 3);
-}
-
-fn ttl() -> Ttl {
-    let now = Ttl::now_local().unwrap();
-    now + Duration::from_secs(10 * 60)
 }

@@ -25,12 +25,6 @@ async fn session_extractor_without_layer() {
     let _res = app.oneshot(req).await.unwrap();
 }
 
-fn serde_err_store<T>() -> Arc<ErrStore<T>> {
-    Arc::new(ErrStore::new(|| {
-        store::Error::serde("`ErrStore` always returns an error")
-    }))
-}
-
 #[tokio::test]
 async fn ignores_deserialization_error() {
     static HANDLER_RUN_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -40,9 +34,12 @@ async fn ignores_deserialization_error() {
         HANDLER_RUN_COUNT.fetch_add(1, SeqCst);
     }
 
+    let store = Arc::new(ErrStore::<()>::new(|| {
+        store::Error::serde("`ErrStore` always returns an error")
+    }));
     let app = Router::new()
         .route("/", routing::get(handler))
-        .layer(SessionLayer::plain(serde_err_store::<()>()).cookie_name("id"));
+        .layer(SessionLayer::plain(store).cookie_name("id"));
 
     let req = Request::builder()
         .uri("/")
