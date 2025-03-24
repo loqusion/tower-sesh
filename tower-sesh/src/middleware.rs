@@ -676,7 +676,7 @@ impl fmt::Display for KeyError {
 /// definition are subject to change.
 ///
 /// [`SameSite`]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
-/// [HTTP draft]: https://tools.ietf.org/html/draft-west-cookie-incrementalism-00
+/// [HTTP draft]: https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-20#name-the-samesite-attribute
 // NOTE: `Copy` should not be implemented in case web standards change in the future.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[non_exhaustive]
