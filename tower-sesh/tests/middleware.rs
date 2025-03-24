@@ -5,17 +5,22 @@ use std::sync::{
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
 use cookie::{Cookie, CookieJar};
-use http::{header, HeaderValue, Request, Response, StatusCode};
+use http::{header, HeaderValue, Method, Request, Response, StatusCode};
+use rand::SeedableRng;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
-use tower_sesh_core::{store::SessionStoreImpl, SessionKey};
+use tower_sesh_core::{
+    store::{SessionStoreImpl, SessionStoreRng},
+    SessionKey,
+};
+use tower_sesh_test::{support::SessionData, TestRng};
 
 mod support;
 use support::{ttl, ArbitraryKey, ArbitrarySessionKey};
 
 fn jar_from_response<B>(
     res: &Response<B>,
-) -> Result<CookieJar, Box<dyn std::error::Error + Send + Sync + 'static>> {
+) -> Result<CookieJar, Box<dyn std::error::Error + 'static>> {
     res.headers()
         .get_all(header::SET_COOKIE)
         .into_iter()
@@ -87,6 +92,67 @@ fn private_or_signed_cookie_no_load() {
             .uri("/")
             .header(header::COOKIE, format!("id={}", session_key.encode()))
             .body(Body::empty())?);
+
+        Ok(())
+    }
+
+    quickcheck::quickcheck(check as fn(_, _, _) -> _);
+}
+
+#[test]
+fn private_or_signed_cookie_create_and_load() {
+    #[tokio::main(flavor = "current_thread")]
+    async fn check(
+        ArbitraryKey(key): ArbitraryKey,
+        seed: u64,
+        is_private: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        async fn session_create(session: Session<SessionData>) -> impl IntoResponse {
+            assert!(session.get().is_none());
+            session.insert(SessionData::sample());
+        }
+
+        async fn session_load(session: Session<SessionData>) -> impl IntoResponse {
+            if session.get().is_some() {
+                StatusCode::OK
+            } else {
+                StatusCode::UNAUTHORIZED
+            }
+        }
+
+        let rng = TestRng::seed_from_u64(seed);
+        let mut store = MemoryStore::<SessionData>::new();
+        store.rng(rng);
+
+        let session_layer = SessionLayer::new(store.into(), key).cookie_name("id");
+        let app = Router::new()
+            .route("/create", routing::post(session_create))
+            .route("/load", routing::get(session_load));
+        let app = if is_private {
+            app.layer(session_layer.private())
+        } else {
+            app.layer(session_layer.signed())
+        };
+
+        let req = Request::builder()
+            .uri("/create")
+            .method(Method::POST)
+            .body(Body::empty())?;
+        let res = app.clone().oneshot(req).await?;
+        let jar = jar_from_response(&res)?;
+
+        let req = Request::builder()
+            .uri("/load")
+            .method(Method::GET)
+            .header(
+                header::COOKIE,
+                format!("id={}", jar.get("id").unwrap().value()),
+            )
+            .body(Body::empty())?;
+        let res = app.clone().oneshot(req).await?;
+        if !res.status().is_success() {
+            return Err("assertion in handler failed".into());
+        }
 
         Ok(())
     }
