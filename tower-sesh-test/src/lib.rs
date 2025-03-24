@@ -2,9 +2,10 @@ use std::time::Duration;
 
 use futures_util::{stream, StreamExt, TryStreamExt};
 use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng as TestRng;
 use time::UtcDateTime;
 use tower_sesh_core::{store::SessionStoreRng, SessionKey, SessionStore, Ttl};
+
+pub use rand_chacha::ChaCha20Rng as TestRng;
 
 pub mod support;
 use support::SessionData;
