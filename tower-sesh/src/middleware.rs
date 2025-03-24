@@ -531,11 +531,11 @@ fn session_cookie_from_request_headers(
 
             // `cookie_controller` handles decryption/authentication if the
             // user has it enabled
-            let cookie = cookie_controller
-                .get(&jar, name)
-                .expect("cookie added to jar should have the correct name");
-
-            return Some(cookie.into_owned());
+            if let Some(cookie) = cookie_controller.get(&jar, name) {
+                return Some(cookie.into_owned());
+            } else {
+                break;
+            }
         }
     }
 
