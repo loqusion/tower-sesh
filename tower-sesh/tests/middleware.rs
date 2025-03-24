@@ -46,6 +46,7 @@ where
     HeaderValue::try_from(value)
 }
 
+#[cfg_attr(miri, ignore)]
 #[test]
 fn private_or_signed_cookie_no_load() {
     #[tokio::main(flavor = "current_thread")]
@@ -99,6 +100,7 @@ fn private_or_signed_cookie_no_load() {
     quickcheck::quickcheck(check as fn(_, _, _) -> _);
 }
 
+#[cfg_attr(miri, ignore)]
 #[test]
 fn private_or_signed_cookie_create_and_load() {
     #[tokio::main(flavor = "current_thread")]

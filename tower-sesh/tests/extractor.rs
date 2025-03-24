@@ -55,6 +55,7 @@ async fn ignores_deserialization_error() {
     assert_eq!(HANDLER_RUN_COUNT.load(SeqCst), 1);
 }
 
+#[cfg_attr(miri, ignore)]
 #[test]
 fn empty_session_if_session_key_parsing_fails() {
     #[tokio::main(flavor = "current_thread")]
