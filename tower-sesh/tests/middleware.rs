@@ -241,17 +241,7 @@ async fn preserves_existing_set_cookie() {
     async fn handler(session: Session<()>) -> impl IntoResponse {
         session.insert(());
 
-        axum::response::Response::builder()
-            .header(
-                header::SET_COOKIE,
-                Cookie::new("hello", "world")
-                    .encoded()
-                    .to_string()
-                    .parse::<HeaderValue>()
-                    .unwrap(),
-            )
-            .body(Body::empty())
-            .unwrap()
+        [(header::SET_COOKIE, "hello=world")]
     }
 
     let app = Router::new()
