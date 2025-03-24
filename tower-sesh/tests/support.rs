@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use parking_lot::Mutex;
 use quickcheck::Arbitrary;
 use rand::Rng;
+use tower_sesh::middleware::Key;
 use tower_sesh_core::{
     store::{self, Result, SessionStoreImpl},
     Record, SessionKey, SessionStore, Ttl,
@@ -31,6 +32,25 @@ impl Arbitrary for ArbitrarySessionKey {
     fn arbitrary(g: &mut quickcheck::Gen) -> Self {
         let inner = SessionKey::from(NonZeroU128::arbitrary(g));
         Self(inner)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ArbitraryKey(pub Key);
+
+impl Arbitrary for ArbitraryKey {
+    fn arbitrary(g: &mut quickcheck::Gen) -> Self {
+        let inner = {
+            let mut buf = [0u8; Key::LEN];
+            for (i, num) in std::iter::repeat_with(|| <u8 as quickcheck::Arbitrary>::arbitrary(g))
+                .take(Key::LEN)
+                .enumerate()
+            {
+                buf[i] = num;
+            }
+            buf
+        };
+        ArbitraryKey(Key::from(inner))
     }
 }
 

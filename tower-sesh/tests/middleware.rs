@@ -5,13 +5,13 @@ use std::sync::{
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
 use cookie::{Cookie, CookieJar};
-use http::{header, HeaderValue, Request, Response};
+use http::{header, HeaderValue, Request, Response, StatusCode};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
 use tower_sesh_core::{store::SessionStoreImpl, SessionKey};
 
 mod support;
-use support::ttl;
+use support::{ttl, ArbitraryKey, ArbitrarySessionKey};
 
 fn jar_from_response<B>(
     res: &Response<B>,
@@ -39,6 +39,59 @@ where
         .collect::<Vec<_>>()
         .join("; ");
     HeaderValue::try_from(value)
+}
+
+#[test]
+fn private_or_signed_cookie_no_load() {
+    #[tokio::main(flavor = "current_thread")]
+    async fn check(
+        ArbitrarySessionKey(session_key): ArbitrarySessionKey,
+        ArbitraryKey(key): ArbitraryKey,
+        is_private: bool,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        async fn handler(session: Session<()>) -> impl IntoResponse {
+            if session.get().is_none() {
+                StatusCode::OK
+            } else {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        }
+
+        let store = MemoryStore::<()>::new();
+        store.update(&session_key, &(), ttl()).await?;
+
+        let session_layer = SessionLayer::new(store.into(), key).cookie_name("id");
+        let app = Router::new().route("/", routing::get(handler));
+        let app = if is_private {
+            app.layer(session_layer.private())
+        } else {
+            app.layer(session_layer.signed())
+        };
+
+        macro_rules! try_request {
+            ($request:expr) => {{
+                let req: Request<_> = $request;
+                let res = app.clone().oneshot(req).await?;
+                if !res.status().is_success() {
+                    return Err("assertion in handler failed".into());
+                }
+            }};
+        }
+
+        try_request!(Request::builder().uri("/").body(Body::empty())?);
+        try_request!(Request::builder()
+            .uri("/")
+            .header(header::COOKIE, "id=!?!?!?!?!?!?")
+            .body(Body::empty())?);
+        try_request!(Request::builder()
+            .uri("/")
+            .header(header::COOKIE, format!("id={}", session_key.encode()))
+            .body(Body::empty())?);
+
+        Ok(())
+    }
+
+    quickcheck::quickcheck(check as fn(_, _, _) -> _);
 }
 
 #[test]
