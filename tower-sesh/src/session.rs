@@ -73,6 +73,139 @@ pub(crate) enum SyncAction {
 }
 
 impl<T> Session<T> {
+    /// # Examples
+    ///
+    /// ```
+    /// use axum::{extract::Path, response::IntoResponse};
+    /// use tower_sesh::Session;
+    /// # use std::time::Duration;
+    /// # use axum::{body::Body, routing::get, Router};
+    /// # use http::{header, Request, StatusCode};
+    /// # use tower::ServiceExt;
+    /// # use tower_sesh::{store::MemoryStore, SessionLayer};
+    /// # use tower_sesh_core::{store::SessionStoreImpl, SessionKey, Ttl};
+    ///
+    /// # #[derive(Clone, Debug)]
+    /// # struct SessionData {
+    /// #     user_id: u64,
+    /// # }
+    /// #
+    /// async fn sensitive(
+    ///     Path(user_id): Path<u64>,
+    ///     session: Session<SessionData>,
+    /// ) -> impl IntoResponse {
+    ///     if session
+    ///         .get()
+    ///         .as_ref()
+    ///         .is_some_and(|s| s.user_id == user_id)
+    ///     {
+    ///         // authorized
+    ///         # StatusCode::OK
+    ///     } else {
+    ///         // unauthorized
+    ///         # StatusCode::FORBIDDEN
+    ///     }
+    /// }
+    /// #
+    /// # tokio_test::block_on(async {
+    /// #
+    /// # let session_key = SessionKey::try_from(1)?;
+    /// # let store = MemoryStore::<SessionData>::new();
+    /// # store.update(
+    /// #     &session_key,
+    /// #     &SessionData { user_id: 1234 },
+    /// #     Ttl::now_local().unwrap() + Duration::from_secs(10 * 60),
+    /// # ).await?;
+    /// # let session_layer = SessionLayer::plain(store.into())
+    /// #     .cookie_name("id");
+    /// # let app = Router::new()
+    /// #     .route("/user/{user_id}/sensitive", get(sensitive))
+    /// #     .layer(session_layer);
+    /// #
+    /// # let req = Request::builder()
+    /// #     .uri("/user/1234/sensitive")
+    /// #     .header(
+    /// #         header::COOKIE,
+    /// #         format!("id={}", session_key.encode()),
+    /// #     )
+    /// #     .body(Body::empty())?;
+    /// # let res = app.clone().oneshot(req).await?;
+    /// # assert!(res.status().is_success());
+    /// #
+    /// # let req = Request::builder()
+    /// #     .uri("/user/1337/sensitive")
+    /// #     .header(
+    /// #         header::COOKIE,
+    /// #         format!("id={}", session_key.encode()),
+    /// #     )
+    /// #     .body(Body::empty())?;
+    /// # let res = app.clone().oneshot(req).await?;
+    /// # assert!(!res.status().is_success());
+    /// #
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
+    /// # }).unwrap();
+    /// ```
+    ///
+    /// ```
+    /// use axum::response::IntoResponse;
+    /// use tower_sesh::Session;
+    /// # use std::time::Duration;
+    /// # use axum::{body::Body, routing::patch, Router};
+    /// # use http::{header, Method, Request, StatusCode};
+    /// # use tower::ServiceExt;
+    /// # use tower_sesh::{store::MemoryStore, SessionLayer};
+    /// # use tower_sesh_core::{store::SessionStoreImpl, SessionKey, Ttl};
+    ///
+    /// # #[derive(Clone, Debug)]
+    /// # struct SessionData {
+    /// #     theme: Theme,
+    /// # }
+    /// #
+    /// # #[derive(Clone, Copy, Debug)]
+    /// # enum Theme {
+    /// #     Light,
+    /// #     Dark,
+    /// # }
+    /// #
+    /// async fn change_theme(session: Session<SessionData>) -> impl IntoResponse {
+    ///     if let Some(data) = session.get().as_mut() {
+    ///         data.theme = Theme::Light;
+    ///         # StatusCode::OK
+    ///     }
+    ///     # else {
+    ///         # StatusCode::FORBIDDEN
+    ///     # }
+    /// }
+    /// #
+    /// # tokio_test::block_on(async {
+    /// #
+    /// # let session_key = SessionKey::try_from(1)?;
+    /// # let store = MemoryStore::<SessionData>::new();
+    /// # store.update(
+    /// #     &session_key,
+    /// #     &SessionData { theme: Theme::Dark },
+    /// #     Ttl::now_local().unwrap() + Duration::from_secs(10 * 60),
+    /// # ).await?;
+    /// # let session_layer = SessionLayer::plain(store.into())
+    /// #     .cookie_name("id");
+    /// # let app = Router::new()
+    /// #     .route("/user/set-theme", patch(change_theme))
+    /// #     .layer(session_layer);
+    /// #
+    /// # let req = Request::builder()
+    /// #     .uri("/user/set-theme")
+    /// #     .method(Method::PATCH)
+    /// #     .header(
+    /// #         header::COOKIE,
+    /// #         format!("id={}", session_key.encode()),
+    /// #     )
+    /// #     .body(Body::empty())?;
+    /// # let res = app.clone().oneshot(req).await?;
+    /// # assert!(res.status().is_success());
+    /// #
+    /// # Ok::<_, Box<dyn std::error::Error>>(())
+    /// # }).unwrap();
+    /// ```
     #[inline]
     #[must_use]
     pub fn get(&self) -> OptionSessionGuard<'_, T> {
