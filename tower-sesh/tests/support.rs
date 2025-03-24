@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use std::{collections::HashMap, fmt, iter, marker::PhantomData, num::NonZeroU128, sync::Arc};
+use std::{
+    collections::HashMap, fmt, iter, marker::PhantomData, num::NonZeroU128, sync::Arc,
+    time::Duration,
+};
 
 use async_trait::async_trait;
 use parking_lot::Mutex;
@@ -10,6 +13,12 @@ use tower_sesh_core::{
     store::{self, Result, SessionStoreImpl},
     Record, SessionKey, SessionStore, Ttl,
 };
+
+/// Arbitrary TTL far into the future.
+pub fn ttl() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    now + Duration::from_secs(10 * 60)
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // `Arbitrary` implementations

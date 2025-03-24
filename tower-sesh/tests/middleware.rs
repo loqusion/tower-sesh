@@ -1,9 +1,6 @@
-use std::{
-    sync::{
-        atomic::{AtomicUsize, Ordering::SeqCst},
-        Arc,
-    },
-    time::Duration,
+use std::sync::{
+    atomic::{AtomicUsize, Ordering::SeqCst},
+    Arc,
 };
 
 use axum::{body::Body, response::IntoResponse, routing, Router};
@@ -11,12 +8,10 @@ use cookie::{Cookie, CookieJar};
 use http::{header, HeaderValue, Request, Response};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_sesh::{store::MemoryStore, Session, SessionLayer};
-use tower_sesh_core::{store::SessionStoreImpl, SessionKey, Ttl};
+use tower_sesh_core::{store::SessionStoreImpl, SessionKey};
 
-fn ttl() -> Ttl {
-    let now = Ttl::now_local().unwrap();
-    now + Duration::from_secs(10 * 60)
-}
+mod support;
+use support::ttl;
 
 fn jar_from_response<B>(
     res: &Response<B>,
