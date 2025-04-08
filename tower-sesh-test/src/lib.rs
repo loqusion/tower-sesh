@@ -152,6 +152,10 @@ doc! {macro_rules! test_suite {
                 loading_an_expired_session_returns_none_update_nonexisting
                 loading_an_expired_session_returns_none_update_existing
                 loading_an_expired_session_returns_none_update_ttl
+                loading_session_after_create_with_ttl_in_past
+                loading_session_after_update_nonexisting_with_ttl_in_past
+                loading_session_after_update_existing_with_ttl_in_past
+                loading_session_after_update_ttl_with_ttl_in_past
                 delete_after_create
                 delete_after_update
                 delete_does_not_error_for_missing_entry
@@ -212,6 +216,11 @@ fn ttl_strict_of(ttl: Ttl) -> Ttl {
         Duration::from_millis(1500)
     };
     ttl + STRICT_OFFSET
+}
+
+fn ttl_expired() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    now - Duration::from_secs(1)
 }
 
 trait TtlExt {
@@ -425,6 +434,66 @@ pub async fn test_loading_an_expired_session_returns_none_update_ttl(
         .unwrap();
 
     tokio::time::sleep(Duration::from_millis(90)).await;
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_session_after_create_with_ttl_in_past(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(1710010949);
+    store.rng(rng);
+
+    let session_key = store
+        .create(&SessionData::sample(), ttl_expired())
+        .await
+        .unwrap();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_session_after_update_nonexisting_with_ttl_in_past(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let mut rng = TestRng::seed_from_u64(1710010949);
+    let session_key = rng.random::<SessionKey>();
+    store.rng(rng);
+
+    store
+        .update(&session_key, &SessionData::sample(), ttl_expired())
+        .await
+        .unwrap();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_session_after_update_existing_with_ttl_in_past(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(1710010949);
+    store.rng(rng);
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
+
+    store
+        .update(&session_key, &SessionData::sample(), ttl_expired())
+        .await
+        .unwrap();
+
+    let record = store.load(&session_key).await.unwrap();
+    assert!(record.is_none());
+}
+
+pub async fn test_loading_session_after_update_ttl_with_ttl_in_past(
+    mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+) {
+    let rng = TestRng::seed_from_u64(1710010949);
+    store.rng(rng);
+    let session_key = store.create(&SessionData::sample(), ttl()).await.unwrap();
+
+    store.update_ttl(&session_key, ttl_expired()).await.unwrap();
 
     let record = store.load(&session_key).await.unwrap();
     assert!(record.is_none());
