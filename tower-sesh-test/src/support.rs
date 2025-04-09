@@ -135,11 +135,7 @@ impl SessionData {
 /// 10 minutes.)
 pub(crate) fn ttl() -> Ttl {
     let now = Ttl::now_local().unwrap();
-    ttl_of(now)
-}
-
-fn ttl_of(ttl: Ttl) -> Ttl {
-    ttl + Duration::from_secs(10 * 60)
+    now + Duration::from_secs(10 * 60)
 }
 
 /// Returns a `Ttl` that is very close to expiring.
