@@ -1,6 +1,11 @@
+use std::time::Duration;
+
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
-use time::{Date, Month, OffsetDateTime, Time};
+use time::{Date, Month, OffsetDateTime, Time, UtcDateTime};
+use tower_sesh_core::Ttl;
+
+pub use rand_chacha::ChaCha20Rng as TestRng;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
@@ -121,5 +126,50 @@ impl SessionData {
                 },
             },
         }
+    }
+}
+
+pub(crate) fn ttl() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    ttl_of(now)
+}
+
+fn ttl_of(ttl: Ttl) -> Ttl {
+    ttl + Duration::from_secs(10 * 60)
+}
+
+pub(crate) fn ttl_strict() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    ttl_strict_of(now)
+}
+
+pub(crate) fn ttl_strict_of(ttl: Ttl) -> Ttl {
+    // miri requires a more lenient TTL due to its slower execution speed
+    const STRICT_OFFSET: Duration = if cfg!(miri) {
+        Duration::from_secs(20)
+    } else {
+        // NOTE: This threshold may cause spurious test failures on some
+        // systems. If that is the case, try increasing this value.
+        Duration::from_millis(1500)
+    };
+    ttl + STRICT_OFFSET
+}
+
+pub(crate) fn ttl_expired() -> Ttl {
+    let now = Ttl::now_local().unwrap();
+    now - Duration::from_secs(1)
+}
+
+pub(crate) trait TtlExt {
+    type Normalized;
+
+    fn normalize(self) -> Self::Normalized;
+}
+
+impl TtlExt for Ttl {
+    type Normalized = UtcDateTime;
+
+    fn normalize(self) -> Self::Normalized {
+        self.replace_nanosecond(0).unwrap().to_utc()
     }
 }
