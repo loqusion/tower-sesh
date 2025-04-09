@@ -534,6 +534,7 @@ fn session_cookie_from_request_headers(
             if let Some(cookie) = cookie_controller.get(&jar, name) {
                 return Some(cookie.into_owned());
             } else {
+                // ignore decryption/authentication failure
                 break;
             }
         }
