@@ -129,6 +129,10 @@ impl SessionData {
     }
 }
 
+/// Returns a `Ttl` that will not expire.
+///
+/// (Technically, the returned `Ttl` will expire if a test runs for longer than
+/// 10 minutes.)
 pub(crate) fn ttl() -> Ttl {
     let now = Ttl::now_local().unwrap();
     ttl_of(now)
@@ -138,11 +142,13 @@ fn ttl_of(ttl: Ttl) -> Ttl {
     ttl + Duration::from_secs(10 * 60)
 }
 
+/// Returns a `Ttl` that is very close to expiring.
 pub(crate) fn ttl_strict() -> Ttl {
     let now = Ttl::now_local().unwrap();
     ttl_strict_of(now)
 }
 
+/// Returns a `Ttl` that is very close to expiring, relative to `ttl`.
 pub(crate) fn ttl_strict_of(ttl: Ttl) -> Ttl {
     // miri requires a more lenient TTL due to its slower execution speed
     const STRICT_OFFSET: Duration = if cfg!(miri) {
@@ -155,11 +161,13 @@ pub(crate) fn ttl_strict_of(ttl: Ttl) -> Ttl {
     ttl + STRICT_OFFSET
 }
 
+/// Returns a `Ttl` that has already expired.
 pub(crate) fn ttl_expired() -> Ttl {
     let now = Ttl::now_local().unwrap();
     now - Duration::from_secs(1)
 }
 
+/// A trait implementing test utility functions for [`Ttl`].
 pub(crate) trait TtlExt {
     type Normalized;
 
@@ -169,6 +177,9 @@ pub(crate) trait TtlExt {
 impl TtlExt for Ttl {
     type Normalized = UtcDateTime;
 
+    /// Returns a normalized form of a [`Ttl`].
+    ///
+    /// This truncates the nanosecond portion of the `Ttl` and converts to UTC.
     fn normalize(self) -> Self::Normalized {
         self.replace_nanosecond(0).unwrap().to_utc()
     }
