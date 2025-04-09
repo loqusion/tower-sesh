@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use time::{Date, Month, OffsetDateTime, Time, UtcDateTime};
 use tower_sesh_core::Ttl;
 
-pub use rand_chacha::ChaCha20Rng as TestRng;
+/// A [reproducible], cryptographically secure PRNG suitable for use in testing.
+///
+/// [reproducible]: https://rust-random.github.io/book/crate-reprod.html
+pub type TestRng = rand_chacha::ChaCha20Rng;
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[non_exhaustive]
