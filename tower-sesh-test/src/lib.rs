@@ -1,3 +1,7 @@
+//! Test suite and utilities for `tower-sesh`.
+//!
+//! See [`test_suite`] for more details.
+
 pub mod suite;
 pub use suite::*;
 pub mod support;
