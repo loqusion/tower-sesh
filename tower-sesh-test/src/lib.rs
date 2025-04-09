@@ -134,12 +134,80 @@ doc! {macro_rules! test_suite {
     (store: $store:expr $(,)?) => { unimplemented!() }
 }}
 
+// To add a test, write a test function in one of `suite`'s submodules meeting
+// all of the following requirements:
+//
+// - The test function's name must begin with `test_`.
+//
+// - The test function must take a single argument `store` which implements
+//   `SessionStore<T>` (for some specific `T`) and `SessionStoreRng<TestRng>`.
+//   `T` must satisfy the type constraints for all store implementations —
+//   in general, it should implement `Clone`, `Serialize`, and `Deserialize`.
+//   Usually, you should use `SessionData` defined in `support`.
+//
+// - The test function must return a type which implements `Future`, e.g. by
+//   using the `async` keyword in front of `fn`. The value returned from the
+//   function is `.await`ed then discarded; note that an `Err` returned from a
+//   function will cause the test to falsely indicate success.
+//
+// - The test function must pass a `TestRng` to `store` with the
+//   `SessionStoreRng::rng()` method before calling any other methods
+//   on `store`. `TestRng` should be instantiated with a unique, fixed seed
+//   using the `SeedableRng::seed_from_u64()` method. To acquire a seed, Bash
+//   and Zsh users can run `echo $RANDOM`; Fish users can run `random` (run the
+//   command more than once and append the two numbers to reduce the risk of
+//   collision).
+//
+// Then, add the name component following `test_` to the macro transcriber in
+// the first macro rule, under the comment labeling the test module. For
+// example, if you added a test function named `test_does_a_thing` to the
+// `store` module, then `does_a_thing` should be added under the `// store`
+// comment.
+//
+// Test names should be sorted in the order their respective functions appear in
+// the module they're defined in.
+//
+// # Example
+//
+// `store.rs`
+//
+// ```
+// use rand::SeedableRng;
+// use tower_sesh_core::{store::SessionStoreRng, SessionStore};
+// use crate::support::{SessionData, TestRng};
+//
+// pub async fn test_does_a_thing(
+//     mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
+// ) {
+//     let rng = TestRng::seed_from_u64(1234567890);
+//     store.rng(rng);
+//
+//     // ...rest of test...
+// }
+// ```
+//
+// `lib.rs`
+//
+// ```not_rust
+// @impl $store => {
+//     // ...
+//
+//     // store
+//     // ...
+//     does_a_thing
+//     // ...
+//
+//     // ...
+// }
+// ```
 #[cfg(not(doc))]
 doc! {macro_rules! test_suite {
     (store : $store:expr $(,)?) => {
         $crate::test_suite! {
             @impl $store => {
                 smoke
+
+                // store
                 create_does_collision_resolution
                 loading_session_after_create
                 loading_session_after_update_nonexisting
