@@ -39,6 +39,10 @@ pub(crate) struct Inner<T> {
 /// `Changed` -> `Purged` | `Taken`
 /// `Purged` -> `Taken`
 ///
+/// State transitions should be performed with the methods [`Inner::renewed`],
+/// [`Inner::changed`], [`Inner::purged`], and [`Inner::take`] instead of
+/// directly assigning to `status`.
+///
 /// `Taken` means the session `Inner` fields have been `mem::replace`d; using
 /// any of the fields after a session is `Taken` is a bug.
 #[derive(Clone, Copy, Debug)]
