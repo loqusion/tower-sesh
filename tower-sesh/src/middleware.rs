@@ -489,7 +489,8 @@ where
             let mut response = fut.await?;
 
             if let Some(session) = session_handle.get() {
-                let sync_result = session.take().sync(store.as_ref()).await;
+                let session = session.take();
+                let sync_result = session.sync(store.as_ref()).await;
 
                 match sync_result {
                     Ok(SyncAction::Set(session_key)) => {
@@ -534,6 +535,7 @@ fn session_cookie_from_request_headers(
             if let Some(cookie) = cookie_controller.get(&jar, name) {
                 return Some(cookie.into_owned());
             } else {
+                // ignore decryption/authentication failure
                 break;
             }
         }

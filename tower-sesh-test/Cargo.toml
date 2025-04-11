@@ -7,6 +7,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+axum = { version = "0.8", default-features = false}
 futures-util = { workspace = true }
 paste = "1.0.15"
 rand = { workspace = true }
@@ -15,6 +16,7 @@ rust_decimal = "1.36.0"
 serde = { workspace = true }
 time = { version = "0.3.39", features = ["formatting", "parsing", "serde"] }
 tokio = "1.43.0"
+tower = "0.5.2"
 tower-sesh = { path = "../tower-sesh", features = ["test-util"] }
 tower-sesh-core = { path = "../tower-sesh-core" }
 tower-sesh-store-redis = { path = "../tower-sesh-store-redis" }

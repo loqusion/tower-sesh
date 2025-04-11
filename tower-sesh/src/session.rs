@@ -34,10 +34,14 @@ pub(crate) struct Inner<T> {
 ///
 /// Valid state transitions are as follows:
 ///
-/// `Unchanged` -> `Changed` | `Renewed` | `Purged`
-/// `Renewed` -> `Changed` | `Purged`
-/// `Changed` -> `Purged`
-/// `Purged`
+/// `Unchanged` -> `Renewed` | `Changed` | `Purged` | `Taken`
+/// `Renewed` -> `Changed` | `Purged` | `Taken`
+/// `Changed` -> `Purged` | `Taken`
+/// `Purged` -> `Taken`
+///
+/// State transitions should be performed with the methods [`Inner::renewed`],
+/// [`Inner::changed`], [`Inner::purged`], and [`Inner::take`] instead of
+/// directly assigning to `status`.
 ///
 /// `Taken` means the session `Inner` fields have been `mem::replace`d; using
 /// any of the fields after a session is `Taken` is a bug.
@@ -374,14 +378,16 @@ impl<T> Inner<T> {
 
     #[inline]
     fn changed(&mut self) {
-        if !matches!(self.status, Purged) {
+        if matches!(self.status, Unchanged | Renewed) {
             self.status = Changed;
         }
     }
 
     #[inline]
     fn purged(&mut self) {
-        self.status = Purged;
+        if matches!(self.status, Unchanged | Renewed | Changed) {
+            self.status = Purged;
+        }
     }
 
     #[inline]
