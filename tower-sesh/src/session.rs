@@ -374,14 +374,16 @@ impl<T> Inner<T> {
 
     #[inline]
     fn changed(&mut self) {
-        if !matches!(self.status, Purged) {
+        if matches!(self.status, Unchanged | Renewed) {
             self.status = Changed;
         }
     }
 
     #[inline]
     fn purged(&mut self) {
-        self.status = Purged;
+        if matches!(self.status, Unchanged | Renewed | Changed) {
+            self.status = Purged;
+        }
     }
 
     #[inline]
