@@ -34,10 +34,10 @@ pub(crate) struct Inner<T> {
 ///
 /// Valid state transitions are as follows:
 ///
-/// `Unchanged` -> `Changed` | `Renewed` | `Purged`
-/// `Renewed` -> `Changed` | `Purged`
-/// `Changed` -> `Purged`
-/// `Purged`
+/// `Unchanged` -> `Renewed` | `Changed` | `Purged` | `Taken`
+/// `Renewed` -> `Changed` | `Purged` | `Taken`
+/// `Changed` -> `Purged` | `Taken`
+/// `Purged` -> `Taken`
 ///
 /// `Taken` means the session `Inner` fields have been `mem::replace`d; using
 /// any of the fields after a session is `Taken` is a bug.
