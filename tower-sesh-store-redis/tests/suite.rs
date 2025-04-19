@@ -11,15 +11,15 @@ use xshell::{cmd, Shell};
 const REDIS_IMAGE: &str = "redis:7.4.2-alpine";
 const VALKEY_IMAGE: &str = "valkey/valkey:8.1.0-alpine";
 
-fn image_run(image: &str) -> anyhow::Result<DockerRedisGuard> {
+fn image_run(image: &str) -> anyhow::Result<DockerContainerGuard> {
     #[derive(Clone, Debug)]
     struct Cleanup<'a> {
         shell: &'a Shell,
         id: &'a str,
     }
     impl Cleanup<'_> {
-        fn with(self, port: u16) -> DockerRedisGuard {
-            let guard = DockerRedisGuard {
+        fn with(self, port: u16) -> DockerContainerGuard {
+            let guard = DockerContainerGuard {
                 shell: self.shell.to_owned(),
                 id: self.id.to_owned(),
                 port,
@@ -86,13 +86,13 @@ fn stop_and_remove(sh: &Shell, id: &str) {
 
 #[must_use = "if unused the docker container will immediately be stopped"]
 #[derive(Clone, Debug)]
-struct DockerRedisGuard {
+struct DockerContainerGuard {
     shell: Shell,
     id: String,
     port: u16,
 }
 
-impl Drop for DockerRedisGuard {
+impl Drop for DockerContainerGuard {
     fn drop(&mut self) {
         stop_and_remove(&self.shell, &self.id);
     }
