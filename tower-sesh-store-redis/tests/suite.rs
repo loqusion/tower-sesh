@@ -8,7 +8,7 @@ use tower_sesh_core::util::Report;
 use tower_sesh_store_redis::RedisStore;
 use xshell::{cmd, Shell};
 
-const REDIS_IMAGE: &str = "redis:7.4.1-alpine";
+const REDIS_IMAGE: &str = "redis:7.4.2-alpine";
 
 fn redis_init() -> anyhow::Result<DockerRedisGuard> {
     #[derive(Clone, Debug)]
