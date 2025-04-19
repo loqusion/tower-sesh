@@ -40,7 +40,7 @@ fn image_run(image: &str) -> anyhow::Result<DockerRedisGuard> {
 
     let run_opts = [
         "--detach",
-        "--publish-all", // publish redis's exposed port to a random host port
+        "--publish-all", // publish the exposed port to a random host port
         "--health-cmd",
         "redis-cli ping",
         "--health-interval",
