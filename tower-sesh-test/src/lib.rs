@@ -1,6 +1,134 @@
 //! Test suite and utilities for `tower-sesh`.
 //!
-//! See [`test_suite`] for more details.
+//! # Usage
+//!
+//! First, add `tower-sesh-test` to your `dev-dependencies`:
+//!
+//! ```toml
+//! [dev-dependencies]
+//! tower-sesh-test = "0.1"
+//! ```
+//!
+//! ## Using the test suite macro
+//!
+//! The [`test_suite!`] macro expands into multiple test items, and is used to
+//! run the test suite for a given store implementation. The expression
+//! following `store:` is used to initialize the store in the body of each test,
+//! and may include `.await`. The type of the expression must implement
+//! [`SessionStore`][session-store] and [`SessionStoreRng`][session-store-rng].
+//!
+//! [session-store]: tower_sesh_core::store#implementing-sessionstore
+//! [session-store-rng]: tower_sesh_core::store::SessionStoreRng
+//!
+//! For example, the following macro invocation:
+//!
+//! ```no_run
+//! use tower_sesh_test::test_suite;
+//! # use tower_sesh::store::MemoryStore;
+//!
+//! test_suite! {
+//!     store: MemoryStore::new(),
+//! }
+//! ```
+//!
+//! Expands to something like this:
+//!
+//! ```no_run
+//! # use tower_sesh::store::MemoryStore;
+//! #
+//! #[tokio::test]
+//! async fn create_does_collision_resolution() {
+//!     let store = MemoryStore::new();
+//!     tower_sesh_test::test_create_does_collision_resolution(store);
+//! }
+//!
+//! #[tokio::test]
+//! async fn loading_session_after_create() {
+//!     let store = MemoryStore::new();
+//!     tower_sesh_test::test_loading_session_after_create(store);
+//! }
+//!
+//! // ...rest of test suite...
+//! ```
+//!
+//! It is recommended to define two test suites per store: one using the store
+//! alone, and one with [`CachingStore`]:
+//!
+//! [`CachingStore`]: tower_sesh::store::CachingStore
+//!
+//! ```ignore
+//! mod my_store {
+//!     use tower_sesh_test::test_suite;
+//!
+//!     test_suite! {
+//!         store: MyStore::new(),
+//!     }
+//! }
+//!
+//! mod my_caching_store {
+//!     use tower_sesh::store::{CachingStore, MemoryStore};
+//!     use tower_sesh_test::test_suite;
+//!
+//!     test_suite! {
+//!         store: CachingStore::from_cache_and_store(
+//!             MemoryStore::new(),
+//!             MyStore::new(),
+//!         ),
+//!     }
+//! }
+//! ```
+//!
+//! ### Scope-based resource management
+//!
+//! Using `guard: <expr>`, you can define a resource tied to a test's lifetime.
+//! At the beginning of each test, `<expr>` is evaluated before the expression
+//! following `store:`, and its [`Drop`] implementation is run on the test's
+//! completion (regardless of success or failure). You can bind this expression
+//! to a variable with the syntax `guard: <guard_ident> = <expr>`; this variable
+//! can be used in the `store:` expression.
+//!
+//! For example:
+//!
+//! ```ignore
+//! test_suite! {
+//!     guard: file = tempfile().unwrap(),
+//!     store: MyStore::new(file),
+//! }
+//! ```
+//!
+//! For a more practical example, see [`tower-sesh-store-redis`'s test suite].
+//!
+//! ### Note on test determinism
+//!
+//! Ideally, each test should be isolated from every other test so that the
+//! success or failure of a test does not depend on execution order.
+//! For instance, [`tower-sesh-store-redis`'s test suite] uses
+//! [`guard:`](#scope-based-resource-management) to run a unique Redis process
+//! for every test.
+//!
+//! [`tower-sesh-store-redis`'s test suite]:
+//!     https://github.com/loqusion/tower-sesh/blob/main/tower-sesh-store-redis/tests/suite.rs
+//!
+//! In some cases, implementing perfect test isolation may be prohibitively
+//! expensive. To account for this possibility, `tower-sesh-test` implements a
+//! fallback layer of isolation: _session key uniqueness_. Each test
+//! deterministically generates unique session keys, ensuring that no two tests
+//! may access the same session concurrently.
+//!
+//! That being said, if you define two test suites like in the example above
+//! with `CachingStore`, they must never be run simultaneously if they run on
+//! the same database. Either run one database instance for each test suite, or
+//! use [conditional compilation] to run the test suites separately. You can
+//! find an example using conditional compilation
+//! [here][conditional-compilation-example]
+//! (also the [command][conditional-compilation-example-ci]).
+//!
+//! [conditional compilation]:
+//!     https://doc.rust-lang.org/rustc/command-line-arguments.html#--cfg-configure-the-compilation-environment
+//! [conditional-compilation-example]:
+//!     https://github.com/loqusion/tower-sesh/blob/69e9e1f477a9ae1312d168ddabf8c3932917e43e/tower-sesh-store-redis/tests/suite.rs
+//! [conditional-compilation-example-ci]:
+//!     https://github.com/loqusion/tower-sesh/blob/69e9e1f477a9ae1312d168ddabf8c3932917e43e/.github/workflows/CI.yml#L168
 
 pub mod suite;
 pub use suite::*;
@@ -17,113 +145,9 @@ macro_rules! doc {
     ($test_suite:item) => {
         /// The `tower-sesh` test suite, which is run for every store implementation.
         ///
-        /// This macro takes a single expression after `store: ` as an argument,
-        /// which is used to initialize a separate store instance for every test
-        /// function. The type of the expression must implement
-        /// [`SessionStore`][session-store] and [`SessionStoreRng`][session-store-rng].
+        /// See [the top-level documentation][lib] for more details.
         ///
-        /// [session-store]: tower_sesh_core::store#implementing-sessionstore
-        /// [session-store-rng]: tower_sesh_core::store::SessionStoreRng
-        ///
-        /// For example, the following macro invocation:
-        ///
-        /// ```no_run
-        /// # use tower_sesh::store::MemoryStore;
-        /// # use tower_sesh_test::test_suite;
-        /// #
-        /// test_suite! {
-        ///     store: MemoryStore::new(),
-        /// }
-        /// ```
-        ///
-        /// Expands to something like this:
-        ///
-        /// ```no_run
-        /// # use tower_sesh::store::MemoryStore;
-        /// #
-        /// #[tokio::test]
-        /// async fn create_does_collision_resolution() {
-        ///     tower_sesh_test::test_create_does_collision_resolution(MemoryStore::new());
-        /// }
-        ///
-        /// #[tokio::test]
-        /// async fn loading_session_after_create() {
-        ///     tower_sesh_test::test_loading_session_after_create(MemoryStore::new());
-        /// }
-        ///
-        /// // ...rest of test suite...
-        /// ```
-        ///
-        /// # Note on test determinism
-        ///
-        /// Though each test runs with its own separate store instance, each store
-        /// instance may in fact perform operations concurrently on the same database.
-        /// For example, in [`tower-sesh-store-redis`]'s test suite, each `RedisStore`
-        /// connects to the same Redis server. This won't result in flakiness, since
-        /// each test generates unique session keys deterministically.
-        ///
-        /// [`tower-sesh-store-redis`]: https://docs.rs/tower-sesh-store-redis
-        ///
-        /// # Examples
-        ///
-        /// ```no_run
-        /// mod memory_store {
-        ///     use tower_sesh::store::MemoryStore;
-        ///     use tower_sesh_test::test_suite;
-        ///
-        ///     test_suite! {
-        ///         store: MemoryStore::new(),
-        ///     }
-        /// }
-        ///
-        /// mod memory_store_caching_store {
-        ///     use tower_sesh::store::{CachingStore, MemoryStore};
-        ///     use tower_sesh_test::test_suite;
-        ///
-        ///     test_suite! {
-        ///         store: CachingStore::from_cache_and_store(
-        ///             MemoryStore::new(),
-        ///             MemoryStore::new(),
-        ///         ),
-        ///     }
-        /// }
-        /// ```
-        ///
-        /// A store initializer can also contain `.await`:
-        ///
-        /// ```no_run
-        /// use serde::{de::DeserializeOwned, Serialize};
-        /// use tower_sesh_core::{store::SessionStoreRng, SessionStore};
-        ///
-        /// async fn redis_store<T, Rng>() -> impl SessionStore<T> + SessionStoreRng<Rng>
-        /// where
-        ///     T: Serialize + DeserializeOwned + Send + Sync + 'static,
-        ///     Rng: rand::CryptoRng + Send + 'static,
-        /// {
-        ///     // ...
-        ///     # unimplemented!() as tower_sesh_store_redis::RedisStore<T>
-        /// }
-        ///
-        /// mod normal {
-        ///     use tower_sesh_test::test_suite;
-        ///
-        ///     test_suite! {
-        ///         store: redis_store().await,
-        ///     }
-        /// }
-        ///
-        /// mod with_caching_store {
-        ///     use tower_sesh::store::{CachingStore, MemoryStore};
-        ///     use tower_sesh_test::test_suite;
-        ///
-        ///     test_suite! {
-        ///         store: CachingStore::from_cache_and_store(
-        ///             MemoryStore::new(),
-        ///             redis_store().await,
-        ///         ),
-        ///     }
-        /// }
-        /// ```
+        /// [lib]: crate#using-the-test-suite-macro
         #[macro_export]
         $test_suite
     };
