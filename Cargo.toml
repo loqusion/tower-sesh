@@ -26,7 +26,7 @@ serde = { version = "1", default-features = false, features = ["std"] }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tower_sesh_docs_local)', 'cfg(tower_sesh_test_caching_store)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tower_sesh_docs_local)'] }
 
 [profile.dev.package]
 insta.opt-level = 3

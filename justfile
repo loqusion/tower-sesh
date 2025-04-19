@@ -1,10 +1,6 @@
 test *FLAGS:
     cargo nextest run --workspace --features test-util {{FLAGS}}
 
-test-caching-store *FLAGS:
-    RUSTFLAGS="--cfg tower_sesh_test_caching_store" \
-        cargo nextest run --features test-util {{FLAGS}}
-
 test-miri-lib *FLAGS:
     MIRIFLAGS='-Zmiri-disable-isolation -Zmiri-strict-provenance' \
         cargo +nightly miri nextest run --workspace --lib --features test-util {{FLAGS}}

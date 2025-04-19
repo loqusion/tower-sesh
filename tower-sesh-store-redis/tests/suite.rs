@@ -111,7 +111,6 @@ where
         .expect("failed to connect to redis")
 }
 
-#[cfg(not(tower_sesh_test_caching_store))]
 mod redis_store {
     use tower_sesh_test::test_suite;
 
@@ -123,7 +122,6 @@ mod redis_store {
     }
 }
 
-#[cfg(not(tower_sesh_test_caching_store))]
 mod valkey_store {
     use tower_sesh_test::test_suite;
 
@@ -135,7 +133,6 @@ mod valkey_store {
     }
 }
 
-#[cfg(tower_sesh_test_caching_store)]
 mod redis_caching_store {
     use tower_sesh::store::{CachingStore, MemoryStore};
     use tower_sesh_test::test_suite;
@@ -151,7 +148,6 @@ mod redis_caching_store {
     }
 }
 
-#[cfg(tower_sesh_test_caching_store)]
 mod valkey_caching_store {
     use tower_sesh::store::{CachingStore, MemoryStore};
     use tower_sesh_test::test_suite;
