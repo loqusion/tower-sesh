@@ -24,7 +24,6 @@
 //!
 //! ```no_run
 //! use tower_sesh_test::test_suite;
-//! # use tower_sesh::store::MemoryStore;
 //!
 //! test_suite! {
 //!     store: MemoryStore::new(),
@@ -34,8 +33,6 @@
 //! Expands to something like this:
 //!
 //! ```no_run
-//! # use tower_sesh::store::MemoryStore;
-//! #
 //! #[tokio::test]
 //! async fn create_does_collision_resolution() {
 //!     let store = MemoryStore::new();
