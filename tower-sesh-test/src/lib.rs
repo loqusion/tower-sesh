@@ -131,11 +131,11 @@ macro_rules! doc {
 
 #[cfg(doc)]
 doc! {macro_rules! test_suite {
-    (store: $store:expr $(,)?) => { unimplemented!() };
     (guard: $guard_ident:ident = $guard:expr, store: $store:expr $(,)?) => {
         unimplemented!()
     };
     (guard: $guard:expr, store: $store:expr $(,)?) => { unimplemented!() };
+    (store: $store:expr $(,)?) => { unimplemented!() };
 }}
 
 // To add a test, write a test function in one of `suite`'s submodules meeting
@@ -206,12 +206,6 @@ doc! {macro_rules! test_suite {
 // ```
 #[cfg(not(doc))]
 doc! {macro_rules! test_suite {
-    (store: $store:expr $(,)?) => {
-        $crate::test_suite! {
-            guard: (),
-            store: $store,
-        }
-    };
     (guard: $guard_ident:ident = $guard:expr, store: $store:expr $(,)?) => {
         $crate::test_suite! {
             @(guard: $guard_ident = $guard, store: $store) => {
@@ -249,6 +243,12 @@ doc! {macro_rules! test_suite {
     (guard: $guard:expr, store: $store:expr $(,)?) => {
         $crate::test_suite! {
             guard: __guard = $guard,
+            store: $store,
+        }
+    };
+    (store: $store:expr $(,)?) => {
+        $crate::test_suite! {
+            guard: (),
             store: $store,
         }
     };
