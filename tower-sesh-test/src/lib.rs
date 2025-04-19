@@ -162,53 +162,20 @@ doc! {macro_rules! test_suite {
 //   command more than once and append the two numbers to reduce the risk of
 //   collision).
 //
-// Then, add the name component following `test_` to the macro transcriber in
-// the first macro rule, under the comment labeling the test module. For
-// example, if you added a test function named `test_does_a_thing` to the
-// `store` module, then `does_a_thing` should be added under the `// store`
-// comment.
+// Then, add the name component following `test_` to the list of tests under
+// the `// Test Suite` comment.
 //
-// Test names should be sorted in the order their respective functions appear in
-// the module they're defined in.
-//
-// # Example
-//
-// `store.rs`
-//
-// ```
-// use rand::SeedableRng;
-// use tower_sesh_core::{store::SessionStoreRng, SessionStore};
-// use crate::support::{SessionData, TestRng};
-//
-// pub async fn test_does_a_thing(
-//     mut store: impl SessionStore<SessionData> + SessionStoreRng<TestRng>,
-// ) {
-//     let rng = TestRng::seed_from_u64(1234567890);
-//     store.rng(rng);
-//
-//     // ...rest of test...
-// }
-// ```
-//
-// `lib.rs`
-//
-// ```not_rust
-// @impl $store => {
-//     // ...
-//
-//     // store
-//     // ...
-//     does_a_thing
-//     // ...
-//
-//     // ...
-// }
-// ```
+// Tests are grouped by the module they're defined in and sorted in the order
+// they appear in that module. For example, if you added a test function named
+// `test_does_a_thing` to the `store` module, then `does_a_thing` should be
+// added under the `// store` comment.
 #[cfg(not(doc))]
 doc! {macro_rules! test_suite {
     (guard: $guard_ident:ident = $guard:expr, store: $store:expr $(,)?) => {
         $crate::test_suite! {
             @(guard: $guard_ident = $guard, store: $store) => {
+                // Test Suite
+
                 smoke
 
                 // store
