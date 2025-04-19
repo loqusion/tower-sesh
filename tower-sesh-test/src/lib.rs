@@ -81,8 +81,11 @@
 //! At the beginning of each test, `<expr>` is evaluated before the expression
 //! following `store:`, and its [`Drop`] implementation is run on the test's
 //! completion (regardless of success or failure). You can bind this expression
-//! to a variable with the syntax `guard: <guard_ident> = <expr>`; this variable
-//! can be used in the `store:` expression.
+//! to one or more variables using [pattern matching] with the syntax
+//! `guard: <guard_pat> = <expr>`; any variables bound this way can be used in
+//! the `store:` expression.
+//!
+//! [pattern matching]: https://doc.rust-lang.org/reference/patterns.html
 //!
 //! For example:
 //!
@@ -163,7 +166,7 @@ macro_rules! doc {
 
 #[cfg(doc)]
 doc! {macro_rules! test_suite {
-    (guard: $guard_ident:ident = $guard:expr, store: $store:expr $(,)?) => {
+    (guard: $guard_pat:pat_param = $guard:expr, store: $store:expr $(,)?) => {
         unimplemented!()
     };
     (guard: $guard:expr, store: $store:expr $(,)?) => { unimplemented!() };
@@ -203,9 +206,9 @@ doc! {macro_rules! test_suite {
 // added under the `// store` comment.
 #[cfg(not(doc))]
 doc! {macro_rules! test_suite {
-    (guard: $guard_ident:ident = $guard:expr, store: $store:expr $(,)?) => {
+    (guard: $guard_pat:pat_param = $guard:expr, store: $store:expr $(,)?) => {
         $crate::test_suite! {
-            @(guard: $guard_ident = $guard, store: $store) => {
+            @(guard: $guard_pat = $guard, store: $store) => {
                 // Test Suite
 
                 smoke
@@ -254,7 +257,7 @@ doc! {macro_rules! test_suite {
 
     (
         @(
-            guard: $guard_ident:ident = $guard:expr,
+            guard: $guard_pat:pat_param = $guard:expr,
             store: $store:expr
         ) => {
             $(
@@ -267,7 +270,7 @@ doc! {macro_rules! test_suite {
             $(#[$m])*
             #[$crate::__private::tokio::test]
             async fn $test() {
-                let $guard_ident = $guard;
+                let $guard_pat = $guard;
                 let __store = $store;
                 $crate::__private::paste::paste! {
                     $crate::[<test_ $test>](__store).await;
