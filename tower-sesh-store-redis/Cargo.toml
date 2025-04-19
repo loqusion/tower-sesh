@@ -38,6 +38,7 @@ tokio = { version = "1.42.0", features = ["full"] }
 tokio-test = "0.4.4"
 tower-sesh = { path = "../tower-sesh", features = ["test-util"] }
 tower-sesh-test = { path = "../tower-sesh-test" }
+xshell = "0.2.7"
 
 [lints]
 workspace = true
