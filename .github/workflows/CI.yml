@@ -109,19 +109,6 @@ jobs:
         rust: [stable, beta, nightly]
       fail-fast: true
     runs-on: ubuntu-latest
-    env:
-      REDIS_URL: redis://localhost:6379
-    services:
-      # Required for tower-sesh-store-redis
-      redis:
-        image: redis:7.4.1-alpine
-        ports:
-          - "6379:6379"
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: "install Rust ${{ matrix.rust }}"
@@ -143,19 +130,6 @@ jobs:
         rust: [stable, beta, nightly]
       fail-fast: true
     runs-on: ubuntu-latest
-    env:
-      REDIS_URL: redis://localhost:6379
-    services:
-      # Required for tower-sesh-store-redis
-      redis:
-        image: redis:7.4.1-alpine
-        ports:
-          - "6379:6379"
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: "install Rust ${{ matrix.rust }}"
