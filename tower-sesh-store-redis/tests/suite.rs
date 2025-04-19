@@ -9,8 +9,9 @@ use tower_sesh_store_redis::RedisStore;
 use xshell::{cmd, Shell};
 
 const REDIS_IMAGE: &str = "redis:7.4.2-alpine";
+const VALKEY_IMAGE: &str = "valkey/valkey:8.1.0-alpine";
 
-fn redis_init() -> anyhow::Result<DockerRedisGuard> {
+fn image_run(image: &str) -> anyhow::Result<DockerRedisGuard> {
     #[derive(Clone, Debug)]
     struct Cleanup<'a> {
         shell: &'a Shell,
@@ -49,7 +50,7 @@ fn redis_init() -> anyhow::Result<DockerRedisGuard> {
         "--health-retries",
         "5",
     ];
-    let id = cmd!(sh, "docker run {run_opts...} {REDIS_IMAGE}").read()?;
+    let id = cmd!(sh, "docker run {run_opts...} {image}").read()?;
 
     // If we return early, this cleans up the running container
     let guard = Cleanup {
@@ -111,26 +112,54 @@ where
 }
 
 #[cfg(not(tower_sesh_test_caching_store))]
-mod normal {
+mod redis_store {
     use tower_sesh_test::test_suite;
 
-    use super::{redis_init, store};
+    use super::{image_run, store, REDIS_IMAGE};
 
     test_suite! {
-        guard: container = redis_init().unwrap(),
+        guard: container = image_run(REDIS_IMAGE).unwrap(),
+        store: store(format!("redis://localhost:{}", container.port)).await,
+    }
+}
+
+#[cfg(not(tower_sesh_test_caching_store))]
+mod valkey_store {
+    use tower_sesh_test::test_suite;
+
+    use super::{image_run, store, VALKEY_IMAGE};
+
+    test_suite! {
+        guard: container = image_run(VALKEY_IMAGE).unwrap(),
         store: store(format!("redis://localhost:{}", container.port)).await,
     }
 }
 
 #[cfg(tower_sesh_test_caching_store)]
-mod with_caching_store {
+mod redis_caching_store {
     use tower_sesh::store::{CachingStore, MemoryStore};
     use tower_sesh_test::test_suite;
 
-    use super::{redis_init, store};
+    use super::{image_run, store, REDIS_IMAGE};
 
     test_suite! {
-        guard: container = redis_init().unwrap(),
+        guard: container = image_run(REDIS_IMAGE).unwrap(),
+        store: CachingStore::from_cache_and_store(
+            MemoryStore::new(),
+            store(format!("redis://localhost:{}", container.port)).await,
+        ),
+    }
+}
+
+#[cfg(tower_sesh_test_caching_store)]
+mod valkey_caching_store {
+    use tower_sesh::store::{CachingStore, MemoryStore};
+    use tower_sesh_test::test_suite;
+
+    use super::{image_run, store, VALKEY_IMAGE};
+
+    test_suite! {
+        guard: container = image_run(VALKEY_IMAGE).unwrap(),
         store: CachingStore::from_cache_and_store(
             MemoryStore::new(),
             store(format!("redis://localhost:{}", container.port)).await,
