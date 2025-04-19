@@ -107,17 +107,16 @@
 //!     https://github.com/loqusion/tower-sesh/blob/main/tower-sesh-store-redis/tests/suite.rs
 //!
 //! In some cases, implementing perfect test isolation may be prohibitively
-//! expensive. To account for this possibility, `tower-sesh-test` implements a
+//! expensive. To account for this scenario, `tower-sesh-test` implements a
 //! fallback layer of isolation: _session key uniqueness_. Each test
 //! deterministically generates unique session keys, ensuring that no two tests
 //! may access the same session concurrently.
 //!
 //! That being said, if you define two test suites like in the example above
-//! with `CachingStore`, they must never be run simultaneously if they run on
-//! the same database. Either run one database instance for each test suite, or
-//! use [conditional compilation] to run the test suites separately. You can
-//! find an example using conditional compilation
-//! [here][conditional-compilation-example]
+//! with `CachingStore`, they must never run simultaneously on the same
+//! database. Either run one database instance for each test suite, or use
+//! [conditional compilation] to run the test suites separately. You can find an
+//! example using conditional compilation [here][conditional-compilation-example]
 //! (also the [command][conditional-compilation-example-ci]).
 //!
 //! [conditional compilation]:
