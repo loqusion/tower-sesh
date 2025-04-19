@@ -127,6 +127,16 @@
 //! [conditional-compilation-example-ci]:
 //!     https://github.com/loqusion/tower-sesh/blob/69e9e1f477a9ae1312d168ddabf8c3932917e43e/.github/workflows/CI.yml#L168
 
+#![warn(missing_debug_implementations)]
+#![deny(rustdoc::broken_intra_doc_links)]
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms, single_use_lifetimes),
+        allow(dead_code, unused_assignments, unused_variables)
+    )
+))]
+
 pub use suite::*;
 pub use support::TestRng;
 
