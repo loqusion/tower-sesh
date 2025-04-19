@@ -1,10 +1,10 @@
 #![cfg(feature = "test-util")]
 
-use std::{fmt, mem, time::Duration};
+use std::{mem, time::Duration};
 
 use redis::aio::ConnectionManagerConfig;
 use serde::{de::DeserializeOwned, Serialize};
-use tower_sesh_core::{store::SessionStoreRng, util::Report, SessionStore};
+use tower_sesh_core::util::Report;
 use tower_sesh_store_redis::RedisStore;
 use xshell::{cmd, Shell};
 
@@ -97,10 +97,9 @@ impl Drop for DockerRedisGuard {
     }
 }
 
-async fn store<T, Rng>(url: String) -> impl SessionStore<T> + SessionStoreRng<Rng> + fmt::Debug
+async fn store<T>(url: String) -> RedisStore<T>
 where
     T: Serialize + DeserializeOwned + Send + Sync + 'static,
-    Rng: rand::CryptoRng + Send + 'static,
 {
     let config = ConnectionManagerConfig::new()
         .set_connection_timeout(Duration::from_secs(5))
