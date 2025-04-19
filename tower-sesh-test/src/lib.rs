@@ -180,10 +180,10 @@ doc! {macro_rules! test_suite {
 //   in general, it should implement `Clone`, `Serialize`, and `Deserialize`.
 //   Usually, you should use `SessionData` defined in `support`.
 //
-// - The test function must return a type which implements `Future`, e.g. by
-//   using the `async` keyword in front of `fn`. The value returned from the
-//   function is `.await`ed then discarded; note that an `Err` returned from a
-//   function will cause the test to falsely indicate success.
+// - The test function's return type must implement `Future`, e.g. by using the
+//   `async` keyword in front of `fn`. The value returned from the function is
+//   `.await`ed then discarded; note that an `Err` returned from a function will
+//   cause the test to falsely indicate success.
 //
 // - The test function must pass a `TestRng` to `store` with the
 //   `SessionStoreRng::rng()` method before calling any other methods
