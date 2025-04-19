@@ -130,10 +130,11 @@
 //! [conditional-compilation-example-ci]:
 //!     https://github.com/loqusion/tower-sesh/blob/69e9e1f477a9ae1312d168ddabf8c3932917e43e/.github/workflows/CI.yml#L168
 
-pub mod suite;
 pub use suite::*;
-pub mod support;
 pub use support::TestRng;
+
+pub mod suite;
+pub mod support;
 
 #[doc(hidden)]
 pub mod __private {
