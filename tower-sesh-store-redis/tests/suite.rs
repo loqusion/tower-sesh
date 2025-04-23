@@ -42,6 +42,7 @@ fn image_run(image: &str) -> anyhow::Result<DockerContainerGuard> {
         "--detach",
         "--publish",
         "127.0.0.1::6379/tcp", // publish the exposed port to a random host port
+        "--rm",
         "--health-cmd",
         "redis-cli ping",
         "--health-interval",
@@ -75,7 +76,6 @@ fn stop_and_remove(sh: &Shell, id: &str) {
             .quiet()
             .ignore_stdout()
             .run()?;
-        cmd!(sh, "docker rm {id}").quiet().ignore_stdout().run()?;
 
         Ok(())
     }
