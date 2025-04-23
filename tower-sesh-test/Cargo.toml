@@ -19,7 +19,7 @@ tokio = "1.43.0"
 tower = "0.5.2"
 tower-sesh = { path = "../tower-sesh", features = ["test-util"] }
 tower-sesh-core = { path = "../tower-sesh-core" }
-tower-sesh-store-redis = { path = "../tower-sesh-store-redis" }
+tower-sesh-store-redis = { path = "../tower-sesh-store-redis", features = ["test-util"] }
 
 [lints]
 workspace = true
