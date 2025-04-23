@@ -109,7 +109,7 @@ mod container {
     }
 }
 
-async fn store<T>(url: String) -> RedisStore<T>
+async fn store<T>(url: &str) -> RedisStore<T>
 where
     T: Serialize + DeserializeOwned + Send + Sync + 'static,
 {
@@ -129,7 +129,7 @@ mod redis_store {
 
     test_suite! {
         guard: container = container::run(REDIS_IMAGE).unwrap(),
-        store: store(format!("redis://localhost:{}", container.port)).await,
+        store: store(&format!("redis://localhost:{}", container.port)).await,
     }
 }
 
@@ -140,7 +140,7 @@ mod valkey_store {
 
     test_suite! {
         guard: container = container::run(VALKEY_IMAGE).unwrap(),
-        store: store(format!("redis://localhost:{}", container.port)).await,
+        store: store(&format!("redis://localhost:{}", container.port)).await,
     }
 }
 
@@ -154,7 +154,7 @@ mod redis_caching_store {
         guard: container = container::run(REDIS_IMAGE).unwrap(),
         store: CachingStore::from_cache_and_store(
             MemoryStore::new(),
-            store(format!("redis://localhost:{}", container.port)).await,
+            store(&format!("redis://localhost:{}", container.port)).await,
         ),
     }
 }
@@ -169,7 +169,7 @@ mod valkey_caching_store {
         guard: container = container::run(VALKEY_IMAGE).unwrap(),
         store: CachingStore::from_cache_and_store(
             MemoryStore::new(),
-            store(format!("redis://localhost:{}", container.port)).await,
+            store(&format!("redis://localhost:{}", container.port)).await,
         ),
     }
 }
