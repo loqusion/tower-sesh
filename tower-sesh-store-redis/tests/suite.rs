@@ -45,11 +45,11 @@ fn image_run(image: &str) -> anyhow::Result<DockerContainerGuard> {
         "--health-cmd",
         "redis-cli ping",
         "--health-interval",
-        "10s",
+        "500ms",
         "--health-timeout",
-        "5s",
+        "500ms",
         "--health-retries",
-        "5",
+        "3",
     ];
     let id = cmd!(sh, "docker run {run_opts...} {image}").read()?;
 
