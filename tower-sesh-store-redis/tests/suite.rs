@@ -59,7 +59,7 @@ mod container {
             "--health-retries",
             "3",
         ];
-        let id = cmd!(sh, "docker run {run_opts...} {image}").read()?;
+        let id = cmd!(sh, "docker container run {run_opts...} {image}").read()?;
 
         // If we return early, this cleans up the running container
         let guard = Cleanup {
@@ -81,7 +81,7 @@ mod container {
 
     fn stop(sh: &Shell, id: &str) {
         fn _stop(sh: &Shell, id: &str) -> xshell::Result<()> {
-            cmd!(sh, "docker stop --timeout 1 {id}")
+            cmd!(sh, "docker container stop --timeout 1 {id}")
                 .quiet()
                 .ignore_stdout()
                 .run()?;
