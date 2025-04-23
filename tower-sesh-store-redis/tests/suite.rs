@@ -40,7 +40,8 @@ fn image_run(image: &str) -> anyhow::Result<DockerContainerGuard> {
 
     let run_opts = [
         "--detach",
-        "--publish-all", // publish the exposed port to a random host port
+        "--publish",
+        "127.0.0.1::6379/tcp", // publish the exposed port to a random host port
         "--health-cmd",
         "redis-cli ping",
         "--health-interval",
