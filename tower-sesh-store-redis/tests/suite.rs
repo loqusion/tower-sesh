@@ -33,7 +33,7 @@ fn image_run(image: &str) -> anyhow::Result<DockerContainerGuard> {
     }
     impl Drop for Cleanup<'_> {
         fn drop(&mut self) {
-            stop_and_remove(&self.shell, &self.id);
+            stop_and_remove(self.shell, self.id);
         }
     }
 
