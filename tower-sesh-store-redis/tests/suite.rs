@@ -2,6 +2,7 @@
 
 use std::{mem, time::Duration};
 
+use anyhow::Context;
 use redis::aio::ConnectionManagerConfig;
 use serde::{de::DeserializeOwned, Serialize};
 use tower_sesh_core::util::Report;
@@ -67,7 +68,9 @@ fn image_run(image: &str) -> anyhow::Result<DockerContainerGuard> {
         r#"{{ (index (index .NetworkSettings.Ports "6379/tcp") 0).HostPort }}"#,
     ];
     let port = cmd!(sh, "docker container inspect {inspect_opts...} {id}").read()?;
-    let port = port.parse()?;
+    let port = port
+        .parse()
+        .with_context(|| format!("failed to parse port number: {port}"))?;
 
     Ok(guard.with(port))
 }
