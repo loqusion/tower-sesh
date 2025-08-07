@@ -43,6 +43,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
       - name: cargo fmt --check
         run: |
           cargo fmt --all --check
@@ -60,18 +62,6 @@ jobs:
           cargo doc --lib --no-deps --all-features --document-private-items
         env:
           RUSTDOCFLAGS: "--cfg docsrs -Dwarnings --cfg tower_sesh_docs_local"
-
-  style:
-    name: cargo fmt
-    needs: basics
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-      - name: rustfmt
-        run: cargo fmt --all --check
 
   hack-check:
     name: cargo hack check
