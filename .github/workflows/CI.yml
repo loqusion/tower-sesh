@@ -89,7 +89,7 @@ jobs:
           cargo minimal-versions check --workspace --ignore-private --exclude tower-sesh-store-redis --all-features
           cargo minimal-versions check --package tower-sesh-store-redis --features test-util
 
-  ### test jobs
+  ### test jobs ###
 
   test:
     name: "cargo test (${{ matrix.rust }})"
